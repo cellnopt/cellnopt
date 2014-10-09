@@ -44,7 +44,7 @@ with open('README.md') as f:
 
 
 setup(
-    name             = 'cellnopt',
+    name             = 'cno',
     version          = version,
     maintainer       = metainfo['authors']['Cokelaer'][0],
     maintainer_email = metainfo['authors']['Cokelaer'][1],
