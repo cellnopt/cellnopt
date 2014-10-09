@@ -16,7 +16,8 @@ from __future__ import absolute_import
 __version__ = '0.0.1'
 
 
+# clashes between cellnopt and availabl cellnopt packages.
+# Very unfortunate...
+#import cellnopt.core as cnocore
 
 from .feeder import Feeder
-
-
