@@ -13,3 +13,14 @@ and those notebooks
 
 - http://nbviewer.ipython.org/github/cokelaer/bioservices/blob/master/doc/source/notebook/BioModels.ipynb
 - https://github.com/cokelaer/euroscipy_proceedings/blob/master/papers/cokelaer/cokelaer.rst
+
+
+To be provided:
+
+- [ ] pre-processing tools
+- [ ] boolean analysis
+- [ ] discrete time analysis
+- [ ] fuzzy analysis
+- [ ] connection to cnor feeder connection
+- [ ] ode analysis
+- [ ] Visualisation
