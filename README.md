@@ -21,6 +21,9 @@ To be provided:
 - [ ] boolean analysis
 - [ ] discrete time analysis
 - [ ] fuzzy analysis
-- [ ] connection to cnor feeder connection
+- [x] connection to cnor feeder connection
 - [ ] ode analysis
 - [ ] Visualisation
+- [ ] data : move cellnopt.data into here
+- [ ] move cellnopt.admin to here ? 
+- [ ] move cellnopt.core as cellnopt.io in here ?
