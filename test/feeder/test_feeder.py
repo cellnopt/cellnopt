@@ -1,5 +1,5 @@
 from cellnopt.core import cnodata
-from cellnopt.feeder import Feeder
+from cno.feeder import Feeder
 
 
 
