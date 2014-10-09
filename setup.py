@@ -61,7 +61,7 @@ setup(
 
     # package installation
     #package_dir = {'':''},
-    packages = ['cellnopt'],
+    packages = ['cno'],
     #package_dir  = package_dir,
     install_requires = ['numpy', 'matplotlib', 'pandas', 'bioservices'],
 
