@@ -1,6 +1,7 @@
 
 
-_registered = ['ToyMMB', 'ToyPCB', 'ToyPB']
+_registered = ['ToyMMB', 'ToyPCB', 'ToyPB', 'ToyPB_True', 'ExtLiverPCB',
+'LiverDREAM']
 
 def _build_registers():
     registers = []
