@@ -20,7 +20,7 @@ Node ask1 removed
 
 
 .. image::
-https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPCB/PKN-ToyPCB.png
+https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/PKN-ToyPB.png
    :alt: ToyPCB figure
 
 
