@@ -20,6 +20,9 @@ Node ask1 removed
 
 
 .. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/PKN-ToyPB.png
+   :width: 200pt
+   :height: 100pt
+   :align: center
    :alt: ToyPB figure
 
 
