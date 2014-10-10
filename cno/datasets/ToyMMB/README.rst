@@ -4,8 +4,7 @@
     manually by Camille Terfve for the CellNOptR tutorial."""
 
 
-.. image:: ToyMMB.svg?branch=master
-   :target: ToyMMB.svg?branch=master
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyMMB/PKN-ToyMMB.svg?
    :alt: ToyMMB figure
 
 
