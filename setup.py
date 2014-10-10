@@ -61,16 +61,26 @@ setup(
 
     # package installation
     #package_dir = {'':''},
-    packages = ['cno'],
+    #packages = ['cno'],
     #package_dir  = package_dir,
     install_requires = ['numpy', 'matplotlib', 'pandas', 'bioservices',
     'easydev', 'colormap>=0.9.3'],
+    zip_safe=False,
 
-    data_files = [
-        'cno/datasets/ToyMMB/PKN-ToyMMB.sif',
-        'cno/datasets/ToyMMB/MD-ToyMMB.csv',
-        
-        ]
+
+    packages = find_packages(),
+    #package_dir  = {
+    #    'cno.feeder': 'cno/feeder',
+    #    'cno.datasets': 'cno/datasets',
+    #    'cno.datasets.ToyMMB': 'cno/datasets/ToyMMB'},
+
+    package_data={
+        'cno.datasets.ToyMMB': ['*'],
+    }
+
+
+
+
 
     )
 
