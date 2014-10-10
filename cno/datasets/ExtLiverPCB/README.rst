@@ -3,7 +3,7 @@
 .. warning:: Note that they are a few variants of this data/PKN.
 
 
-.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ExtLiverPCB/PKN-ExtLiverPCB.png
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ExtLiverPCB/ExtLiverPCB.png
 
 
 
