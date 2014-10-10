@@ -1,5 +1,5 @@
 import os
-from cno.datasets import ToyMMB
+from cno.datasets import ToyMMB, ToyPB, ToyPCB, ExtLiverPCB
 from cno.datasets import cnodata, registers
 
 
@@ -20,3 +20,13 @@ def test_datasets_toymmb():
     ToyMMB.data_filename
     ToyMMB.description
     ToyMMB.plot()
+
+
+def test_all_plots():
+    import cno.datasets as ds
+
+    ds.ToyPB.plot()
+    ds.ToyPCB.plot()
+    ds.ExtLiverPCB.plot()
+    ds.LiverDREAM.plot()
+    ds.ToyPB_True.plot()

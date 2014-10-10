@@ -1,5 +1,22 @@
+# -*- python -*-
+#
+#  This file is part of cellnopt software
+#
+#  Copyright (c) 2014 - EBI-EMBL
+#
+#  File author(s): Thomas Cokelaer <cokelaer@ebi.ac.uk>
+#
+#  Distributed under the GPLv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: http://github.com/cellnopt
+#
+##############################################################################
+""""""
 import os
 from . import __path__
+
 
 name = 'ToyPCB'
 
