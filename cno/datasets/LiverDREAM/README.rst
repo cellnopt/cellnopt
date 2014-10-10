@@ -1,6 +1,10 @@
 :Description: This model is used in several articles and is used for many tests in CNO. It was part of the DREAM4 challenge. It is also a subset of a larger model, Liver data used in reference [1]_ here below. Also used in [2]_.
 
 
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/LiverDREAM/
+LiverDREAM.png
+
+
 References
 ---------------
 
