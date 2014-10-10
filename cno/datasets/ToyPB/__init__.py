@@ -1,7 +1,7 @@
 import os
 from . import __path__
 
-name = 'ToyMMB'
+name = 'ToyPB'
 
 __all__ = ['description', 'model_filename', 'data_filename', 'name']
 
