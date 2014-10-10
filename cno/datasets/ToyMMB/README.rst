@@ -8,8 +8,8 @@
 .. [2] **C. Terfve.** *Training of boolean logic models of signalling networks using prior knowledge networks and perturbation data with CellNOptR.* `BioConductor link <http://www.bioconductor.org/packages/release/bioc/html/CellNOptR.html>`_
 
 
-.. note:: alias to PKN-ToyMMB.sif are: ToyModelMMB.sif,  ToyModelMKM.sif
-.. note:: alias to MD-ToyMMB.csv are: ToyModelMMB.csv,  ToyModelMKM.csv
+:Notes: aliases to PKN-ToyMMB.sif are ToyModelMMB.sif and  ToyModelMKM.sif
+    and aliases to MD-ToyMMB.csv are ToyModelMMB.csv and  ToyModelMKM.csv
 
 
 
