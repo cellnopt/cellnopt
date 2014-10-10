@@ -19,9 +19,8 @@ Node ask1 removed
 ========================================= =====================================================================
 
 
-.. image::
-https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/PKN-ToyPB.png
-   :alt: ToyPCB figure
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/PKN-ToyPB.png
+   :alt: ToyPB figure
 
 
 
