@@ -2,6 +2,8 @@ import os
 from cno.datasets import ToyMMB, ToyPB, ToyPCB, ExtLiverPCB
 from cno.datasets import cnodata, registers
 
+from nose.plugins.attrib import attr
+
 
 def test_registered_cnodata():
     for filename in registers:
@@ -21,7 +23,7 @@ def test_datasets_toymmb():
     ToyMMB.description
     ToyMMB.plot()
 
-
+@attr('skip')
 def test_all_plots():
     import cno.datasets as ds
 

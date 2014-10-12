@@ -15,4 +15,9 @@ def _build_registers():
 
 
 registers = _build_registers()
+for register in _registered:
+    import importlib
+    importlib.import_module('cno.datasets.{0}'.format(register))
+
+
 from .cnodata import cnodata
