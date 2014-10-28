@@ -21,3 +21,5 @@ __version__ = '0.0.1'
 #import cellnopt.core as cnocore
 
 from .feeder import Feeder
+from .datasets import cnodata
+from .misc import CNOError

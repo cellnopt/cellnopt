@@ -10,6 +10,10 @@ import pylab
 import pandas as pd
 from biokit import viz
 
+
+__all__ = ["CASPO"]
+
+
 def combine_caspo(results):
     """From several results from CASPO, create a MultiCASPO object"""
     raise NotImplementedError
