@@ -41,6 +41,8 @@ class CASPO(object):
         # TODO compression ??
         # TODO save results in a temporary directory
 
+        self.df = pd.DataFrame({'mse':[], 'size':[]})
+
     def optimise(self, pkn, midas, size=0, fit=0, factor=10, timepoint=None):
         """Run the optimisation using **clasp/gringo**.
 
@@ -224,17 +226,21 @@ class CASPO(object):
         pylab.xlabel("Tolerance in %")
         pylab.ylabel("Number of models")
 
-    def summary(self):
+    def __str__(self):
         """Prints information about the optimisation"""
-        raise NotImplementedError
-        mses = self.mse[:]
-        models = self.models[:]
-        count, tol = self._get_count_vs_tol()
+        mses = self.df.mse.values
+        #models = self.models[:]
+
         N = len(set(mses))
-        print("There are %s different MSE found amongst %s models" % (N,len(mses)))
-        print("The minimum MSE is %s " % min(mses))
-        Ngtts = len(self.family.gtts)
-        print("There are %s GTTS " % Ngtts)
+        txt = "There are %s different MSE found amongst %s models\n" % (N,len(mses))
+        txt += "The minimum MSE is %s " % self.df.mse.min()
+        return txt
+        #Ngtts = len(self.family.gtts)
+        #print("There are %s GTTS " % Ngtts)
+
+    def summary(self):
+        print(self)
+
 
     def plot_frequencies_hyperedges(self):
         """Plot frequencies of the hyperedges amonsgt all models
