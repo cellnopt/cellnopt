@@ -16,10 +16,11 @@ from __future__ import absolute_import
 __version__ = '0.0.1'
 
 
-# clashes between cellnopt and availabl cellnopt packages.
+# clashes between cellnopt and available cellnopt packages.
 # Very unfortunate...
-#import cellnopt.core as cnocore
+# import cellnopt.core as cnocore
 
 from .feeder import Feeder
 from .datasets import cnodata
 from .misc import CNOError
+from .io.reactions import Reactions, Reaction
