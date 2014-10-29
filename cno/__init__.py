@@ -23,4 +23,9 @@ __version__ = '0.0.1'
 from .feeder import Feeder
 from .datasets import cnodata
 from .misc import CNOError
+
 from .io.reactions import Reactions, Reaction
+from .io.sif import SIF
+from .io.cna import CNA
+
+

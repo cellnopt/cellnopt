@@ -290,6 +290,7 @@ class Reactions(ReactionBase):
         self._reactions = []
         self._reaction = Reaction(strict_rules=strict_rules)
         self.verbose = verbose
+        self.strict_rules = strict_rules
        
     def to_list(self):
         """Return list of reaction names"""
@@ -400,7 +401,7 @@ class Reactions(ReactionBase):
             >>> assert len(c.reactions) == 1
 
         """
-        reac = Reaction(reaction)
+        reac = Reaction(reaction, strict_rules=self.strict_rules)
         reac.sort()
 
         # 
