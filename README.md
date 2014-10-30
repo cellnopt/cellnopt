@@ -27,3 +27,11 @@ To be provided:
 - [ ] data : move cellnopt.data into here
 - [ ] move cellnopt.admin to here ? 
 - [ ] move cellnopt.core as cellnopt.io in here ?
+  - [ ] midas
+  - [x] sif/reactions
+  - [ ] cnograph
+  - [ ] normalisation
+  - [ ] compression
+  - [ ] mapback
+  - [ ] models
+  - [x] cna
