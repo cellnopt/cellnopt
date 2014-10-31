@@ -5,3 +5,4 @@ from .cna import CNA
 from .sif2asp import SIF2ASP
 from .midas import XMIDAS
 from .midas_extra import Measurement, Measurements, MIDASBuilder
+from .adj2sif import ADJ2SIF

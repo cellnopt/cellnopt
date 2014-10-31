@@ -1,11 +1,11 @@
 from cno.io.sif import SIF
-from cno import testing
+from cno.testing import getdata
 import easydev
 import tempfile
 
-simple = testing.get("test_simple.sif")
-double = testing.get("test_double.sif")
-net = testing.get("PKN-ToyMMB.net")
+simple = getdata("test_simple.sif")
+double = getdata("test_double.sif")
+net = getdata("PKN-ToyMMB.net")
   
 
 
@@ -75,7 +75,7 @@ def test_sifreader_wrong():
         assert True
 
 def test_sif2reaction():
-    from cellnopt.data import cnodata
+    from cno import cnodata
     filename = cnodata("PKN-ToyMMB.sif")
     s = SIF(filename)
     s.add_reaction("a=and1")

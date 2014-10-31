@@ -17,11 +17,13 @@ def test_registered_cnodata():
         assert True
 
 def test_datasets_toymmb():
-
     ToyMMB.model_filename
     ToyMMB.data_filename
     ToyMMB.description
     ToyMMB.plot()
+
+
+
 
 @attr('skip')
 def test_all_plots():
