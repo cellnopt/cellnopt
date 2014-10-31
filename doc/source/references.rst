@@ -1,6 +1,17 @@
 .. contents::
 
 
+Formalisms
+==============
+
+
+.. automodule:: cno.feeder.feeder
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+
 
 Data Structures
 ================

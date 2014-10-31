@@ -11,5 +11,7 @@ def test_feeder():
 
     f.run(model=pknmodel, data=midas)
     f.newlinks
-    f.summary()
+    print(f)
+
+    f.plot()
 
