@@ -1,5 +1,5 @@
 from cno.io import CNA
-from cno.testing import get as getdata
+from cno.testing import getdata
 
 
 import numpy
@@ -13,8 +13,6 @@ def test_cna_reaction():
    a = CNA(getdata("test_cna_reactions"), verbose=True)
    assert len(a.reactions) == 123
    assert len(a.species) == 94
-   #assert a.notMat.sum().sum() == 31
-   #assert a.interMat.sum().sum() == -52
 
    f = tempfile.NamedTemporaryFile()
    a.to_sif(f.name)

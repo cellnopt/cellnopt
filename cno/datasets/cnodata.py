@@ -14,20 +14,30 @@
 #
 ##############################################################################
 """"""
-
 import importlib
 from cno.datasets import registers
 
-def cnodata(filename):
+
+def cnodata(filename=None):
+    if filename is None:
+        print("Valid names are:")
+        print("\n".join(sorted(registers)))
+        return
+
+
+    msg = "Unknown filename. "
+    msg += "Type cnodata() without argument to get the list"
 
     if filename in registers:
         tag = filename.split("-")[1].split('.')[0]
 
         mod = importlib.import_module('cno.datasets.{0}'.format(tag))
-        if filename.startswith("PKN"):
-                fullpath = mod.model_filename
+        if filename.startswith("PKN-"):
+            fullpath = mod.model_filename
+        elif filename.startswith("MD-"):
+            fullpath = mod.data_filename
         else:
-                fullpath = mod.data_filename
+            print(msg)
         return fullpath
     else:
-        print("Unknown filename. Registered filenames are {0}".format(registers))
+        print(msg)

@@ -1,4 +1,5 @@
 """This test file cover the cno.midas module"""
+from nose.plugins.attrib import attr
 from os.path import join as pj
 import os.path
 
@@ -9,7 +10,9 @@ import numpy
 
 from easydev.easytest import assert_list_almost_equal, TempFile
 
-from cno.testing import get as get_share_file
+from cno.testing import getdata
+
+
 
 filenames = ['MD-ToyMMB_bis.csv',
              'MD-LiverDREAM.csv']
@@ -23,7 +26,7 @@ def test_all_file():
    
 
 def test_export():
-    m = XMIDAS(get_share_file("MD-Test.csv"))
+    m = XMIDAS(getdata("MD-Test.csv"))
     f = TempFile()
     m.save2midas(f.name)
     m = XMIDAS(f.name)
@@ -31,7 +34,7 @@ def test_export():
 
 
 def test_multi_cellline():
-    c = XMIDAS(get_share_file("MD-MultipleCellLines.csv"), cellLine="C1")
+    c = XMIDAS(getdata("MD-MultipleCellLines.csv"), cellLine="C1")
 
 
 def _test_compare_pycno_vs_cnor():
@@ -123,7 +126,7 @@ def test_xmidas():
     m.rename_time({0:0,2:2*60,4:4*60}) 
 
 def test_xmidas_average():
-    m = XMIDAS(get_share_file("MD-average.csv"))
+    m = XMIDAS(getdata("MD-average.csv"))
     m.average_replicates()
     m.average_replicates(inplace=True)
 
@@ -138,7 +141,7 @@ def _test_xmidas_plot():
     m.xplot()
 
 
-    m = XMIDAS(get_share_file("MD-unnorm.csv"))
+    m = XMIDAS(getdata("MD-unnorm.csv"))
     m.plot(mode="mse", logx=True)
     m.df -= 2
     m.plot(mode="mse")
@@ -163,6 +166,7 @@ def test_heatmap():
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
     m.heatmap()
 
+@attr('fixme')
 def test_hcluster():
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
     m.hcluster()
@@ -177,11 +181,11 @@ def test_xmidas_experiments():
     exps = m.export2experiments()
 
 def _test_norm_time():
-    m = XMIDAS(get_share_file("MD-unnorm.csv"))
+    m = XMIDAS(getdata("MD-unnorm.csv"))
     m.normalise(mode="time")
 
 def _test_norm_control():
-    m = XMIDAS(get_share_file("MD-unnorm_exp.csv"))
+    m = XMIDAS(getdata("MD-unnorm_exp.csv"))
     m.normalise(mode="control")
 
 def test_xmidas_add_noise():

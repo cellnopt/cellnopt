@@ -1,10 +1,10 @@
 from cno.io.eda import EDA
 from cno.io.sif import SIF
-from cno import testing
+from cno.testing import getdata
 import tempfile
 
-filename = testing.get("test_simple.eda") 
-sifname = testing.get("test_simple.sif") 
+filename = getdata("test_simple.eda") 
+sifname = getdata("test_simple.sif") 
 
 
 def test_eda():
