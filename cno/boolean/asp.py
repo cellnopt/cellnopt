@@ -1,5 +1,7 @@
 import subprocess
 import os
+from collections import defaultdict
+from collections import Counter
 
 from cellnopt.core import CNOGraph, XMIDAS
 from cellnopt.core.models import Models
@@ -19,13 +21,9 @@ def combine_caspo(results):
     raise NotImplementedError
 
 
-
 class MultiCASPO(object):
     def __init__(self, verbose=False):
         self.verbose = verbose
-
-
-
 
 
 class CASPO(object):
@@ -47,7 +45,43 @@ class CASPO(object):
 
         self.df = pd.DataFrame({'mse':[], 'size':[]})
 
-    def optimise(self, pkn, midas, size=0, fit=0, factor=10, timepoint=None):
+
+    def _optimise():
+        from caspo import core
+        graph = core.Graph(pkn.nodes(),
+                           map(lambda t: (t[0],t[1], 1 if t[2]['link'] == '+' else -1),
+                               pkn.edges_iter(pkn.nodes(),True)))
+
+        # Now, we read the MIDAS from caspo
+        from zope import component
+        reader = component.getUtility(core.ICsvReader)
+        reader.read('../caspo/data/LiverToy/dataset.csv')
+        dataset = core.IDataset(reader)
+        #Register clingo binary
+        from pyzcasp import potassco
+        potassco.configure(clingo="clingo")
+        # Instantiate the learner and learn using clingo at timepoint 10,
+        # tolerance of 10% over fitness, and tolerance of 5 over size
+        from caspo.learn import learner
+        networks = learner(graph, dataset, 10, potassco.IClingo, compress=False).learn(0.1, 5)
+        return networks
+
+        """
+    graphs = []
+for net in networks:
+    cnograph = CNOGraph()
+    cnograph.add_nodes_from(net.variables)
+    cnograph.midas = midas
+    for var, clauses in net.mapping.iteritems():
+        for clause in clauses:
+            cnograph.add_reaction("%s=%s" % (str(clause).replace('+','^'), var))
+    graphs.append(cnograph)
+
+"""
+
+
+
+    def optimise(self, pkn, midas, size=0, fit=0, factor=10, length=0, timepoint=None):
         """Run the optimisation using **clasp/gringo**.
 
         :param bool gtts: if set to True, in addition to the models, the GTTS are
@@ -77,7 +111,11 @@ class CASPO(object):
         # TODO: discretisation can be floor, ceil, floor
         # TODO length option (max length for conjunecitons default to 0 ?)
 
-        script = "caspo learn %(pkn)s %(midas)s %(timepoint)s --fit %(fit)s --size %(size)s --factor %(factor)s --discretization %(disc)s" % {'midas': midas.filename, 'pkn':pkn, 'fit':fit,
+        # FIXME: bug in caspo. when fit=0, actually it is set to size of models +fit + 1
+        #   so internally, we set fit to fit-1
+        # size -= 1
+
+        script = "caspo learn %(pkn)s %(midas)s %(timepoint)s --fit %(fit)s --size %(size)s --factor %(factor)s --discretization %(disc)s --length %(length)s" % {'midas': midas.filename, 'pkn':pkn, 'fit':fit, 'length':length,
         'size':size, 'factor':factor, 'timepoint':timepoint, 'disc':'round'}
         if self.verbose:
             print (script)
@@ -102,7 +140,11 @@ class CASPO(object):
 
         # ignore time zero in the computation so to agree with CNO, we divide
         # MSE by 2
-        mse = float([x for x in out_buf.split("\n") if 'MSE' in x][0].split()[2])
+        print(out_buf)
+        try:
+            mse = float([x for x in out_buf.split("\n") if 'MSE' in x][0].split()[2])
+        except:
+            mse = []
 
         # TODO simplify
         all_scores = Models("out/networks-mse-len.csv").df['MSE']
@@ -164,7 +206,7 @@ class CASPO(object):
         m = self.df.size.min()
         M = self.df.size.max()
 
-        bins = kargs.get('bins', range(m, M+1))
+        bins = kargs.get('bins', range(m-1, M+2)) # why +2 ?
         kargs['bins'] = bins
 
         bins = kargs.get('align', 'left')
@@ -196,7 +238,7 @@ class CASPO(object):
         pylab.xlabel("Score", fontsize=fontsize)
         pylab.ylabel("Model size", fontsize=fontsize)
 
-    def plot_model_number_vs_tolerance(self, **kargs):
+    def plot_model_number_vs_tolerance(self, normed=True, **kargs):
         """Plots number of models found as a function of the tolerance
 
         Tolerance is :math:`MSE_0 + fit`
@@ -211,9 +253,7 @@ class CASPO(object):
             >>> a.plot_number_models_vs_tolerance()
 
         """
-
         from numpy import cumsum
-        from collections import Counter
         counter = Counter(self.df.mse)
         m = self.df.mse.min()
         counts = [counter[x] for x in sorted(counter.keys())]
@@ -225,7 +265,10 @@ class CASPO(object):
         kargs['marker'] = marker
         kargs['linestyle'] = linestyle
 
-        pylab.plot(tolerances, cumsum(counts), **kargs)
+        counts = cumsum(counts)
+        if normed:
+            counts /= max(counts)
+        pylab.plot(tolerances, counts, **kargs)
         pylab.grid(True)
         pylab.xlabel("Tolerance in %")
         pylab.ylabel("Number of models")
@@ -297,6 +340,7 @@ class CASPO(object):
 
 
         """
+        raise NotImplementedError
         conjunctions = list(self.family.combinatorics('exclusive'))
         for conjunction in conjunctions:
 
@@ -349,6 +393,7 @@ class CASPO(object):
 
 
         """
+        raise NotImplementedError
         # A given GTT has a unique MSE. Several GTT may have the same MSE
         # We want to plot the figure 5 of ASP/CASO paper so we want to extract
         # for a given MSE, all the GTTs and figure out how many models are found
@@ -360,7 +405,6 @@ class CASPO(object):
         # what are the unique MSEs ?
         # round values to agree with figure 4
         unique_mses = set([round(x,4) for x in mses])
-        from collections import defaultdict
         group = defaultdict(list)
 
         # Now, for each unique MSE, retrieve the different GTT and their number
@@ -374,40 +418,30 @@ class CASPO(object):
         for this in sorted(unique_mses):
             print(this, sorted(group[this], reverse=True))
 
-        from pylab import bar, grid, clf, plot, legend, title, xticks, ylabel,  xlabel
-        from pylab import grid
-
-        clf(); N = 0; icolor = 0;
+        pylab.clf()
+        N = 0
+        icolor = 0
         colors = ['yellow','k','b','r','g', 'orange', '', '', '', '']
 
         M = max(Ngtts) * 1.1
 
         for m in sorted(unique_mses):
             print m, sorted(group[m], reverse=True)
-            bar(range(N, N+len(group[m])), sorted(group[m], reverse=True,),
+            pylab.bar(range(N, N+len(group[m])), sorted(group[m], reverse=True,),
                    width=0.8 , color=colors[icolor%6], label="%s" % m) # %6 = number of colors
-            plot([N,N],[0, M], 'k--')
+            pylab.plot([N,N],[0, M], 'k--')
 
             icolor += 1
             print N, N+len(group[m])
             N += len(group[m])
-        grid(axis="y")
-        legend(loc="upper left", ncol=2)
-        xticks([],[])
-        ylabel("#")
-        title("""Distribution of sub-optimal models
+        pylab.grid(axis="y")
+        pylab.legend(loc="upper left", ncol=2)
+        pylab.xticks([],[])
+        pylab.ylabel("#")
+        pylab.title("""Distribution of sub-optimal models
         Models are ordered in groups (colored) from left to right
         according to their MSEs. Each bar within a group represents a GTT""")
         return group
-
-
-
-
-
-
-
-
-
 
     def _get_mse_Ngtts(self):
         if self.gtts:
