@@ -13,7 +13,6 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-import os
 import csv
 from .sif import SIF
 
@@ -57,13 +56,13 @@ class EDA(object):
         data = open(self.filename)
         data_iter = csv.reader(data, delimiter=" ")
         data_iter = list(data_iter)
-        
+
         if len(data_iter) and "edgescore" in [x.lower() for x in data_iter[0]]:
             del data_iter[0]
 
         # skip first row
         #header = data_iter.next()
-        data = [] 
+        data = []
         for i, datum in enumerate(data_iter):
             if len(datum) == 5:
                 data.append(datum)
@@ -80,15 +79,15 @@ class EDA(object):
     def export2sif(self, threshold=None):
         """Exports EDA data into SIF file
 
-        :param float threshold: since EDA format provides a weight on each edge, 
-            it can be used as a threshold to consider the relation or not. 
+        :param float threshold: since EDA format provides a weight on each edge,
+            it can be used as a threshold to consider the relation or not.
             By default, the :attr:`threshold` is set to 0, which means all edges
-            should be exported in the output SIF format (assuming weights are positive). 
+            should be exported in the output SIF format (assuming weights are positive).
             You ca n either set the :attr:`threshold` attribute to a different value
             or provide this **threshold** parameter to override the default threshold.
 
         ::
-        
+
             >>> from cno.io.eda import EDA
             >>> from cno import testing
             >>> e = EDA(testing.get("test_simple.eda"))

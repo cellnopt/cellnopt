@@ -71,10 +71,10 @@ class CNA(Reactions):
 
     ::
 
-        >>> from cellnopt.core import *
-        >>> a = Reactions(get_share_file('reactions'))
+        >>> from cno.io import Reactions
+        >>> from cno import getdata
+        >>> a = Reactions(getdata('test_reactions'))
         >>> reacs = a.reactions
-        >>> # a.writeSIF("test.sif")
 
     """
     def __init__(self, filename=None, type=2, verbose=False):
@@ -190,7 +190,7 @@ first column after pipe character (%s)""" % (str(i+1), parameters[0]))
 
         ::
 
-            from cellnopt.core import *
+            from cno.io import CNA
             r = CNA()
             r.add_reaction("a=b")
             r.add_reaction("a+c=e")

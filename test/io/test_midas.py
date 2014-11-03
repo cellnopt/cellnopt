@@ -6,33 +6,39 @@ import os.path
 from cno.io.midas import  XMIDAS
 from cno import cnodata
 
-import numpy
-
 from easydev.easytest import assert_list_almost_equal, TempFile
 
 from cno.testing import getdata
 
 
 
+
 filenames = ['MD-ToyMMB_bis.csv',
              'MD-LiverDREAM.csv']
 
+filenames = getdata(pattern="MD*")
 
 def test_all_file():
     # this is a nosetests trick to have one test per file reportig in the output
     # and not just one for all files. This way, we now how many files are tested
     for filename in filenames:
         yield readfiles, filename
-   
+
+def readfiles(filename):
+    m = XMIDAS(filename)
+
 
 def test_export():
-    m = XMIDAS(getdata("MD-Test.csv"))
+    m = XMIDAS(getdata("MD-test.csv"))
     f = TempFile()
     m.save2midas(f.name)
     m = XMIDAS(f.name)
     f.delete()
 
 
+
+
+"""
 def test_multi_cellline():
     c = XMIDAS(getdata("MD-MultipleCellLines.csv"), cellLine="C1")
 
@@ -44,7 +50,7 @@ def _test_compare_pycno_vs_cnor():
     
     
 def _compare_pycno_vs_cnor(filename):
-    """check that the sif file read by CNOR and pyCNO are identical"""
+    #check that the sif file read by CNOR and pyCNO are identical
     filename = cnodata(filename)
     try:
         from cellnopt.wrapper import rpack_CNOR as cnor
@@ -245,11 +251,4 @@ def test_scale():
 
 
 
-
-
-
-
-
-
-
-
+"""

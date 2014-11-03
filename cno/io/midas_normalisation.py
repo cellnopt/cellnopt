@@ -13,7 +13,6 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-
 import midas
 import easydev
 import numpy as np
@@ -22,10 +21,10 @@ __all__ = ["XMIDASNormalise"]
 
 
 class NormaliseMIDASBase(object):
-    def __init__(self, mode="time", verbose=True, saturation=np.inf, 
+    def __init__(self, mode="time", verbose=True, saturation=np.inf,
                  detection=0., EC50noise=0., EC50data=0.5, HillCoeff=2.,
                 changeThreshold=0.):
-        
+
         # read-write attributes
         self.verbose = verbose
         self.mode = mode
@@ -50,7 +49,7 @@ class NormaliseMIDASBase(object):
             self._saturation = saturation
         else:
             raise TypeError("saturation argument must be a number")
-    saturation = property(_get_saturation, _set_saturation, 
+    saturation = property(_get_saturation, _set_saturation,
         doc="saturation above which measurement are ignored")
 
     def _get_detection(self):
@@ -60,7 +59,7 @@ class NormaliseMIDASBase(object):
             self._detection = detection
         else:
             raise TypeError("detection argument must be a number")
-    detection = property(_get_detection, _set_detection, 
+    detection = property(_get_detection, _set_detection,
         doc="detection above which measurement are ignored")
 
     def _get_EC50noise(self):
@@ -110,7 +109,7 @@ class NormaliseMIDASBase(object):
             self.control_normalisation(**kargs)
         else:
             raise NotImplementedError()
-        return res 
+        return res
 
     def time_normalisation(self):
         raise NotImplementedError
@@ -130,31 +129,31 @@ class XMIDASNormalise(NormaliseMIDASBase):
 
 
     :param float EC50noise: EC50noise no effect if set to 0 (defaults to 0)
-    :param floatEC50Data: parameter for the scaling of the data between 0 and 1, 
+    :param floatEC50Data: parameter for the scaling of the data between 0 and 1,
         default=0.5
     :param float HillCoef: Hill coefficient for the scaling of the data, default to 2
-    :param EC50Noise: parameter for the computation of a penalty for data 
-        comparatively smaller than other time points or conditions. No effect 
+    :param EC50Noise: parameter for the computation of a penalty for data
+        comparatively smaller than other time points or conditions. No effect
         if set to zero (default).
-    :param float detection: minimum detection level of the instrument, 
+    :param float detection: minimum detection level of the instrument,
         -everything smaller will be treated as noise (NA), default to 0
-    :param float saturation: saturation level of the instrument, everything 
+    :param float saturation: saturation level of the instrument, everything
         over this will be treated as NA, default to Inf.
-    :param float changeThrehold: threshold for relative change considered 
+    :param float changeThrehold: threshold for relative change considered
         significant, default to 0
 
 
     Once parameters are provided, you can still change them since there are
-    all attributes. Thex next step is to normalise the data. 
-    
+    all attributes. Thex next step is to normalise the data.
+
     this can be done using one of :
-        
+
         * :meth:`time_normalisation`
         * :meth:`control_normalisation`
 
 
     """
-    def __init__(self, data, mode="time", verbose=True, saturation=np.inf, 
+    def __init__(self, data, mode="time", verbose=True, saturation=np.inf,
                  detection=0., EC50noise=0., EC50data=0.5, HillCoeff=2.,
                 changeThreshold=0.):
 
@@ -170,7 +169,7 @@ class XMIDASNormalise(NormaliseMIDASBase):
             pass
         else:
             raise TypeError("Input must be a filename string or a XMIDAS instance")
-            
+
         # FIXME: do we need a copy or just a reference could be enough ?
         self.df = data.df.copy()
         self.cellLine = data.cellLine
@@ -198,14 +197,14 @@ class XMIDASNormalise(NormaliseMIDASBase):
         r"""Class dedicated to the normalisation of MIDAS data
 
 
-        
 
-        Before normalisation, the measurements that are out of the dynamic 
+
+        Before normalisation, the measurements that are out of the dynamic
         range [:attr:`detection`; :attr:`saturation`] are tagged to be ignored.
 
         The fold change matrix is computed as follows:
 
-        .. math:: 
+        .. math::
 
             F(t) = \frac{\left\lvert X(t) - X(t_0) \right\lvert }{ X(t_0)}
 
@@ -224,27 +223,27 @@ class XMIDASNormalise(NormaliseMIDASBase):
         .. math:: X_s(t) = P(t) H(t)
 
         Negative values are multiplied by -1 and values that are
-        non-significant are set to zero. 
-                
+        non-significant are set to zero.
+
         Finally, rescale for min and max over each colum ignoring time t0 if and only if
         rescale_scaling is On.
 
         .. math:: X_{s}(t) = \frac{X_s(t) - m_s }{M_s - m_s}
 
-        where :math:`m_s` and :math:`M_s` are the minimum and maximum value over time and 
+        where :math:`m_s` and :math:`M_s` are the minimum and maximum value over time and
         experiment for the given specy :math:`s`.
-    
-    
+
+
         .. note:: this normalisation works by computing a fold change relative
             to the same condition at time 0. If the value at time zero equals zero,
             , then the fold change calculation will fails. Note, however, that in
             X(t=0)=0 is not expected in many common biochemical techniques)
-        
+
         """
         # we will exclude the values out of the dynamic range
         y = self.df.mask((self.df>self.saturation)|(self.df<self.detection))
-        
-        #1. Compute the max across all measurements for each signal, 
+
+        #1. Compute the max across all measurements for each signal,
         # will be used later on for the saturation
         signalMax = y.groupby(level=self._level_exp_name).max()
 
@@ -256,10 +255,10 @@ class XMIDASNormalise(NormaliseMIDASBase):
 
         # for debugging
         self._y = y
-        self._signalMax = signalMax 
+        self._signalMax = signalMax
         self._foldChange = foldChange
 
-        # 2. Get the saturation penalty using EC50noise 
+        # 2. Get the saturation penalty using EC50noise
         # compute the penalty for being noisy, which is calculated for each
         # measurement as the measurement divided by the max measurement across all
         # conditions and time for that particular signal (excluding values out of the
@@ -268,11 +267,11 @@ class XMIDASNormalise(NormaliseMIDASBase):
         satPenalty = data / (self.EC50noise + data)
         # for debugging
         self._satPenalty = satPenalty
-    
+
         # 3. Now we transform the data through a Hill function
         HillData = foldChange**self.HillCoeff/ \
             ((self.EC50data**self.HillCoeff)+(foldChange**self.HillCoeff))
-            
+
         # for debugging
         self._HillData = HillData
 
@@ -291,14 +290,14 @@ class XMIDASNormalise(NormaliseMIDASBase):
         NormData[self._get_masked_ignore()] = 0
 
         # rescale negative values
-        
+
         # search for min and max over each colum ignoring time=t0
         m = NormData.groupby(level=self._level_exp_name).min()
         M = NormData.groupby(level=self._level_exp_name).max()
 
-        # if minimum  is negative and minimum != maximum 
-       
-        # FIXME: check this code. 
+        # if minimum  is negative and minimum != maximum
+
+        # FIXME: check this code.
         cond = (m < 0) & (m!=M)
         m[cond==False] = 0
         M[cond==False] = 1
@@ -306,8 +305,8 @@ class XMIDASNormalise(NormaliseMIDASBase):
         NormData = NormData.divide(M-m, level=self._level_exp_name)
 
         return NormData
-        
-        
+
+
     def get_experiments_with_same_control(self):
 
         controls = self.get_control_name()
@@ -319,62 +318,62 @@ class XMIDASNormalise(NormaliseMIDASBase):
             if control != exp:
                 mapping[control].append(exp)
         return mapping
-        
+
     def get_control_name(self):
         """Return experiment name that are control (i.e., stimuli are off)"""
-        name = self._df_ref.experiments[self._df_ref.stimuli.sum(axis=1)==0].index        
+        name = self._df_ref.experiments[self._df_ref.stimuli.sum(axis=1)==0].index
         return name
-        
-        
+
+
     def _get_control(self, experiment_name):
         inhibitors = self._df_ref.inhibitors.ix[experiment_name]
         # here is a sub selction where experiment matches the experiment_name
         mask = (self._df_ref.inhibitors == inhibitors).all(axis=1)
         # indices contains all experiment that have the same inhibitors
         indices = self._df_ref.inhibitors[mask].index
-                
+
         # now from those experiment, which one is the control (i.e., all stimuli are off)
         stimuli = self._df_ref.stimuli.ix[indices]
         mask = stimuli.sum(axis=1)==0
         control = stimuli[mask].index
-        
+
         # TODO assert control is unique
         assert len(control) == 1
         return control[0]
-        
-        
+
+
     def control_normalisation(self):
         """
 
-        In the control normalisation, the relative change is computed 
-        relative to the control experiment at the same time. The control  
-        being the experiment where all stimuli are zero but inhibitors 
-        re identical 
-        
+        In the control normalisation, the relative change is computed
+        relative to the control experiment at the same time. The control
+        being the experiment where all stimuli are zero but inhibitors
+        re identical
+
         .. todo:: check that a data set has these experiments.
-        
-        
+
+
         .. note:: the time zero case is a special case. Indeed, even
-            if provided, control is ignored. The t0 data is set to zero 
+            if provided, control is ignored. The t0 data is set to zero
             everywhere since only two measurements were made: with and
-            without inhibitor(s) and these measurements have been 
-            copied across corresponding position; we assume that the 
-            inhibitors are already present at time 0 when we 
+            without inhibitor(s) and these measurements have been
+            copied across corresponding position; we assume that the
+            inhibitors are already present at time 0 when we
             add the stimuli to find the right row to normalise.
-    
-            
+
+
         .. note:: for now, the control is chosen as the experiment where
             all stimuli are zero.
-            
-            
-            changeTHresholdcan be a scalar or a time series (pandas) or a list 
-        
+
+
+            changeTHresholdcan be a scalar or a time series (pandas) or a list
+
         """
         """control = self.get_control_name()
         # we will exclude the values out of the dynamic range
         y = self.df.mask((self.df>self.saturation)|(self.df<self.detection))
-        
-        #1. Compute the max across all measurements for each signal, 
+
+        #1. Compute the max across all measurements for each signal,
         # will be used later on for the saturation
         signalMax = y.groupby(level=self._level_exp_name).max()
 
@@ -383,31 +382,31 @@ class XMIDASNormalise(NormaliseMIDASBase):
         # F(t) = abs(X(t)-X_{t=0})/X_{0}
         foldChange = y.groupby(level=[self._level_exp_name]).apply(
                 lambda x: abs((x-x.ix[0]))/x.ix[0])
-        
+
         #y.ix['undefined'].ix['experiment_0'] = 0
-        
+
         # FIXME is that correct ??? need a complicated example
         ctrl = y.ix[self.cellLine].ix[control]
         norm = abs(y.sub(ctrl, level="time"))
         foldChange = norm.divide(y.ix[self.cellLine].ix[control], level='time')
-    
+
         # for debugging
         # signalMax should be on experiment_1 only not all of them.
         self._signalMax = signalMax.ix[control]
         self._foldChange = foldChange
         """
-        
+
         # we will exclude the values out of the dynamic range
         y = self.df.mask((self.df>self.saturation)|(self.df<self.detection))
-        
+
         # Note the double max to max over signals and time
         signalMax = y.groupby(level=['cellLine', 'experiment']).max().max()
         self._signalMax = signalMax
         #experiment = list(set(y.reset_index()['experiment']))
-        
+
         foldChange = y.copy()
         diff = y.copy()
-        # FIXME there is probably a nice way to handle the following without for loop but 
+        # FIXME there is probably a nice way to handle the following without for loop but
         # this is quite tricky and did not manage so for now, let us use for loops.
         # besides, this way looks easier for debugging purposes.
         for exp in self._df_ref.experiments.index:
@@ -418,18 +417,18 @@ class XMIDASNormalise(NormaliseMIDASBase):
                 continue
             else:
                 # according to       http://stackoverflow.com/questions/17552997/how-to-update-a-subset-of-a-multiindexed-pandas-dataframe?rq=1
-                # get_level_values is the fastest way 
+                # get_level_values is the fastest way
                 df1 = y[y.index.get_level_values('experiment') == control]
                 df2 = y[y.index.get_level_values('experiment') == exp]
-                # !!! here, we use df2-df1.values not the inverse in order to 
+                # !!! here, we use df2-df1.values not the inverse in order to
                 # maje sure that the update is made on the experiment of the data
-                #, not the control. The inverse would be buggy. 
+                #, not the control. The inverse would be buggy.
                 foldChange.update( abs(df2 -df1.values)/df1.values )
                 diff.update(df2 -df1.values)
-        self._foldChange = foldChange 
+        self._foldChange = foldChange
         self._diff = diff
-              
-        # 2. Get the saturation penalty using EC50noise 
+
+        # 2. Get the saturation penalty using EC50noise
         # compute the penalty for being noisy, which is calculated for each
         # measurement as the measurement divided by the max measurement across all
         # conditions and time for that particular signal (excluding values out of the
@@ -439,12 +438,12 @@ class XMIDASNormalise(NormaliseMIDASBase):
         satPenalty = data / (self.EC50noise + data)
         # for debugging
         self._satPenalty = satPenalty
-    
+
         # 3. Now we transform the data through a Hill function
         HillData = foldChange**self.HillCoeff/((self.EC50data**self.HillCoeff)+(foldChange**self.HillCoeff))
         # for debugging
         self._HillData = HillData
-        
+
         # multiply HillData and SatPenalty, matrix by matrix and element by element.
         NormData = HillData * satPenalty
         self._NormData = NormData.copy()
@@ -463,16 +462,16 @@ class XMIDASNormalise(NormaliseMIDASBase):
         cond1 = diff >= -self.changeThreshold
         cond2 = diff <= self.changeThreshold
         masked_ignore = cond1 & cond2
-        
+
         NormData[masked_ignore] = 0
 
         # search for min and max over each colum ignoring time=t0
         m = NormData.min(level="experiment")
         M = NormData.max(level="experiment")
 
-        # if minimum  is negative and minimum != maximum 
-       
-        # FIXME: check this code. 
+        # if minimum  is negative and minimum != maximum
+
+        # FIXME: check this code.
         cond = (m < 0) & (m!=M)
         m[cond==False] = 0
         M[cond==False] = 1

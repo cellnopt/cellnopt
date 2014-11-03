@@ -24,12 +24,11 @@ def cnodata(filename=None):
         print("\n".join(sorted(registers)))
         return
 
-
     msg = "Unknown filename. "
     msg += "Type cnodata() without argument to get the list"
 
     if filename in registers:
-        tag = filename.split("-")[1].split('.')[0]
+        tag = filename.split("-",1)[1].split('.')[0]
 
         mod = importlib.import_module('cno.datasets.{0}'.format(tag))
         if filename.startswith("PKN-"):
