@@ -11,29 +11,39 @@ from easydev.easytest import assert_list_almost_equal, TempFile
 from cno.testing import getdata
 
 
-
-
-filenames = ['MD-ToyMMB_bis.csv',
-             'MD-LiverDREAM.csv']
+#filenames = ['MD-ToyMMB_bis.csv',
+#             'MD-LiverDREAM.csv']
 
 filenames = getdata(pattern="MD*")
 
-def test_all_file():
+def _test_reading_all_file():
     # this is a nosetests trick to have one test per file reportig in the output
     # and not just one for all files. This way, we now how many files are tested
     for filename in filenames:
         yield readfiles, filename
 
 def readfiles(filename):
-    m = XMIDAS(filename)
+    if 'multiple' in filename:
+        m = XMIDAS(filename, cellLine='C1')
+    else:
+        m = XMIDAS(filename)
 
+def test_reading_and_saving():
+    for filename in filenames:
+        yield reading_and_saving, filename
 
-def test_export():
-    m = XMIDAS(getdata("MD-test.csv"))
+def reading_and_saving(filename):
+    if 'multiple' in filename:
+        m1 = XMIDAS(filename, cellLine='C1')
+    else:
+        m1 = XMIDAS(filename)
     f = TempFile()
-    m.save2midas(f.name)
-    m = XMIDAS(f.name)
+    m1.save2midas(f.name)
+    m2 = XMIDAS(f.name)
     f.delete()
+    assert m1 == m2
+
+    print(m1)
 
 
 

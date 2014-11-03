@@ -22,7 +22,6 @@ import numpy
 import numpy as np
 import pandas as pd
 
-
 from easydev.logging_tools import Logging
 import colormap
 
@@ -31,7 +30,7 @@ import midas_normalisation as normalisation
 
 from cno.core import DevTools
 
-__all__ = ["XMIDAS", "TypicalTimeSeries"]
+__all__ = ["XMIDAS", "TypicalTimeSeries", 'MIDASReader']
 
 
 
@@ -85,11 +84,11 @@ class MIDASReader(MIDAS):
         labels = ["TR:"+x for x in self.ignore_codes if "TR:"+x in self._data.columns]
         self._data = self._data.drop(labels, axis=1)
 
-        try:
-            self._init()  # read MIDAS and convert to dataframe
-        except Exception, e:
-            self.logging.warning("Could not interpret the MIDAS input data file")
-            self.logging.warning(e.message)
+        #try:
+        self._init()  # read MIDAS and convert to dataframe
+        #except Exception, e:
+        #    self.logging.warning("Could not interpret the MIDAS input data file")
+        #    self.logging.warning(e.message)
 
     def _preprocess_cellines(self):
         #CellLine are tricky to handle with the MIDAS format because they use the
@@ -148,6 +147,58 @@ class MIDASReader(MIDAS):
             self._cellLine = celltype_names[0]
 
         #self._valid_cellLine_names = [this for this in self._]
+
+    def _midas_validity(self):
+        # checks are made of self._data only not df that will be built later on.
+
+        if self._ignore_invalid_columns:
+            for this in self._data.columns:
+                columns = [this for this in self._data.columns if this[0:2] in self.valid_codes]
+                bad = [this for this in self._data.columns if this[0:2] not in self.valid_codes]
+                if len(bad):
+                    self.logging.warning("Found columns that are invalid (do not start with {}). There are removed.".format(self.valid_codes.keys()))
+                    self._data = self._data[columns]
+
+            #columns = [this in self._data.columns if this.startswith("")]
+            pass
+
+        # check validity of TR:
+        for this in self._data.columns:
+            if ":" not in this:
+                txt = "Error in header of the input MIDAS file\n"
+                txt += "    Column's name must contain the special character ':'\n"
+                raise ValueError(txt)
+            if this.split(":")[0] not in self.valid_codes.keys():
+                txt = "Error in header of the input MIDAS file\n"
+                txt += "    Column's name must start with one of the valid code {}\n".format(self.valid_codes)
+                raise ValueError(txt)
+
+
+        # check if zero time data is available otherwise need to call
+        #maybe better to play with -df
+        #_duplicate_time_zero_using_inhibitors_only
+        df = self._data[[this for this in self._data.columns if this.startswith("DA")]]
+        unique_times = list(set(df.as_matrix().flatten()))
+        unique_times.sort()
+        if len(unique_times) <2:
+            raise ValueError("Must contains at least 2 time points including time zero")
+        if 0 not in unique_times or len(unique_times)<=1:
+            raise ValueError("You must have zero times in the MIDAS file, that was not found.")
+        times = list(df.as_matrix().flatten())
+        counter = {}
+        for time in unique_times:
+            counter[time] = times.count(time)
+
+        self._missing_time_zero = False
+        if len(set(counter.keys())) >= 2:
+            if counter[0] != counter[unique_times[1]]:
+                # call correct function
+                self._missing_time_zero = True
+            else:
+                pass
+
+        if len([x for x in self._data.columns if x.startswith("DV")]) == 0:
+            raise ValueError("Header of MIDAS file has no columns starting with DV. expects at least one")
 
 
 class XMIDAS(MIDASReader):
@@ -243,60 +294,6 @@ class XMIDAS(MIDASReader):
 
         self.create_empty_simulation()
         self.errors = self.sim.copy()
-
-
-    def _midas_validity(self):
-        # checks are made of self._data only not df that will be built later on.
-
-        if self._ignore_invalid_columns:
-            for this in self._data.columns:
-                columns = [this for this in self._data.columns if this[0:2] in self.valid_codes]
-                bad = [this for this in self._data.columns if this[0:2] not in self.valid_codes]
-                if len(bad):
-                    self.logging.warning("Found columns that are invalid (do not start with {}). There are removed.".format(self.valid_codes.keys()))
-                    self._data = self._data[columns]
-
-            #columns = [this in self._data.columns if this.startswith("")]
-            pass
-
-        # check validity of TR:
-        for this in self._data.columns:
-            if ":" not in this:
-                txt = "Error in header of the input MIDAS file\n"
-                txt += "    Column's name must contain the special character ':'\n"
-                raise ValueError(txt)
-            if this.split(":")[0] not in self.valid_codes.keys():
-                txt = "Error in header of the input MIDAS file\n"
-                txt += "    Column's name must start with one of the valid code {}\n".format(self.valid_codes)
-                raise ValueError(txt)
-
-
-        # check if zero time data is available otherwise need to call
-        #maybe better to play with -df
-        #_duplicate_time_zero_using_inhibitors_only
-        df = self._data[[this for this in self._data.columns if this.startswith("DA")]]
-        unique_times = list(set(df.as_matrix().flatten()))
-        unique_times.sort()
-        if len(unique_times) <2:
-            raise ValueError("Must contains at least 2 time points including time zero")
-        if 0 not in unique_times or len(unique_times)<=1:
-            raise ValueError("You must have zero times in the MIDAS file, that was not found.")
-        times = list(df.as_matrix().flatten())
-        counter = {}
-        for time in unique_times:
-            counter[time] = times.count(time)
-
-        self._missing_time_zero = False
-        if len(set(counter.keys())) >= 2:
-            if counter[0] != counter[unique_times[1]]:
-                # call correct function
-                self._missing_time_zero = True
-            else:
-                pass
-
-        if len([x for x in self._data.columns if x.startswith("DV")]) == 0:
-            raise ValueError("Header of MIDAS file has no columns starting with DV. expects at least one")
-
 
     def _manage_replicates(self):
         """
@@ -438,11 +435,17 @@ class XMIDAS(MIDASReader):
     times = property(_get_times)
 
     def _get_names_inhibitors(self):
-        return list(self.experiments.Inhibitors.columns)
+        try:
+            return list(self.experiments.Inhibitors.columns)
+        except:
+            return []
     names_inhibitors = property(_get_names_inhibitors)
 
     def _get_names_stimuli(self):
-        return list(self.experiments.Stimuli.columns)
+        try:
+            return list(self.experiments.Stimuli.columns)
+        except:
+            return []
     names_stimuli = property(_get_names_stimuli)
 
     def _init(self):
@@ -1365,18 +1368,16 @@ class XMIDAS(MIDASReader):
         # TODO: cellline
 
         header = ["TR:%s:CellLine"%self.cellLine]
-        for this in self.experiments.columns:
-            if "TR:" in this:
-                if this.endswith(":i"):
-                    header += [this.replace(":i", "i")]
-                else:
-                    header += [this]
-            else:
-                if this.endswith(":i"):
-                    header += ["TR:"+this.replace(":i", "i")]
-                else:
-                    header += ["TR:" + this]
-        #header += ["TR:"+ this if "TR" not in this else this for this in self.experiments.columns]
+
+        try:
+            header += ['TR:'+this for this in self.experiments.Stimuli.columns]
+        except:
+            pass
+        try:
+            header += ['TR:'+this+'i' for this in self.experiments.Inhibitors.columns]
+        except:
+            pass
+
         if expand_time_column == False:
             header += ["DA:ALL"]
         else:
@@ -1394,7 +1395,6 @@ class XMIDAS(MIDASReader):
         for time in self.times:
             # experiments of levels is 1
             # better to use experiments df so that order is same as in experiments
-            # for exp in self.df.index.levels[1]:
             for exp in self.experiments.index:
 
                 #FIXME: if we drop an experiment, this fails. do we want to
@@ -1442,7 +1442,6 @@ class XMIDAS(MIDASReader):
         assert len(control) == 1
         return control[0]
 
-
     def normalise(self, mode, inplace=True, changeThreshold=0, **kargs):
         """Normalise the data
 
@@ -1470,15 +1469,18 @@ class XMIDAS(MIDASReader):
         else:
             self.df = normed_midas.copy()
 
-    def export2experiments(self):
-        """Returns list of Experiments
-
+    def to_measurements(self):
+        """Returns a Measurements instance
+        
         Each datum in the dataframe :attr:`df` is converted into an
         instance of :class:`~cellnopt.core.xmidas.Experiment`.
 
         :return: list of experiments.
 
-        .. todo:: use Experiments
+        ::
+
+            mb = MIDASbuilder(m.to_measurements)
+            mb.xmidas
 
         """
         experiments = []
