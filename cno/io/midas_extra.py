@@ -19,13 +19,6 @@ from __future__ import unicode_literals
 import numpy as np
 import pandas as pd
 
-try:
-    from cno.io.midas import XMIDAS
-except:
-    pass
-
-
-
 
 __all__ = ["Measurement", "Measurements", "MIDASBuilder"]
 
@@ -41,7 +34,7 @@ class Measurement(object):
         >>> m = Measurement("AKT", 0, {"EGFR":1}, {"AKT":0}, 0.1)
 
     """
-    def __init__(self, name, time, stimuli, inhibitors, measurement,
+    def __init__(self, protein_name, time, stimuli, inhibitors, measurement,
             cellLine="undefined", units='second'):
         """
 
@@ -60,7 +53,7 @@ class Measurement(object):
         self.stimuli = stimuli
 
         self._measurement = measurement
-        self._name = name
+        self._protein_name = protein_name
 
         self._inhibitors = None
         self.inhibitors = inhibitors
@@ -89,12 +82,12 @@ class Measurement(object):
         assert time>=0
     time = property(_get_time, _set_time)
 
-    def _get_name(self):
-        return self._name
-    def _set_name(self, name):
+    def _get_protein_name(self):
+        return self._protein_name
+    def _set_protein_name(self, name):
         assert isinstance(name, str)
-        self._name = name
-    name = property(_get_name, _set_name)
+        self._protein_name = name
+    protein_name = property(_get_protein_name, _set_protein_name)
 
     def _get_stimuli(self):
         return self._stimuli
@@ -134,7 +127,7 @@ class Measurement(object):
 
     def __str__(self):
         txt = "Protein {} (cellLine {}) measured at time {} has value: {}".format(
-                self.name, self.cellLine, self.time, self.data)
+                self.protein_name, self.cellLine, self.time, self.data)
         txt += " for the following measurement: \n\tStimuli: {}\n\tInhibitors: {}.".format(
                 self.stimuli, self.inhibitors)
         return txt
@@ -158,7 +151,7 @@ class Measurements(object):
             self.measurements.append(copy.deepcopy(exp))
 
     def _get_species(self):
-        species = sorted(list(set([e.name for e in self.measurements])))
+        species = sorted(list(set([e.protein_name for e in self.measurements])))
         return species
     species = property(_get_species)
 
@@ -188,6 +181,9 @@ class MIDASBuilder(object):
 
     More sophisticated builders can be added.
 
+    .. note:: a bit slow but can scale up to 20 species, 20 conditions
+        60 time points and 2 replicates that is 2280 points in less than 0.2 seconds
+        so good enough for now.
 
     """
     def __init__(self):
@@ -281,10 +277,6 @@ class MIDASBuilder(object):
         return candidate[0]
 
     def get_df_exps(self):
-        #m.test_example(times=range(0,60))
-        # %timeit -n 3 df,dfd = m.get_df_exps()
-        # 60 ms per loop
-
         stimuli = list(self.stimuli)
         inhibitors = list(self.inhibitors)
         Ns = len(stimuli)
@@ -295,7 +287,6 @@ class MIDASBuilder(object):
         df = pd.DataFrame(np.arange(N*Nrows).reshape(Nrows, N), index=range(0,Nrows),
                 columns=[['Stimuli']*Ns + ['Inhibitors']*Ni, stimuli + inhibitors])
         df.sortlevel(axis=1, inplace=True)
-
 
         # FIXME: this is the slowest part in the 2 next loops.
         for stimulus in stimuli:
@@ -317,12 +308,18 @@ class MIDASBuilder(object):
         groups = df.groupby(by=list(df.columns.values)).groups
 
         df = df.drop_duplicates()
+
+        experiment_names = ['experiment_%s' % i for i in range(0, len(groups.keys()))]
+
+        df.reset_index(inplace=True)
+        df['experiment'] = experiment_names
+        df.set_index(['cell', 'experiment', 'time'], inplace=True)
+
         return df, groups
 
     def get_df_data(self):
-
         df = pd.DataFrame({
-            'protein': [x.name for x in self.measurements],
+            'protein': [x.protein_name for x in self.measurements],
             'data':  [x.data for x in self.measurements],
             'time': [x.time for x in self.measurements],
             'cell':   [x.cellLine for x in self.measurements]
@@ -332,41 +329,45 @@ class MIDASBuilder(object):
 
         # NOTE the pivot method does not allow multi index in the pandas
         # version used during the development of this method.
-        df = pd.pivot_table(df,
-                       index=['cell', 'experiment', 'time'],
-                        columns='protein', values='data')
-
-        return df
+        return pd.pivot_table(df,
+                            index=['cell', 'experiment', 'time'],
+                            columns='protein', values='data')
 
     def _get_xmidas(self):
+        from cno.io.midas import XMIDAS
+        xm = XMIDAS()
 
-        #df_data = self.get_df_data()
+        xm.df = self.get_df_data()
+        xm.create_empty_simulation()
+        df_exps, groups = self.get_df_exps()
 
-        #species = sorted(list(set([e.name for e in self.measurements])))
-        #times = sorted(list(set([e.time for e in self.measurements])))
-        #measurement_names = list(df_measurements.index)
+        # set the name of the experiments in the first df (df_exps)
+        xm._experiments = df_exps
 
-        #df = self._get_xmidas_df()
-        #df = df.sort_index(axis=1)
-        #df = df.sortlevel(["experiment"])
+        # set name of the experiments in second df (based on the group)
+        mapping = {}
+        for i, name in enumerate(df_exps.index.levels[1]): # loop over experiments
+            # looking for the indices (row index) of the experiments
+            # within a group
+            exps = groups[tuple(df_exps.ix[i].values)]
+            exp_index = [exp[1] for exp in exps]
+            # all those rows should be named with same experiment name
+            # that is the variabe we are looping on (name)
+            for j in exp_index:
+                mapping[j] = name
 
-        x = XMIDAS()
+        xm.df.reset_index(inplace=True)
+        xm.df['experiment'] = [mapping[x] for x in xm.df['experiment'].values]
+        xm.df.set_index(['cell', 'experiment', 'time'], inplace=True)
 
-        # proper column compatible with MIDAS:
-        #stimuli = sorted(list(set([y for e in self.measurements for y in e.stimuli.keys()])))
-        #inhibitors = sorted(list(set([y for e in self.measurements for y in e.inhibitors.keys()])))
-        x.df = self.get_df_data()
-        x.create_empty_simulation()
-        x._experiments = self.get_df_exps()
-
-
-        x._cellLine = x.cellLines[0]
+        # TODO
+        #xm._cellLine = x.cellLines[0]
 
         # FIXME do we need this raw attribute
         #x._rawdf = x.copy()
         #x._rawexp = x._measurements.copy()
 
-        return x
+        return xm
     xmidas = property(_get_xmidas)
 
     def to_midas(self, filename):

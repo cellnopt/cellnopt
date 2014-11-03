@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of cellnopt.core software
+#  This file is part of cellnopt software
 #
 #  Copyright (c) 2012-2013 - EMBL-EBI
 #
@@ -20,14 +20,14 @@ import numpy
 class ADJ2SIF(object):
     """Reads an adjacency matrix (and names) from CSV files
 
-    The instance can then be exported to :class:`~cellnopt.core.sif.SIF` or used
-    as input for the :class:`cellnopt.core.cnograph.CNOGraph` structure.
+    The instance can then be exported to :class:`~cno.io.sif.SIF` or used
+    as input for the :class:`cno.io.cnograph.CNOGraph` structure.
 
     ::
 
-        >>> from cellnopt.core import *
-        >>> f1 = get_share_file("adjacency_matrix.csv")
-        >>> f2 = get_share_file("adjacency_names.csv")
+        >>> from cno.io import ADJ2SIF, CNOGraph, getdata
+        >>> f1 = getdata("test_adjacency_matrix.csv")
+        >>> f2 = getdata("test_adjacency_names.csv")
         >>> s = ADJ2SIF(f1, f2)
         >>> sif = s.export2sif()
         >>> c = CNOGraph(s.G)

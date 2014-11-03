@@ -22,20 +22,21 @@ import numpy
 import numpy as np
 import pandas as pd
 
-import midas_normalisation as normalisation
-#from oldmidas import MIDAS
 
 from easydev.logging_tools import Logging
 import colormap
-from easydev import check_param_in_list
 
+from midas_extra import Measurement
+import midas_normalisation as normalisation
 
-__all__ = ["XMIDAS", "MultiMIDAS", "TypicalTimeSeries"]
+from cno.core import DevTools
+
+__all__ = ["XMIDAS", "TypicalTimeSeries"]
 
 
 
 class MIDAS(object):
-    """What is it ?"""
+    """This is s a description of the MIDAS format (let us call it 1.0)"""
     valid_codes = {
                    'ID':'identifier',
                    'TR':'stimuli/inhibitors',
@@ -57,111 +58,12 @@ class MIDAS(object):
         #: filename of the original data
         self.filename = filename
 
-        self.cmap_scale=0.5
+        self.cmap_scale = 0.5
         self.fontsize = 16
         self.logging = Logging("INFO")
         self._colormap = colormap.Colormap()
 
-
-
-
-class MultiMIDAS(object):
-    """Data structure to store multiple instances of MIDAS files
-
-
-    You can read a MIDAS file that contains several cell lines:
-    and acces to the midas files usig their cell line name
-
-    .. doctest::
-
-        >>> mm = MultiMIDAS(cnodata("EGFR-ErbB_PCB2009.csv"))
-        >>> mm.cellLines
-        ['HepG2', 'PriHu']
-        >>> mm["HepG2"].namesCues
-        ['TGFa', 'MEK12', 'p38', 'PI3K', 'mTORrap', 'GSK3', 'JNK']
-
-    where the list of cell line names is available in the :attr:`cellLines`
-    attribute.
-
-    Or you can start from an empty list and add instance later on using :meth:`addMIDAS`
-    method.
-
-    """
-    def __init__(self, filename=None):
-        """.. rubric:: constructor
-
-        :param str filename: a valid MIDAS file (optional)
-
-        """
-        self._midasList = []
-        self._names = []
-        if filename:
-            self.readMIDAS(filename)
-
-    def addMIDAS(self, midas):
-        """Add an existing MIDAS instance to the list of MIDAS instances
-
-        .. doctest::
-
-            >>> from cellnopt.core import *
-            >>> m = MIDASReader(cnodata("MD-ToyPB.csv"))
-            >>> mm = MultiMIDAS()
-            >>> mm.addMIDAS(m)
-
-        """
-        if midas.celltypeName not in self._names:
-            self._midasList.append(midas)
-            self._names.append(midas.celltypeName)
-        else:
-            raise ValueError("midsa with same celltype already in the list")
-
-    def readMIDAS(self, filename):
-        """read MIDAS file and extract individual cellType/cellLine
-
-        This function reads the MIDAS and identifies the cellLines. Then, it
-        creates a MIDAS instance for each cellLines and add the MIDAS instance to the
-        :attr:`_midasList`. The MIDAS file can then be retrieved using their
-        cellLine name, which list is stored in :attr:`cellLines`.
-
-        :param str filename: a valid MIDAS file containing any number of cellLines.
-
-
-        """
-        from oldmidas import MIDASReader
-        m = MIDASReader()
-        m.filename = filename
-        m._names = m._readHeader()
-        celltypes = m._get_celltypes()
-        if len(celltypes) <= 1:
-            m = MIDASReader(filename)
-            self.addMIDAS(m)
-        else:
-            for name in celltypes.keys():
-                m = MIDASReader(filename, celltype=name)
-                self.addMIDAS(m)
-
-    def _get_cellLines(self):
-        names = [x.celltypeName for x in self._midasList]
-        return names
-    cellLines = property(_get_cellLines,
-        doc="return names of all cell lines, which are the MIDAS instance identifier ")
-
-    def __getitem__(self, name):
-        index = self.cellLines.index(name)
-        return self._midasList[index]
-
-    def plot(self):
-        """Call plot() method for each MIDAS instances in different figures
-
-        More sophisticated plots to easily compare cellLines could be
-        implemented.
-
-        """
-        for i,m in enumerate(self._midasList):
-            from pylab import figure, clf
-            figure(i+1)
-            clf()
-            m.plot()
+        self._dev = DevTools()
 
 
 class XMIDAS(MIDAS):
@@ -223,39 +125,35 @@ class XMIDAS(MIDAS):
     ..todo:: a MIDAS class to check validity just to simplfy the XMIDAs class itself.
 
     .. todo:: inhibitors ends in :i to avoid clashes with same name in stimuli..
+
+
+    API:
+
+        - you can store several cell line within one MIDAS file. However, XMIDAS
+          handles only 1 for now.
+
     """
     def __init__(self, filename=None, cellLine=None, verbose=False):
         super(XMIDAS, self).__init__(filename)
 
         self._cellLine = cellLine
+
+        # multi index related
+        # position of the columns for the multi index
         self._celltype_index = 0
         self._experiment_index = 1
         self._time_index = 2
-        self._levels = ["cellLine", "experiment", "time"]
+        # names of the multi index level (rows)
+        self._levels = ["cell", "experiment", "time"]
+
         self.verbose = verbose
 
         self._ignore_invalid_columns = True
 
         self._read_filename()
+
         self.create_empty_simulation()
         self.errors = self.sim.copy()
-
-    def _check_param_in_list(self, names, values):
-        names = self._str_or_list_to_list(names)
-        for name in names:
-            # easydev function
-            check_param_in_list(name, values)
-
-    def reset(self):
-        """Reset the data to the original data.
-
-
-
-        .. warning:: experimental
-        .. todo:: copy errors ?
-        """
-        self.df = self._rawdf.copy()
-        self._experiments = self._rawexp.copy()
 
     def _read_filename(self, filename=None):
         if filename != None:
@@ -283,10 +181,6 @@ class XMIDAS(MIDAS):
         except Exception, e:
             self.logging.warning("Could not interpret the MIDAS input data file")
             self.logging.warning(e.message)
-        self._rawdf = self.df.copy()
-        self._rawexp = self.experiments.copy()
-
-        # populate thr simulation dataframe if possible
 
     def _preprocess_cellines(self):
         #CellLine are tricky to handle with the MIDAS format because they use the
@@ -322,7 +216,6 @@ class XMIDAS(MIDAS):
         # otherwise they will be an ambiguity.
         if len(cellLines) != len(set(cellLines)) and len(cellLines)>1:
             raise ValueError("some cellLines have the same name.")
-
 
         for this in self._data.columns:
             if this.split(":")[0].startswith("TR") == True:
@@ -439,10 +332,6 @@ class XMIDAS(MIDAS):
             else:
                 return df
 
-    #def __radd__(self, this):
-    #    print("__radd__")
-    #    self.df += this.df
-
     def __div__(self, this):
         m = self.copy()
         m.df /= this
@@ -544,15 +433,11 @@ class XMIDAS(MIDAS):
     times = property(_get_times)
 
     def _get_names_inhibitors(self):
-        cues = self._get_cues()
-        cues = [x for x in cues if x.endswith(":i")]
-        cues = [x[:-2:] for x in cues]
-        return cues
+        return list(self.experiments.Inhibitors.columns)
     names_inhibitors = property(_get_names_inhibitors)
 
     def _get_names_stimuli(self):
-        cues = self._get_cues()
-        return [x for x in cues if not x.endswith(":i")]
+        return list(self.experiments.Stimuli.columns)
     names_stimuli = property(_get_names_stimuli)
 
     def _init(self):
@@ -572,12 +457,11 @@ class XMIDAS(MIDAS):
         # TODO sort alphabetical ignoring big caps
         df_dv = _data[[this for this in _data.columns if this.startswith("DV")]]
 
-        value_experiments = _data[df_tr.columns]
+        value_experiments = _data[df_tr.columns].copy()
         value_experiments.replace("NaN", 0, inplace=True)
 
         value_signals = _data[df_dv.columns].as_matrix()
         value_times = _data[df_da.columns]
-
 
         names = [this for this in df_tr[:] if "CellLine" not in this]
         self._experiments = _data[names].drop_duplicates()
@@ -624,8 +508,10 @@ class XMIDAS(MIDAS):
 
         if self._missing_time_zero == True:
             self._duplicate_time_zero_using_inhibitors_only()
+
         if self.df.shape[0] > len(self.times) * self.experiments.shape[0]:
             self.logging.warning("WARNING:: you may have duplicated experiments, pleiase average the replaicates using self.average_replicates(inplace=True)")
+
         if self.df.max(skipna=True).max(skipna=True) > 1:
             self.logging.warning("WARNING:: values larger than 1. You may want to normalise/scale the data")
 
@@ -647,6 +533,13 @@ class XMIDAS(MIDAS):
             else:
                 cues.append(c)
         self._experiments.columns = cues
+
+        inh = [x for x in self._experiments.columns if x.endswith(":i") is True]
+        stim = [x for x in self._experiments.columns if x.endswith(":i") is False]
+        self._experiments = pd.DataFrame(self._experiments.values,
+                     columns=[['Stimuli']*len(stim) + ['Inhibitors']*len(inh),
+                              [x.replace(":i","") for x in self._experiments.columns]],
+                        index= self._experiments.index)
 
     def _check_consistency_data(self):
         # times consistency all times must have same length
@@ -689,9 +582,10 @@ class XMIDAS(MIDAS):
                 # we only need the time 0
                 newrow = newdata[newdata.index == 0]
                 # let us add some index information that is now missing
-                newrow['time'] = 0
-                newrow['experiment'] = this_exp
-                newrow['cellLine'] = self.cellLine
+
+                newrow[self._levels[0]] = self.cellLine
+                newrow[self._levels[1]] = this_exp
+                newrow[self._levels[2]] = 0
 
                 # we can now merge with the full data set
                 if types.NoneType == type(tobeadded):
@@ -700,24 +594,9 @@ class XMIDAS(MIDAS):
                     tobeadded = pd.concat([tobeadded, newrow])
         # finally concatenate all the rows with the dataframe df
         df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
-        df = df.set_index(["cellLine", "experiment", "time"])
-        df = df.sortlevel(["experiment"])
+        df = df.set_index(self._levels)
+        df = df.sortlevel(self._levels[1]) # experiment
         self.df = df.copy()
-
-    # could be in easydev
-    def _str_or_list_to_list(self, labels):
-        # TODO: could be part of easydev
-        if isinstance(labels, str):
-            labels = [labels]
-        elif isinstance(labels, float):
-            labels = [labels]
-        elif isinstance(labels, int):
-            labels = [labels]
-        elif isinstance(labels, list):
-            pass
-        else:
-            raise TypeError("must provide a list of strings or a string.")
-        return labels
 
     def remove_species(self, labels):
         """Remove a set of species
@@ -731,7 +610,7 @@ class XMIDAS(MIDAS):
             m.remove_species(["p38"])
 
         """
-        labels = self._str_or_list_to_list(labels)
+        labels = self._dev.tolist(labels)
         columns = self.df.columns[:]
         for label in labels:
             if label not in columns:
@@ -756,9 +635,9 @@ class XMIDAS(MIDAS):
         Done in the 3 dataframes :attr:`df`, :attr:`sim` and :attr:`errors`
         """
         if len(self.df):
-            self.df.set_index(['cellLine', 'experiment', 'time'], inplace=True)
-            self.sim.set_index(['cellLine', 'experiment', 'time'], inplace=True)
-            self.errors.set_index(['cellLine', 'experiment', 'time'], inplace=True)
+            self.df.set_index(self._levels, inplace=True)
+            self.sim.set_index(self.levels, inplace=True)
+            self.errors.set_index(self._levels, inplace=True)
 
     def remove_cellLine(self, labels):
         """Remove a cellLine from the dataframe.
@@ -770,7 +649,7 @@ class XMIDAS(MIDAS):
         valid cellLine found in the :attr:`cellLines` attribute
 
         """
-        self._remove_labels_from_level(labels, "cellLine")
+        self._remove_labels_from_level(labels, self._levels[0])
 
     def remove_times(self, labels):
         """Remove time values from the data
@@ -853,7 +732,7 @@ class XMIDAS(MIDAS):
         .. seealso:: :meth:`rename_stimuli`, :meth:`rename_inhibitors`
 
         """
-        self._check_param_in_list(names_dict.keys(), list(self.experiments.columns))
+        self._dev.check_param_in_list(names_dict.keys(), self.experiments.columns)
         columns = list(self.experiments.columns)
         columns = [c if c not in names_dict.keys() else names_dict[c] for c in columns]
         self.experiments.columns = columns
@@ -877,7 +756,7 @@ class XMIDAS(MIDAS):
 
 
         """
-        self._check_param_in_list(names_dict.keys(), list(self.experiments.columns))
+        self._dev.check_param_in_list(names_dict.keys(), self.experiments.columnss)
         columns = list(self.experiments.columns)
         columns = [c if c not in names_dict.keys() else names_dict[c] for c in columns]
         self.experiments.columns = columns
@@ -898,7 +777,7 @@ class XMIDAS(MIDAS):
 
 
         """
-        self._check_param_in_list(names_dict.keys(), list(self.df.columns))
+        self.dev.check_param_in_list(names_dict.keys(), self.df.columns)
         columns = list(self.df.columns)
         columns = [c if c not in names_dict.keys() else names_dict[c] for c in columns]
         self.df.columns = columns
@@ -915,7 +794,7 @@ class XMIDAS(MIDAS):
 
         """
         self.reset_index()
-        self.df.replace({"cellLine": to_replace}, inplace=True)
+        self.df.replace({self._levels[0]: to_replace}, inplace=True)
         self.set_index()
 
     def rename_time(self, to_replace):
@@ -1403,11 +1282,11 @@ class XMIDAS(MIDAS):
     nExps = property(_get_nExps, doc="return number of experiments")
 
     def _get_stimuli(self):
-        return self.experiments[[this for this in self.names_stimuli]]
+        return self.experiments.Stimuli
     stimuli = property(_get_stimuli, doc="return the stimuli dataframe")
 
     def _get_inhibitors(self):
-        return self.experiments[[this+":i" for this in self.names_inhibitors]]
+        return self.experiments.Inhibitors
     inhibitors = property(_get_inhibitors, doc="return the inhibitors dataframe")
 
     def _get_nSignals(self):
@@ -1426,12 +1305,14 @@ class XMIDAS(MIDAS):
         xtlabels = [int(t0),int((t2-t0)/2)] * self.nSignals + [int(t2)]
         return xtlabels
 
-    def xplot(self, *args, **kargs):
+    def xplot(self,  bbox=False, *args, **kargs):
         """Same as :meth:`plot` using the xkcd layout !"""
         with pylab.xkcd():
             self.plot(*args, **kargs)
-            bbox = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-            #pylab.text(3, 12, "XMIDAS", fontsize=14,  verticalalignment='top', bbox=bbox)
+            mybbox = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+            if bbox:
+                pylab.text(3, 12, "XMIDAS", fontsize=14,
+                           verticalalignment='top', bbox=mybbox)
 
             tx = pylab.title("XMIDAS", bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
             tx.set_position((0.6, 1.15))
@@ -1598,7 +1479,6 @@ class XMIDAS(MIDAS):
         .. todo:: use Experiments
 
         """
-        from cno.io.midas_extra import Measurement
         experiments = []
         for row in self.df.iterrows():
             cellLine, exp, time = row[0]
@@ -1996,67 +1876,29 @@ class XMIDAS(MIDAS):
 
     # works for simple cases where only one stimuli is on at a time
     def sort_experiments_by_stimuli(self):
-        stimuli = list(self.stimuli.columns)
-        list_exp = []
-        for stimulus in stimuli:
-            # First, we get group of experiment for a given stimuli
-            # here groups[1] means get experiments where EGF is on
-            groups = self.experiments.groupby(stimulus).groups
-            if 1 not in groups.keys():
-                continue
-            experiments = groups[1]
-            # Second, we sort the subset of experiments based on the inhibitors
-            # (already sorted alphabetically FIXME ?)
-            for inhibitor in list(self.inhibitors.columns):
-                groups = self.experiments.ix[experiments].groupby(inhibitor).groups
-                if 1 in groups.keys():
-                    for exp in groups[1]:
-                        if exp not in list_exp:
-                            list_exp.append(exp)
-                if 0 in groups.keys():
-                    for exp in groups[0]:
-                        if exp not in list_exp:
-                            list_exp.append(exp)
-        assert len(list_exp) == len(self.experiments)
+        list_exps = []
 
-        self._experiments = self.experiments.reindex_axis(list_exp, axis=0)
-        self.df = self.df.reindex_axis(list_exp, axis=0, level=1)
-        return list_exp
+        for stimulus in self.names_stimuli:
+            list_exps.append(('Stimuli', stimulus))
+        for inhibitor in self.names_inhibitors:
+            list_exps.append(('Inhibitors', inhibitor))
+        new_order = self.experiments.groupby(list_exps).groups.values()
+        new_order = list(pylab.flatten(new_order))
+        print(new_order)
+        self._experiments = self.experiments.reindex_axis(new_order, axis=0)
 
     def sort_experiments_by_inhibitors(self):
+        list_exps = []
+        for inhibitor in self.names_inhibitors:
+            list_exps.append(('Inhibitors', inhibitor))
+        for stimulus in self.names_stimuli:
+            list_exps.append(('Stimuli', stimulus))
 
-        inhibitors = list(self.inhibitors.columns)
-        list_exp = []
-        for inhibitor in inhibitors:
-            # First, we get group of experiment for a given stimuli
-            # here groups[1] means get experiments where EGF is on
-            groups = self.experiments.groupby(inhibitor).groups
-            if 1 not in groups.keys():
-                continue
-            experiments = groups[1]
-            # Second, we sort the subset of experiments based on the inhibitors
-            # (already sorted alphabetically FIXME ?)
-            for stimulus in list(self.stimuli.columns):
-                groups = self.experiments.ix[experiments].groupby(stimulus).groups
-                if 1 in groups.keys():
-                    for exp in groups[1]:
-                        if exp not in list_exp:
-                            list_exp.append(exp)
-                if 0 in groups.keys():
-                    for exp in groups[0]:
-                        if exp not in list_exp:
-                            list_exp.append(exp)
-        for exp in self.experiments.index:
-            print("experiment were not handled. added a posterirori ")
-            if exp not in list_exp:
-                list_exp.append(exp)
-        assert len(list_exp) == len(self.experiments)
+        new_order = self.experiments.groupby(list_exps).groups.values()
+        new_order = list(pylab.flatten(new_order))
+        print(new_order)
 
-        self._experiments = self.experiments.reindex_axis(list_exp, axis=0)
-        self.df = self.df.reindex_axis(list_exp, axis=0, level=1)
-        return list_exp
-
-
+        self._experiments = self.experiments.reindex_axis(new_order, axis=0)
 
 
     def __eq__(self, other):
