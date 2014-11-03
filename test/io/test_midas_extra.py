@@ -11,6 +11,7 @@ filenames = ['MD-ToyMMB_bis.csv',
 def test_experiment():
     e = Measurement("AKT", 0, {'TGFa':1}, {'AKT':1}, 10.1)
     e.units = "second"
+    e.units
     try:
         e.units = "dummy"
         assert False
@@ -18,15 +19,28 @@ def test_experiment():
         assert True
     e.cellLine = "TEST"
     e.protein_name = "zap70"
+    e.time = 10
 
     e.stimuli = {"TGFa":0}
     assert e.stimuli == {"TGFa":0}
+    try:
+        e.stimuli = {"TGFa":10}
+        assert False
+    except:
+        assert True
+
+    e.inhibitors = {"AKT":0}
+    try:
+        e.inhibitors = {"AKT":10}
+        assert False
+    except:
+        assert True
+    e.data = 10.
 
     e.get_cues()
     e.cues_as_dict()
 
     print(e)
-
 
 
 def test_midasbuilder():
@@ -37,12 +51,13 @@ def test_midasbuilder():
     e4 = Measurement("AKT", 0, {"EGFR":0}, {"AKT":0}, 0.1)
     e5 = Measurement("AKT", 5, {"EGFR":0}, {"AKT":0}, 0.1)
     e6 = Measurement("AKT", 10, {"EGFR":0}, {"AKT":0}, 0.1)
-    for e in [e1,e2,e3,e4,e5,e6]:
-        m.add_measurement(e)
-    #m.to_midas("test.csv")
-    
-
-
+    m.add_measurements([e1, e2, e3, e4, e5, e6])
+    m.test_example()
+    assert len(m)>10
+    m.get_colnames()
+    m.stimuli
+    m.inhibitors
+    xm = m.xmidas
 
 
 def test_experimentS():
@@ -50,9 +65,9 @@ def test_experimentS():
      es = Measurements()
      e1 = Measurement("AKT", 0, {"EGFR":1}, {"AKT":0}, 0.1)
      e2 = Measurement("AKT", 5, {"EGFR":1}, {"AKT":0}, 0.5)
-     es.add_single_measurements([e1,e2])
+     es.add_measurements([e1,e2])
      assert len(es)==2
-
+     assert es.species == ['AKT']
 
 
 

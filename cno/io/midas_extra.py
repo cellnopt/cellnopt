@@ -139,13 +139,14 @@ class Measurements(object):
         >>> es = Measurements()
         >>> e1 = Measurement("AKT", 0, {"EGFR":1}, {"AKT":0}, 0.1)
         >>> e2 = Measurement("AKT", 5, {"EGFR":1}, {"AKT":0}, 0.5)
-        >>> es.add_single_measurements([e1,e2])
+        >>> es.add_measurements([e1,e2])
 
     """
-    def __init__(self):
+    def __init__(self, measurements=[]):
         self.measurements = []
+        self.add_measurements(measurements)
 
-    def add_single_measurements(self, measurements):
+    def add_measurements(self, measurements):
         for exp in measurements:
             import copy
             self.measurements.append(copy.deepcopy(exp))
@@ -239,7 +240,7 @@ class MIDASBuilder(object):
     def add_measurement(self, measurement):
         self.measurements.append(measurement)
 
-    def add_list_measurements(self, measurements):
+    def add_measurements(self, measurements):
         for e in measurements:
             self.add_measurement(e)
 
@@ -259,22 +260,6 @@ class MIDASBuilder(object):
             inhibitors = inhibitors.union(e.inhibitors.keys())
         return inhibitors
     inhibitors = property(_get_inhibitors)
-
-    def _get_measurement_name(self, e):
-        data = e.stimuli.copy()
-        data.update(e.inhibitors)
-
-        # let us build a dataframe corresponding to the measurement. This is a 1-row DF
-        mydf = pd.DataFrame(data, index=[0], columns=self._dfexp.columns)
-
-        # let us compare it with the full list of unique measurements to figure out
-        # its name
-        candidate = self._dfexp[(self._dfexp == mydf.ix[0]).all(axis=1)]
-        candidate = candidate.index # just need the indices, not the content
-        if len(candidate) != 1:
-            print(candidate)
-            raise ValueError("Found 0 or more than 1 candidate measurement. ")
-        return candidate[0]
 
     def get_df_exps(self):
         stimuli = list(self.stimuli)
@@ -370,9 +355,9 @@ class MIDASBuilder(object):
         return xm
     xmidas = property(_get_xmidas)
 
-    def to_midas(self, filename):
-        xmidas = self.xmidas
-        xmidas.save2midas(filename)
+    #def to_midas(self, filename):
+    #    xmidas = self.xmidas
+    #    xmidas.save2midas(filename)
 
 
 
