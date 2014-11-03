@@ -66,105 +66,14 @@ class MIDAS(object):
         self._dev = DevTools()
 
 
-class XMIDAS(MIDAS):
-    """XMIDAS dat structure. X stands for extended and replaces
-    :class:`MIDASReader` class.
+class MIDASReader(MIDAS):
+    def __init__(self, filename, verbose='ERROR'):
+        super(MIDASReader, self).__init__(filename, verbose)
 
-    ::
-
-        from cellnopt.core import XMIDAS
-        m = XMIDAS(cnodata("tes.csv"))
-        m.df # access to the data frame
-        m.scale_max(gain=0.9)   # scale over all experiments and time finding the max
-                        # and scaling (divide by max) for each species individually.
-        m.corr()        # alias to m.df.corr() removing times/experiments
-        columns
-
-
-
-        tuples = [(exp, time) for exp in ["exp1", "exp2"] for time in [0,1,2,3,4]]
-        index = pd.MultiIndex.from_tuples(tuples, names=["experiment", "time"])
-        xx = pd.DataFrame(randn(10,2), index=index, columns=["Akt", "Erk"])
-
-
-    What remains to be done ?
-
-        * average over celltypes  To be done in MultiMIDAS
-
-
-    .. warning:: if there are replicates, call average_replicates before creating a
-        simulation or calling plot"mode="mse")
-
-    .. todo:: when using MSE, an option could be to average the errors by taking into
-        account the time. In other words, a weight/integral. if t = 1,2,3,4,5,10,60, the
-        errors on 1,2,3,4,5 are more  important than between 5,10,60. does it make sense ?
-
-    .. todo:: make df a property to handle sim properly, if not scaled,
-        sim and exp seems to have the same scale also errors are large as expected
-
-    .. warning:: MD-TR-33333-JITcellData.csv contains extra ,,,, at the end. should
-        be removed or ignored
-
-    .. todo:: colorbar issue with  midas.XMIDAS("share/data/MD-test_4andgates.csv")
-
-
-    .. todo:: when plotting, if there is only 1 stimuli and 5-6 inhibitors, the
-        width of the stimuli is the same as the one with the inhibitors. cell size
-        should be identical, not stretched. See e..g., "EGFR-ErbB_PCB2009.csv"
-
-
-    .. todo:: when ploting the mse, we should be able to plotonly a subset of the time
-      indices (useful for bollean analysis at a given time)
-
-
-    .. todo::MIDAS have two ways of coding stimuli/inhibitors a short and long version
-        TR:aa / TR::aai or TR:aa:Stimuli / TR:aa:Inhibitors note that in the shotr case,
-        the letter i is used to encode inhibitor, which is not robust at all.
-
-
-    ..todo:: a MIDAS class to check validity just to simplfy the XMIDAs class itself.
-
-    .. todo:: inhibitors ends in :i to avoid clashes with same name in stimuli..
-
-
-    API:
-
-        - you can store several cell line within one MIDAS file. However, XMIDAS
-          handles only 1 for now.
-
-    """
-    def __init__(self, filename=None, cellLine=None, verbose=False):
-        super(XMIDAS, self).__init__(filename)
-
-        self._cellLine = cellLine
-
-        # multi index related
-        # position of the columns for the multi index
-        self._celltype_index = 0
-        self._experiment_index = 1
-        self._time_index = 2
-        # names of the multi index level (rows)
-        self._levels = ["cell", "experiment", "time"]
-
-        self.verbose = verbose
-
-        self._ignore_invalid_columns = True
-
-        self._read_filename()
-
-        self.create_empty_simulation()
-        self.errors = self.sim.copy()
-
-    def _read_filename(self, filename=None):
-        if filename != None:
-            self.filename = filename
-        if self.filename != None:
-            self._data = pd.read_csv(self.filename, skipinitialspace=True, sep=",")
-        else:
-            self._data = pd.DataFrame()
-            self._experiments = pd.DataFrame()
-            self.df = pd.DataFrame()
+    def read(self):
+        if self.filename == None:
             return
+        self._data = pd.read_csv(self.filename, skipinitialspace=True, sep=",")
 
         # figure out the cell line names
         self._preprocess_cellines()
@@ -239,6 +148,102 @@ class XMIDAS(MIDAS):
             self._cellLine = celltype_names[0]
 
         #self._valid_cellLine_names = [this for this in self._]
+
+
+class XMIDAS(MIDASReader):
+    """XMIDAS dat structure. X stands for extended and replaces
+    :class:`MIDASReader` class.
+
+    ::
+
+        from cellnopt.core import XMIDAS
+        m = XMIDAS(cnodata("tes.csv"))
+        m.df # access to the data frame
+        m.scale_max(gain=0.9)   # scale over all experiments and time finding the max
+                        # and scaling (divide by max) for each species individually.
+        m.corr()        # alias to m.df.corr() removing times/experiments
+        columns
+
+
+
+        tuples = [(exp, time) for exp in ["exp1", "exp2"] for time in [0,1,2,3,4]]
+        index = pd.MultiIndex.from_tuples(tuples, names=["experiment", "time"])
+        xx = pd.DataFrame(randn(10,2), index=index, columns=["Akt", "Erk"])
+
+
+    What remains to be done ?
+
+        * average over celltypes  To be done in MultiMIDAS
+
+
+    .. warning:: if there are replicates, call average_replicates before creating a
+        simulation or calling plot"mode="mse")
+
+    .. todo:: when using MSE, an option could be to average the errors by taking into
+        account the time. In other words, a weight/integral. if t = 1,2,3,4,5,10,60, the
+        errors on 1,2,3,4,5 are more  important than between 5,10,60. does it make sense ?
+
+    .. todo:: make df a property to handle sim properly, if not scaled,
+        sim and exp seems to have the same scale also errors are large as expected
+
+    .. warning:: MD-TR-33333-JITcellData.csv contains extra ,,,, at the end. should
+        be removed or ignored
+
+    .. todo:: colorbar issue with  midas.XMIDAS("share/data/MD-test_4andgates.csv")
+
+
+    .. todo:: when plotting, if there is only 1 stimuli and 5-6 inhibitors, the
+        width of the stimuli is the same as the one with the inhibitors. cell size
+        should be identical, not stretched. See e..g., "EGFR-ErbB_PCB2009.csv"
+:
+
+    .. todo:: when ploting the mse, we should be able to plotonly a subset of the time
+      indices (useful for bollean analysis at a given time)
+
+
+    .. todo::MIDAS have two ways of coding stimuli/inhibitors a short and long version
+        TR:aa / TR::aai or TR:aa:Stimuli / TR:aa:Inhibitors note that in the shotr case,
+        the letter i is used to encode inhibitor, which is not robust at all.
+
+
+    ..todo:: a MIDAS class to check validity just to simplfy the XMIDAs class itself.
+
+    .. todo:: inhibitors ends in :i to avoid clashes with same name in stimuli..
+
+
+    API:
+
+        - you can store several cell line within one MIDAS file. However, XMIDAS
+          handles only 1 for now.
+
+    """
+    def __init__(self, filename=None, cellLine=None, verbose=False):
+        super(XMIDAS, self).__init__(filename)
+
+        self._cellLine = cellLine
+
+        # multi index related
+        # position of the columns for the multi index
+        self._celltype_index = 0
+        self._experiment_index = 1
+        self._time_index = 2
+        # names of the multi index level (rows)
+        self._levels = ["cell", "experiment", "time"]
+
+        self.verbose = verbose
+
+        self._ignore_invalid_columns = True
+
+
+        self._data = pd.DataFrame()
+        self._experiments = pd.DataFrame()
+        self.df = pd.DataFrame()
+
+        self.read()
+
+        self.create_empty_simulation()
+        self.errors = self.sim.copy()
+
 
     def _midas_validity(self):
         # checks are made of self._data only not df that will be built later on.
@@ -641,7 +646,6 @@ class XMIDAS(MIDAS):
 
     def remove_cellLine(self, labels):
         """Remove a cellLine from the dataframe.
-
 
         Does not really work since there is only one cellLine in the dataframe.
         all data is contained in :attr:`data` but the current dataframe contains only
@@ -1113,18 +1117,16 @@ class XMIDAS(MIDAS):
                         colorc=color
 
                     try:
-                        pylab.plot(times+j, y+self.nExps-i-1 , 'k-o', markersize=markersize, color=colorc)
-
-
-                        pylab.fill_between(times+j, y+self.nExps-1-i , self.nExps-1-i, alpha=alpha,
+                        pylab.plot(times+j, y+self.nExps-i-1 , 'k-o',
+                                   markersize=markersize, color=colorc)
+                        pylab.fill_between(times+j, y+self.nExps-1-i ,
+                                           self.nExps-1-i, alpha=alpha,
                                            color=color)
                     except:
                         pass
-
                 else:
                     pylab.plot(times+j, y+self.nExps-i-1 , 'k-o',
                                markersize=markersize, color="k")
-
 
                 #    plot(times+j, sim[i,j]/1.05+(self.nExps-i-1), 'b--o', markersize=markersize)
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize",10))
