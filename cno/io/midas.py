@@ -32,7 +32,6 @@ from easydev import check_param_in_list
 
 __all__ = ["XMIDAS", "MultiMIDAS", "TypicalTimeSeries"]
 
-from cno.io.midas_extra import Measurement, Measurements
 
 
 class MIDAS(object):
@@ -1599,6 +1598,7 @@ class XMIDAS(MIDAS):
         .. todo:: use Experiments
 
         """
+        from cno.io.midas_extra import Measurement
         experiments = []
         for row in self.df.iterrows():
             cellLine, exp, time = row[0]
@@ -1713,7 +1713,8 @@ class XMIDAS(MIDAS):
     def copy(self):
         x = XMIDAS()
         x._data = self._data.copy()
-        x._missing_time_zero = self._missing_time_zero
+        # FIXME
+        #x._missing_time_zero = self._missing_time_zero
         x.cellLine = self.cellLine
         x.df = self.df.copy()
         x._experiments = self.experiments.copy()

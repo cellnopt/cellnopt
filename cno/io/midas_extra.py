@@ -15,10 +15,7 @@
 ##############################################################################
 from __future__ import print_function
 from __future__ import unicode_literals
-import types
 
-import pylab
-import numpy
 import numpy as np
 import pandas as pd
 
@@ -28,9 +25,6 @@ except:
     pass
 
 
-from easydev.logging_tools import Logging
-import colormap
-from easydev import check_param_in_list
 
 
 __all__ = ["Measurement", "Measurements", "MIDASBuilder"]
@@ -47,7 +41,7 @@ class Measurement(object):
         >>> m = Measurement("AKT", 0, {"EGFR":1}, {"AKT":0}, 0.1)
 
     """
-    def __init__(self, protein_name, time, stimuli, inhibitors, measurement,
+    def __init__(self, name, time, stimuli, inhibitors, measurement,
             cellLine="undefined", units='second'):
         """
 
@@ -66,7 +60,7 @@ class Measurement(object):
         self.stimuli = stimuli
 
         self._measurement = measurement
-        self._protein_name = protein_name
+        self._name = name
 
         self._inhibitors = None
         self.inhibitors = inhibitors
@@ -95,12 +89,12 @@ class Measurement(object):
         assert time>=0
     time = property(_get_time, _set_time)
 
-    def _get_protein_name(self):
-        return self._protein_name
-    def _set_protein_name(self, name):
+    def _get_name(self):
+        return self._name
+    def _set_name(self, name):
         assert isinstance(name, str)
-        self._protein_name = name
-    protein_name = property(_get_protein_name, _set_protein_name)
+        self._name = name
+    name = property(_get_name, _set_name)
 
     def _get_stimuli(self):
         return self._stimuli
@@ -140,7 +134,7 @@ class Measurement(object):
 
     def __str__(self):
         txt = "Protein {} (cellLine {}) measured at time {} has value: {}".format(
-                self.protein_name, self.cellLine, self.time, self.data)
+                self.name, self.cellLine, self.time, self.data)
         txt += " for the following measurement: \n\tStimuli: {}\n\tInhibitors: {}.".format(
                 self.stimuli, self.inhibitors)
         return txt
@@ -164,7 +158,7 @@ class Measurements(object):
             self.measurements.append(copy.deepcopy(exp))
 
     def _get_species(self):
-        species = sorted(list(set([e.protein_name for e in self.measurements])))
+        species = sorted(list(set([e.name for e in self.measurements])))
         return species
     species = property(_get_species)
 
@@ -199,7 +193,14 @@ class MIDASBuilder(object):
     def __init__(self):
         self.measurements = []
 
-    def test_example(self):
+    def test_example(self, Nspecies=20, N=10, times=[0,10,20,30]):
+        """
+
+        N number of stimuli and inhibitors
+        Ntime =
+        There are duplicates so Nrows = N*2 * Ntimes * 2
+
+        """
         self.measurements = []
         """e1 = Measurement("DIG1", 0, {"EGF":1, "Akt":1}, {}, 1)
         e2 = Measurement("DIG1", 0, {"EGF":1, "Akt":1}, {}, 1.2)
@@ -210,9 +211,9 @@ class MIDASBuilder(object):
         e7 = Measurement("DIG3", 20, {"EGF":1, "Akt":0}, {}, 3.5)
         self.add_list_measurements([e1,e2,e3,e4,e5,e6, e7])"""
 
-        species = ['AKT' + str(i) for i in range(1,20)]
+        species = ['AKT' + str(i) for i in range(1,Nspecies)]
 
-        N = 10
+
         stimuli = ['S'+str(i) for i in range(1, N)]
         inhibitors = ['I'+str(i) for i in range(1, N)]
 
@@ -226,13 +227,13 @@ class MIDASBuilder(object):
             d_sti.update(dict([(x,0) for x in stimuli[N1:]]))
             d_inh = dict([(x,1) for x in inhibitors[0:N2]])
             d_inh.update(dict([(x,0) for x in inhibitors[N2:]]))
-            for time in [0,10,20,30]:
+            for time in times:
 
-                e = Measurement(this, time, 
+                e = Measurement(this, time,
                         d_sti, d_inh, random.random())
                 self.add_measurement(e)
                 # add duplicated values
-                e = Measurement(this, time, 
+                e = Measurement(this, time,
                         d_sti, d_inh, random.random())
                 self.add_measurement(e)
 
@@ -280,8 +281,9 @@ class MIDASBuilder(object):
         return candidate[0]
 
     def get_df_exps(self):
-        import pandas as pd
-        import numpy as np
+        #m.test_example(times=range(0,60))
+        # %timeit -n 3 df,dfd = m.get_df_exps()
+        # 60 ms per loop
 
         stimuli = list(self.stimuli)
         inhibitors = list(self.inhibitors)
@@ -290,187 +292,82 @@ class MIDASBuilder(object):
         Nrows = len(self)
         N = Ns+Ni
 
-        df = pd.DataFrame(np.arange(N*Nrows).reshape(Nrows, N), index=range(0,Nrows), 
+        df = pd.DataFrame(np.arange(N*Nrows).reshape(Nrows, N), index=range(0,Nrows),
                 columns=[['Stimuli']*Ns + ['Inhibitors']*Ni, stimuli + inhibitors])
-
         df.sortlevel(axis=1, inplace=True)
 
+
+        # FIXME: this is the slowest part in the 2 next loops.
         for stimulus in stimuli:
-             df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] for x in self.measurements]
+             df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] for x in
+                 self.measurements]
         for inhibitor in inhibitors:
-             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] for x in self.measurements]
+             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] for x in
+                 self.measurements]
 
-        # Create a key (as a string) from all inhibitors/stimuli values
-        DATA = [str(df.ix[i].values) for i,x in enumerate(df.index)]
-
-        # get time/cell and index to build a multi index
         df['time'] = [x.time for x in self.measurements]
         df['cell'] = [x.cellLine for x in self.measurements]
         df.reset_index(inplace=True)
+        df.rename(columns={'index':'experiment'}, inplace=True)
 
-        df['summary'] = DATA
-        #df.groupby('summary').groups
+        # set indexes now based on cell name, time and index, which will need
+        # to be renamed as condition
+        df.set_index(['cell', 'experiment', 'time'], inplace=True)
 
+        groups = df.groupby(by=list(df.columns.values)).groups
 
-        # set indexes
-        df = df.set_index(['cell', 'index', 'time'])
+        df = df.drop_duplicates()
+        return df, groups
 
+    def get_df_data(self):
 
-        g = df.groupby('summary').groups
-        Nexp = len(g)
-
-
-
-        # NOW, the data. indexes will be the same as above
-        proteins = [x.protein_name for x in self.measurements]
-        data = [x.data for x in self.measurements]
-
-        # df for the data
-        dfd = pd.DataFrame({'protein':proteins, 'data': data, 'time':time, 'cell': cell})
-        dfd = dfd.reset_index().pivot('index','protein')
-
-        #df.duplicated(subset=df[['Stimuli', 'Inhibitors']])
-        # measurements
-        return df, dfd
-
-    """
-
-    In [85]: df = pd.DataFrame(np.arange(3*18).reshape(3,18), index=[['A','A','A'],['exp1', 'exp1', 'exp2'],
-    [0,10,0]], columns=[['Stimuli']*9 + ['Inhibitors']*9, list(m.stimuli) + list(m.inhibitors)])
-
-    In [86]: df.index.names = ['a','b','c']
-
-    In [87]: df.sortlevel(axis=0, inplace=True, level=['b','c'])
-
-    In [88]: df.sortlevel(axis=1, inplace=True)
-
-
-    """
-
-    def _get_xmidas_df(self):
-        # this is a df used to stored and extract information from the
-        # measurements
-        #exp_names = self._get_measurements()
-        self._dfexp = self._get_measurements().copy()
-        if "TR:" in self._dfexp.columns[0]:
-            self._shift=3
-            self._dfexp.columns = [col[3:] for col in self._dfexp.columns] # get rid of TR: for query
-        else:
-            self._shift = 0
-        print("building")
         df = pd.DataFrame({
-            'time': [this.time for this in self.measurements],
-            #'measurement':[self._get_measurement_name(exp_names, this) for this in exps],
-            'measurement':[self._get_measurement_name(this) for this in self.measurements],
-            'value':[this.data for this in self.measurements],
-            'species':[this.protein_name for this in self.measurements],
-            'cellLine':[this.cellLine for this in self.measurements]})
+            'protein': [x.name for x in self.measurements],
+            'data':  [x.data for x in self.measurements],
+            'time': [x.time for x in self.measurements],
+            'cell':   [x.cellLine for x in self.measurements]
+            })
+        df.reset_index(inplace=True)
+        df.rename(columns={'index':'experiment'}, inplace=True)
 
-        # create multi index data frame
-        df.set_index(["cellLine", "experiment", "time"], inplace=True)
-        print(2)
+        # NOTE the pivot method does not allow multi index in the pandas
+        # version used during the development of this method.
+        df = pd.pivot_table(df,
+                       index=['cell', 'experiment', 'time'],
+                        columns='protein', values='data')
 
-        # now we need to move species names as columns and values column as a
-        # matrix. There may be NA values.
-
-        # I thought from here, a simple pivot_table call would make the trick of
-        # setting species as the column replicates are averaged, which we do not
-        # want.
-
-        # amatrix of values. The tricky part is that measuremets/replicaes may
-        # be done for a species and not others so there are possibly NA. The
-        # matrix that holds the data are a dimension NxM computed here below
-
-        # values will be populated little by little by appending measurements
-        # what we know for sure right now are the list of speices and the first
-        # experiment index
-        Nspecies = len(df.species.unique())
-        tuples = []
-        df_values = []
-        species = sorted(df.species.unique())
-
-        # FIXME: the usage of the query is slow. need to be speed up
-        self._df = df
-        for index in df.index.unique():
-            data = df.xs(index, level=["cellLine", "experiment", "time"])
-            # for each combi of cellline/exp/time, what is the max number of
-            # replicates over all species
-            M = data.groupby("species").species.count().max()
-            for x in range(0,M):
-                tuples.append(index)
-
-            values = pd.DataFrame([[np.nan] * Nspecies]*M, columns=species)
-            for this in species:
-                data_species = data.query("species=='{}'".format(this), engine="python")['value']
-                if len(data_species):
-                    values[this] =  list(data_species) + [np.nan] * (M-len(data_species))
-                else:
-                    pass
-            df_values.append(values)
-
-            # here we built the dt for a single index
-        print(3)
-        values = pd.concat(df_values, ignore_index=True)
-        index = pd.MultiIndex.from_tuples(tuples, names=["cellLine", "experiment", "time"])
-        newdf = pd.DataFrame(values.as_matrix(), index=index, columns=species)
-        print(4)
-        return newdf
+        return df
 
     def _get_xmidas(self):
-        """pbl: replicates are ignored !!
 
-        .. todo:: get rid of TR: in the measurements df
-        """
-        df_measurements = self._get_measurements()
+        #df_data = self.get_df_data()
 
-        species = sorted(list(set([e.protein_name for e in self.measurements])))
-        times = sorted(list(set([e.time for e in self.measurements])))
-        measurement_names = list(df_measurements.index)
+        #species = sorted(list(set([e.name for e in self.measurements])))
+        #times = sorted(list(set([e.time for e in self.measurements])))
+        #measurement_names = list(df_measurements.index)
 
-        df = self._get_xmidas_df()
-        df = df.sort_index(axis=1)
-        df = df.sortlevel(["experiment"])
+        #df = self._get_xmidas_df()
+        #df = df.sort_index(axis=1)
+        #df = df.sortlevel(["experiment"])
 
         x = XMIDAS()
 
         # proper column compatible with MIDAS:
-        stimuli = sorted(list(set([y for e in self.measurements for y in e.stimuli.keys()])))
-        inhibitors = sorted(list(set([y for e in self.measurements for y in e.inhibitors.keys()])))
-
-        columns = []
-        for name in df_measurements.columns:
-            if name in stimuli:
-                if name.startswith("TR:")==False:
-                    newname = "TR:" + name
-                    columns.append(newname)
-                else:
-                    columns.append(name)
-            elif name in inhibitors:
-                if name.startswith("TR:")==False:
-                    newname = "TR:" + name + ":i"
-                    columns.append(newname)
-                else:
-                    columns.append(name)
-            else:
-                raise ValueError()
-        df_measurements.columns = columns
-
-        x._measurements = df_measurements.copy()
-        x.df = df.copy()
+        #stimuli = sorted(list(set([y for e in self.measurements for y in e.stimuli.keys()])))
+        #inhibitors = sorted(list(set([y for e in self.measurements for y in e.inhibitors.keys()])))
+        x.df = self.get_df_data()
         x.create_empty_simulation()
+        x._experiments = self.get_df_exps()
+
+
         x._cellLine = x.cellLines[0]
-        x._rawdf = df.copy()
-        x._rawexp = x._measurements.copy()
+
+        # FIXME do we need this raw attribute
+        #x._rawdf = x.copy()
+        #x._rawexp = x._measurements.copy()
+
         return x
     xmidas = property(_get_xmidas)
-
-    def _get_measurements(self):
-        df_measurements = pd.DataFrame([e.cues_as_dict() for e in
-            self.measurements], columns=self.get_colnames())
-        df_measurements = df_measurements.drop_duplicates()
-        df_measurements.index = range(0, df_measurements.shape[0])
-        df_measurements.index = ["measurement_{}".format(this) for this in  df_measurements.index]
-        return df_measurements
 
     def to_midas(self, filename):
         xmidas = self.xmidas
