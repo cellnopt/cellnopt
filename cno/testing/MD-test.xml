@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+
+<midas xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="midas.xsd">
+	
+    <metadata>
+        <name>ExtLiver</name>
+        <comments>example</comments>
+        <version>1.0</version>
+        <generator>cellnopt 0.2</generator>
+
+        <authors>
+            <author>
+                <name>Thomas Cokelaer</name>
+                <email>cokelaer@ebi.ac.uk</email>
+            </author>
+        </authors>
+
+        <references>
+            <reference>
+                <authors>todo</authors>
+                <title>BMC</title>
+                <journal>BMC</journal>
+                <links>
+                    <link>ddd</link>
+                </links>
+            </reference>
+        </references>
+    </metadata>
+
+
+    <measurements>
+
+        <measurement>
+            <treatments>
+                <stimuli>
+                    <stimulus>
+                        <name>EGF</name>
+                        <value>1</value>
+                    </stimulus>
+                </stimuli>
+             </treatments>
+            <species>
+                <name>AKT</name>
+                <value units="unspecified">0.1</value>
+            </species>
+            <cell>
+                <name>HepG2</name>
+            </cell>
+            <time>
+                <value units="second">10</value>
+            </time>
+        </measurement>
+
+        <measurement>
+            <treatments>
+                <inhibitors>
+                    <inhibitor>
+                        <name>PI3K</name>
+                        <value>1</value>
+                    </inhibitor>
+                </inhibitors>
+            </treatments>
+            <species>
+                <name>AKT</name>
+                <value units="unspecified">0.1</value>
+            </species>
+            <cell>
+                <name>HepG2</name>
+            </cell>
+            <time>
+                <value units="second">10</value>
+            </time>
+        </measurement>
+
+    </measurements>
+
+
+</midas>
+
+
+
+
