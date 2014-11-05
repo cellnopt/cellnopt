@@ -35,6 +35,10 @@ All other dependencies should be installed automatically (networkx, numpy, matpl
     pip install cellnopt
 
 
+Contributions and isses
+########################
+
+Code hosted on `github <https://github.com/cellnopt/cellnopt>`_.
 
 User guide
 ##################

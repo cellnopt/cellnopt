@@ -11,6 +11,11 @@ Formalisms
     :inherited-members:
     :synopsis: 
 
+.. automodule:: cno.boolean.cnorbool
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
 
 
 Data Structures
@@ -18,6 +23,35 @@ Data Structures
 
 IO
 -----
+
+
+CNOGraph
+~~~~~~~~~~~
+.. automodule:: cno.io.cnograph
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+MIDAS
+~~~~~~~
+.. automodule:: cno.io.midas
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+.. automodule:: cno.io.xmlmidas
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+.. automodule:: cno.io.measurements
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
 
 Reactions
 ~~~~~~~~~~~~~~
@@ -53,5 +87,25 @@ CNA
     :synopsis: 
 
 
+Converters
+~~~~~~~~~~~~~~~~
 
+.. automodule:: cno.io.adj2sif
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+
+.. automodule:: cno.io.sif2asp
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+.. automodule:: cno.io.sop2sif
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
 

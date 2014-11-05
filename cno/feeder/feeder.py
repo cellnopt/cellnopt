@@ -26,13 +26,16 @@ class Feeder(object):
     """Find missing links automatically
 
 
-    ::
+    .. plot::
+        :include-source:
+        :width: 80%
 
         from cno import Feeder, cnodata
         feeder = Feeder()
         feeder.run(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"),
                    k=4, verbose=False)
         feeder.newlinks
+        feeder.plot()
 
 
 

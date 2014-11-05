@@ -32,11 +32,26 @@ from biokit.rtools import bool2R
 
 
 class CNORbool(CNOBase):
-    """
+    """Access to CellNOptR R package to run boolean analysis
+
+
+    ::
 
         c = pipeline.CNObool("PKN-test.sif", "MD-test.csv")
-        c.optimise(compression=True, expansion=True)
+        c.optimise(compression=True, expansion=True, reltol=.15)
 
+    Results are stored in :attr:`results`. Information stored are various.
+    The errors corresponding to the best models can be visualised with :meth:`plot_errors`
+    and models within the tolerance are stored in :attr:`models.
+
+    .. plot::
+        :include-source:
+
+        from cno import cnodata, CNORbool
+        c = CNORbool(cnodata("PKN-ToyMMB.sif"), 
+            cnodata("MD-ToyMMB.csv"))
+        c.optimise()
+        c.plot_errors()
 
     """
     def __init__(self, model, data, verbose=True):
@@ -45,8 +60,10 @@ class CNORbool(CNOBase):
         self.session = RSession(dump_stdout=self.verboseR)
         self.parameters = {} # fill with GA binary parameters
 
-
     def reconnect(self):
+        """If you cancel a job, you may need to reconnect the R server.
+
+        """
         self.session = RSession(dump_stdout=self.verboseR)
 
     def optimise(self, tag="cnorbool", reltol=0.1, 

@@ -18,8 +18,8 @@ metainfo = {
         },
     'version': version,
     'license' : 'BSD',
-    'download_url' : ['http://pypi.python.org/pypi/biokit'],
-    'url' : ['http://pypi.python.org/pypi/biokit'],
+    'download_url' : ['http://pypi.python.org/pypi/cno'],
+    'url' : ['http://pypi.python.org/pypi/cno'],
     'description':'Access to Biological Web Services from Python' ,
     'platforms' : ['Linux', 'Unix', 'MacOsX', 'Windows'],
     'keywords' : [],
@@ -69,16 +69,12 @@ setup(
 
 
     packages = find_packages(),
-    #package_dir  = {
-    #    'cno.feeder': 'cno/feeder',
-    #    'cno.datasets': 'cno/datasets',
-    #    'cno.datasets.ToyMMB': 'cno/datasets/ToyMMB'},
-
+    
+    # is this required ?
     package_data={
         'cno.datasets.ToyMMB': ['*'],
         'cno.datasets.ToyPB': ['*'],
     },
-
 
     entry_points = {
         'console_scripts': [

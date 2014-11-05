@@ -25,14 +25,15 @@ class CNOBase(object):
 
     def _get_model(self):
         return self._pknmodel
-    pknmodel = property(_get_model)
+    pknmodel = property(_get_model, doc="get the prior knowledge network")
 
     def _get_data(self):
         return self._data
-    data = property(_get_data)
+    data = property(_get_data, doc="get the data (MIDAS)")
 
     def preprocessing(self, expansion=True, compression=True, cutnonc=True, 
             maxInputsPerGate=2):
+        """Apply preprocessing on the PKN model"""
         self._pknmodel.preprocessing(expansion, compression, cutnonc, 
                 maxInputsPerGate=maxInputsPerGate)
 
