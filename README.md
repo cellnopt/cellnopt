@@ -27,7 +27,7 @@ To be provided:
 - [ ] data : move cellnopt.data into here
 - [ ] move cellnopt.admin to here ? 
 - [ ] move cellnopt.core as cellnopt.io in here ?
-  - [ ] midas
+  - [x] midas
   - [x] sif/reactions
   - [ ] cnograph
   - [ ] normalisation
@@ -35,3 +35,10 @@ To be provided:
   - [ ] mapback
   - [ ] models
   - [x] cna
+- [ ] R packages available
+  - [x] boolean T1
+  - [x] boolean T2
+  - [ ] fuzzy
+  - [ ] discrete time
+  - [ ] ode
+
