@@ -1904,7 +1904,6 @@ class XMIDAS(MIDASReader):
 
         self._experiments = self.experiments.reindex_axis(new_order, axis=0)
 
-
     def __eq__(self, other):
         if all(other.df == self.df) == False:
             return False

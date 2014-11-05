@@ -430,16 +430,16 @@ class CNOGraph(nx.DiGraph):
             sif = SIF(model)
         elif isinstance(model, SIF):
             sif = model
-        elif hasattr(model, "reacID"):
+        elif hasattr(model, "reactions"):
             sif = model
-        elif model==None:
+        elif model == None:
             sif = SIF()
         else:
             raise ValueError("The sif input must be a filename to a SIF file or an instance of the SIF class")
 
         # add all reactions
-        for reac in sif.reacID:
-            self.add_reaction(reac)
+        for reac in sif.reactions:
+            self.add_reaction(reac.name)
 
         # now, we need to set the attributes, only if we have a cnolist,
         # otherwise color is the default (white)
@@ -1302,7 +1302,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
     nonc = property(fget=_get_nonc,
         doc="Returns list of Non observable and non controlable nodes (Read-only).")
 
-    def _get_reacID(self):
+    def _get_reactions(self):
         # FIXME. A=B, C=B, expand_and_gates; reacID does not contain the and gate...
         edges =  [x for x in self.edges()]
         links = [str(self.edge[x[0]][x[1]]['link']) for x in edges]
@@ -1318,7 +1318,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             else:
                 reacs.append("!" + n1 + "=" + n2)
         return reacs
-    reacID = property(_get_reacID, doc="return the reactions (edges)")
+    reactions = property(_get_reactions, doc="return the reactions (edges)")
 
     def _get_namesSpecies(self):
         nodes = self.nodes()
@@ -2762,7 +2762,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         .. seealso:: :meth:`cellnopt.core.sif.SIF.export2SBMLQual`
         """
         s = SIF()
-        for reac in self.reacID:
+        for reac in self.reactions:
             s.add_reaction(reac)
         _res = s.export2SBMLQual(filename=filename, modelName=modelName)
 
@@ -3110,7 +3110,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         .. warning:: need to fix the reacID attribute to get AND gates
         """
         s = SIF()
-        for r in self.reacID:
+        for r in self.reactions:
             s.add_reaction(r)
         return s
 
