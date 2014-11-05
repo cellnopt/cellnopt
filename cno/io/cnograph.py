@@ -2708,7 +2708,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         from networkx.readwrite import write_gexf
         write_gexf(self, filename)
 
-    def export2sif(self, filename):
+    def to_sif(self, filename=None):
         """Export CNOGraph into a SIF file.
 
         Takes into account and gates. If a species called  "A^B=C" is found, it is an AND
@@ -2720,8 +2720,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         :param str filename:
 
-        .. todo:: could use SIF class instead to simplify the code
         """
+        # FIXME: use the sif file 
         andCounter = 0
         fh = open(filename, "w")
         for edge in self.edges(data=True):
