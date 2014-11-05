@@ -15,6 +15,8 @@
 ##############################################################################
 from __future__ import print_function
 from __future__ import unicode_literals
+import random
+import copy
 
 import numpy as np
 import pandas as pd
@@ -34,7 +36,7 @@ class Measurement(object):
         >>> m = Measurement("AKT", 0, {"EGFR":1}, {"AKT":0}, 0.1)
 
     """
-    def __init__(self, protein_name, time, stimuli, inhibitors, measurement,
+    def __init__(self, protein_name, time, stimuli, inhibitors, value,
             cellLine="undefined", units='second'):
         """
 
@@ -52,7 +54,7 @@ class Measurement(object):
         self._stimuli = None
         self.stimuli = stimuli
 
-        self._measurement = measurement
+        self._measurement = value
         self._protein_name = protein_name
 
         self._inhibitors = None
@@ -133,7 +135,7 @@ class Measurement(object):
         return txt
 
 
-class Measurements(object):
+class Measurements(list):
     """Data structure to store list of measurements
 
         >>> es = Measurements()
@@ -142,22 +144,45 @@ class Measurements(object):
         >>> es.add_measurements([e1,e2])
 
     """
-    def __init__(self, measurements=[]):
-        self.measurements = []
-        self.add_measurements(measurements)
+    def __init__(self, measurements=None):
+        if measurements:
+            self.append(measurements)
 
     def add_measurements(self, measurements):
+        from cno.core import devtools
+        measurements = devtools.DevTools().tolist(measurements)
         for exp in measurements:
-            import copy
-            self.measurements.append(copy.deepcopy(exp))
+            # FIXME do we need a costly copy here ?
+            self.append(copy.deepcopy(exp))
 
     def _get_species(self):
-        species = sorted(list(set([e.protein_name for e in self.measurements])))
+        species = sorted(list(set([e.protein_name for e in self])))
         return species
     species = property(_get_species)
 
-    def __len__(self):
-        return len(self.measurements)
+    def _get_stimuli(self):
+        stimuli = set()
+        for e in self:
+            stimuli = stimuli.union(e.stimuli.keys())
+        return stimuli
+    stimuli = property(_get_stimuli)
+
+    def _get_inhibitors(self):
+        inhibitors = set()
+        for e in self:
+            inhibitors = inhibitors.union(e.inhibitors.keys())
+        return inhibitors
+    inhibitors = property(_get_inhibitors)
+            
+    def get_protein(self):
+        return [x.protein_name for x in self]
+    def get_data(self):
+        return [x.data for x in self]
+    def get_time(self):
+        return [x.time for x in self]
+    def get_cell(self):
+        return [x.cellLine for x in self]
+
 
 
 class MIDASBuilder(object):
@@ -186,9 +211,12 @@ class MIDASBuilder(object):
         60 time points and 2 replicates that is 2280 points in less than 0.2 seconds
         so good enough for now.
 
+    If an inhibitor or stimuli is not provided, we assume ti is absent (set to zero).
+
+
     """
     def __init__(self):
-        self.measurements = []
+        self.measurements = Measurements()
 
     def test_example(self, Nspecies=20, N=10, times=[0,10,20,30]):
         """
@@ -198,7 +226,7 @@ class MIDASBuilder(object):
         There are duplicates so Nrows = N*2 * Ntimes * 2
 
         """
-        self.measurements = []
+        self.measurements = Measurements()
         """e1 = Measurement("DIG1", 0, {"EGF":1, "Akt":1}, {}, 1)
         e2 = Measurement("DIG1", 0, {"EGF":1, "Akt":1}, {}, 1.2)
         e3 = Measurement("DIG1", 0, {"EGF":1, "Akt":1}, {}, 1.3)
@@ -214,7 +242,6 @@ class MIDASBuilder(object):
         stimuli = ['S'+str(i) for i in range(1, N)]
         inhibitors = ['I'+str(i) for i in range(1, N)]
 
-        import random
         for this in species:
             N1 = random.randint(1, N)
             N2 = random.randint(1, N)
@@ -225,40 +252,29 @@ class MIDASBuilder(object):
             d_inh = dict([(x,1) for x in inhibitors[0:N2]])
             d_inh.update(dict([(x,0) for x in inhibitors[N2:]]))
             for time in times:
-
                 e = Measurement(this, time,
                         d_sti, d_inh, random.random())
-                self.add_measurement(e)
+                self.add_measurements(e)
                 # add duplicated values
                 e = Measurement(this, time,
                         d_sti, d_inh, random.random())
-                self.add_measurement(e)
+                self.add_measurements(e)
 
     def __len__(self):
         return len(self.measurements)
 
-    def add_measurement(self, measurement):
-        self.measurements.append(measurement)
-
     def add_measurements(self, measurements):
-        for e in measurements:
-            self.add_measurement(e)
+        self.measurements.add_measurements(measurements)
 
     def get_colnames(self):
         return self.measurements[0].get_cues()
 
     def _get_stimuli(self):
-        stimuli = set()
-        for e in self.measurements:
-            stimuli = stimuli.union(e.stimuli.keys())
-        return stimuli
+        return self.measurements.stimuli
     stimuli = property(_get_stimuli)
 
     def _get_inhibitors(self):
-        inhibitors = set()
-        for e in self.measurements:
-            inhibitors = inhibitors.union(e.inhibitors.keys())
-        return inhibitors
+        return self.measurements.inhibitors
     inhibitors = property(_get_inhibitors)
 
     def get_df_exps(self):
@@ -269,20 +285,21 @@ class MIDASBuilder(object):
         Nrows = len(self)
         N = Ns+Ni
 
-        df = pd.DataFrame(np.arange(N*Nrows).reshape(Nrows, N), index=range(0,Nrows),
+        df = pd.DataFrame(np.zeros(N*Nrows).reshape(Nrows, N), index=range(0,Nrows),
                 columns=[['Stimuli']*Ns + ['Inhibitors']*Ni, stimuli + inhibitors])
         df.sortlevel(axis=1, inplace=True)
 
-        # FIXME: this is the slowest part in the 2 next loops.
-        for stimulus in stimuli:
-             df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] for x in
-                 self.measurements]
-        for inhibitor in inhibitors:
-             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] for x in
-                 self.measurements]
 
-        df['time'] = [x.time for x in self.measurements]
-        df['cell'] = [x.cellLine for x in self.measurements]
+        # this is the slowest part in the 2 next loops.
+        for stimulus in stimuli:
+             df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] if stimulus 
+                     in x.stimuli.keys() else 0 for x in  self.measurements]
+        for inhibitor in inhibitors:
+             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] if inhibitor
+                     in x.inhibitors.keys() else 0 for x in  self.measurements]
+
+        df['time'] = self.measurements.get_time()
+        df['cell'] = self.measurements.get_cell()
         df.reset_index(inplace=True)
         df.rename(columns={'index':'experiment'}, inplace=True)
 
@@ -297,17 +314,17 @@ class MIDASBuilder(object):
         experiment_names = ['experiment_%s' % i for i in range(0, len(groups.keys()))]
 
         df.reset_index(inplace=True)
+        # FIXME this is a copy ?
         df['experiment'] = experiment_names
         df.set_index(['cell', 'experiment', 'time'], inplace=True)
-
         return df, groups
 
     def get_df_data(self):
         df = pd.DataFrame({
-            'protein': [x.protein_name for x in self.measurements],
-            'data':  [x.data for x in self.measurements],
-            'time': [x.time for x in self.measurements],
-            'cell':   [x.cellLine for x in self.measurements]
+            'protein': self.measurements.get_protein(),
+            'data':  self.measurements.get_data(),
+            'time': self.measurements.get_time(),
+            'cell': self.measurements.get_cell()
             })
         df.reset_index(inplace=True)
         df.rename(columns={'index':'experiment'}, inplace=True)
@@ -319,8 +336,12 @@ class MIDASBuilder(object):
                             columns='protein', values='data')
 
     def _get_xmidas(self):
+        # FIXME if no time zero provided, assumes this is a fold change and set values to zero.
+
         from cno.io.midas import XMIDAS
         xm = XMIDAS()
+        if len(self.measurements) == 0:
+            return xm
 
         xm.df = self.get_df_data()
         xm.create_empty_simulation()
@@ -330,6 +351,7 @@ class MIDASBuilder(object):
         xm._experiments = df_exps
 
         # set name of the experiments in second df (based on the group)
+        # FIXME: multi cell line fails here
         mapping = {}
         for i, name in enumerate(df_exps.index.levels[1]): # loop over experiments
             # looking for the indices (row index) of the experiments
@@ -354,14 +376,4 @@ class MIDASBuilder(object):
 
         return xm
     xmidas = property(_get_xmidas)
-
-    #def to_midas(self, filename):
-    #    xmidas = self.xmidas
-    #    xmidas.save2midas(filename)
-
-
-
-
-
-
 
