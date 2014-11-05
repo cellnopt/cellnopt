@@ -1,22 +1,21 @@
-from cellnopt.core import CNOGraph
-from cellnopt.core import XMIDAS
 
+__all__ = ["CNOBase"] 
 
 class CNOBase(object):
+    """Alias to CNOGraph and common class to all simulations"""
+    def __init__(self, pknmodel, data, verbose=False):
 
-
-    def __init__(self, model, data, verbose=False):
-
-        self._model = None
+        self._pknmodel = None
         self._data = None
         self._verbose = verbose
 
-
-        self._model = CNOGraph(model)
+        # prevent import cycling
+        from cno.io import CNOGraph
+        from cno.io import XMIDAS
         self._data = XMIDAS(data)
+        self._pknmodel = CNOGraph(pknmodel)
+        self._pknmodel.midas = self._data
         
-
-
     def _get_verbose(self):
         return self._verbose
     def _set_verbose(self, value):
@@ -25,9 +24,15 @@ class CNOBase(object):
     verbose = property(_get_verbose, _set_verbose)
 
     def _get_model(self):
-        return self._model
-    model = property(_get_model)
+        return self._pknmodel
+    pknmodel = property(_get_model)
 
     def _get_data(self):
         return self._data
     data = property(_get_data)
+
+    def preprocessing(self, expansion=True, compression=True, cutnonc=True, 
+            maxInputsPerGate=2):
+        self._pknmodel.preprocessing(expansion, compression, cutnonc, 
+                maxInputsPerGate=maxInputsPerGate)
+

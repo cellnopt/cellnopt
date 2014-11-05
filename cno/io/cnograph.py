@@ -339,6 +339,7 @@ class CNOGraph(nx.DiGraph):
 
         self._nonc = None
 
+        # the model
         if hasattr(model, "nodes") and hasattr(model, "edges"):
             for node in model.nodes():
                 self.add_node(str(node))
@@ -348,8 +349,17 @@ class CNOGraph(nx.DiGraph):
                 else:
                     self.add_edge(str(edge[0]), str(edge[1]), link="+")
             self.set_default_node_attributes() # must be call if sif or midas modified.
-        else:
-            self.readSIF(model)
+            self.filename = None
+        elif model is None:
+            self.filename = None
+        elif model.endswith('.sif'):
+            self.read_sif(model)
+            self.filename = model[:]
+        elif model.endswith(".xml"):
+            self.read_sbmlqual(model)
+            self.filename = model[:]
+
+        # the data
         self.midas = data
 
 
@@ -420,7 +430,7 @@ class CNOGraph(nx.DiGraph):
             doc="list of signals found in the :attr:`midas` and hidden attribute :meth:`_signals`")
 
     # METHODS
-    def readSIF(self, model):
+    def read_sif(self, model):
         """If the SIF file changes, we need to rebuild the graph."""
         # takes the SIF input file and build up the CNOGraph. remove all nodes
         # before
@@ -2743,7 +2753,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
                     fh.write("%s -1 %s\n" % (pred,andNode))
         fh.close()
 
-    def export2json(self, filename):
+    def to_json(self, filename):
         """Export the graph into a JSON format
 
         :param str filename:
@@ -2754,17 +2764,27 @@ not present in the model. Change your model or MIDAS file. """ % x)
         data = json_graph.node_link_data(self)
         json.dump(data, open(filename, "w"))
 
-    def export2SBMLQual(self, filename, modelName="CellNOpt_model"):
+    def read_sbmlqual(self, filename):
+        sif = SIF()
+        sif.read_sbmlqual(filename)
+        self.clear()
+        for reac in sif.reactions:
+            self.add_reaction(reac.name)
+
+    def to_sbmlqual(self, filename=None):
         """Export the topology into SBMLqual and save in a file
 
-        This requires only the topology information (i.e. MIDAS content is ignored).
+        :param str filename: if not provided, returns the SBML as a string.
+        :return: nothing if filename is not provided
 
-        .. seealso:: :meth:`cellnopt.core.sif.SIF.export2SBMLQual`
+        .. seealso:: :meth:`cno.io.sbmlqual`
         """
+        # TODO could use reactions inside SBMLqual. No need
+        # to know if this is a sif or cnograph as long as it has reactions
         s = SIF()
         for reac in self.reactions:
             s.add_reaction(reac)
-        _res = s.export2SBMLQual(filename=filename, modelName=modelName)
+        return s.to_sbmlqual(filename=filename)
 
     def loadjson(self, filename):
         """Load a network in JSON format as exported from :meth:`export2json`

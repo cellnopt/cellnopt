@@ -294,6 +294,7 @@ class XMIDAS(MIDASReader):
 
         self.create_empty_simulation()
         self.errors = self.sim.copy()
+        self._missing_time_zero = False
 
     def _manage_replicates(self):
         """

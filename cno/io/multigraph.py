@@ -28,8 +28,9 @@ import easydev
 from easydev import Logging
 
 # cellnopt modules
-from cno.core.sif import SIF
-from cno.core.midas import XMIDAS
+from cno.io.sif import SIF
+from cno.io.midas import XMIDAS
+from cno.io.cnograph import CNOGraph
 
 from colormap import Colormap
 
