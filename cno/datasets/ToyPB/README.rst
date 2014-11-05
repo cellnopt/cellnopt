@@ -26,6 +26,7 @@ Node ask1 removed
    :alt: ToyPB figure
 
 
+- SBML format available: cnodata("PKN-ToyPB.xml")
 
 
 References

@@ -76,11 +76,15 @@ setup(
 
     package_data={
         'cno.datasets.ToyMMB': ['*'],
-    }
+        'cno.datasets.ToyPB': ['*'],
+    },
 
 
-
-
+    entry_points = {
+        'console_scripts': [
+            'cno_plotmodel=cno.apps.plotmodel:plotmodel',
+            ]
+        },
 
     )
 

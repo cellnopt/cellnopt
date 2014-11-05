@@ -115,10 +115,10 @@ def test_exportsbml():
     s1 = SIF()
     s1.add_reaction("A=C")
     s1.add_reaction("!B=C")
-    s1.to_SBMLQual("test.xml")
+    s1.to_sbmlqual("test.xml")
 
     s2 = SIF()
-    s2.importSBMLQual("test.xml")
+    s2.read_sbmlqual("test.xml")
     assert s1 == s2
 
 def test_constructor():

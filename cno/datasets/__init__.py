@@ -23,9 +23,11 @@ assert len(directories)
 # but some may not be valid
 for register in directories:
     if len(glob.glob(os.sep.join([pathname, register, 'PKN-*'])))==0:
-        print("register {0} not valid (no PKN found)".format(register))
+        pass
+        #print("register {0} not valid (no PKN found)".format(register))
     if len(glob.glob(os.sep.join([pathname, register, 'MD-*'])))==0:
-        print("register {0} not valid (no MIDAS found)".format(register))
+        pass
+        #print("register {0} not valid (no MIDAS found)".format(register))
     else:
         _registered.append(register)
 
@@ -34,6 +36,10 @@ def _build_registers():
     registers = []
     for k in _registered:
         registers.append("PKN-{0}.sif".format(k))
+    for k in _registered:
+        filename = "PKN-{0}.xml".format(k)
+        if os.path.exists(os.sep.join([pathname, k,filename])):
+            registers.append("PKN-{0}.xml".format(k))
     for k in _registered:
         registers.append("MD-{0}.csv".format(k))
     registers = sorted(registers)
