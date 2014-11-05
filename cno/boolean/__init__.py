@@ -1,2 +1,4 @@
-from . import asp
-from asp import CASPO
+
+
+from .asp import CASPO
+from .cnorbool import CNORbool

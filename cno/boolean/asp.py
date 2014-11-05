@@ -3,8 +3,8 @@ import os
 from collections import defaultdict
 from collections import Counter
 
-from cellnopt.core import CNOGraph, XMIDAS
-from cellnopt.core.models import Models
+from cno.io import CNOGraph, XMIDAS
+from cno.misc.models import Models
 
 from easydev import AttrDict, TempFile
 
