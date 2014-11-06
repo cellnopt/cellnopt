@@ -15,15 +15,16 @@
 ##############################################################################
 import numpy
 from scipy.optimize import fsolve
-from pylab import linspace
+import pylab 
+
 
 __all__ = ["ode_transfer_function", "normhill_tf",
-"create_picture_cnorfuzzy_package"]
+"plot_picture_cnorfuzzy_package"]
 
 
 
 def plot_ode_transfer_function(tau, inputs):
-    X = linspace(0,1,100)
+    X = pylab.linspace(0,1,100)
     dX = ode_transfer_function(X, tau, inputs)
     from pylab import plot
     plot(X,dX)
@@ -103,45 +104,50 @@ def getk(N=[3,3,3,3,3,3,1.01], EC50=[0.2,0.3,0.4,0.5,0.6,0.7,0.5]):
     return k
 
 
-def create_picture_cnorfuzzy_package():
+def create_picture_cnorfuzzy_package(fontsize=20, save=True):
     """Creates pictures of Fuzzy hill functions as in Morris et al.
-
 
     .. plot:: 
         :include-source:
         :width: 50%
 
-        from cellnopt.core.matfun import create_picture_cnorfuzzy_package
+        from cno.misc.matfun import create_picture_cnorfuzzy_package
         create_picture_cnorfuzzy_package()
 
     """
-    from pylab import plot, legend, xlabel, ylabel, xticks, yticks,clf, savefig
-    n=[3,3,3,3,3,3,1.01]
-    ec50=[0.2,0.3,0.4,0.5,0.6,0.7,0.5]
+    n = [3, 3, 3, 3, 3, 3, 1.01]
+    ec50 = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.5]
     k = getk(n, ec50)
-    x = numpy.linspace(0,1,100)
-    clf()
-    for i in range(0, len(n)):
-        plot(x, normhill_tf(x,k[i],n[i]), linewidth=2, label="n=%s EC50=%s" % (n[i], ec50[i]))
-    xlabel("Input Value", fontsize=22)
-    ylabel("Output Value", fontsize=22)
-    legend(loc="lower right")
-    xticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1], fontsize=20)
-    yticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],fontsize=20)
-       
-    savefig('tf1.pdf')
+    x = numpy.linspace(0, 1, 100)
 
-
-    clf()
-    n=[0.2,0.3,0.4,0.5,0.6,0.7,0.8]
+    pylab.figure(1)
+    pylab.clf()
     for i in range(0, len(n)):
-        plot(x, x*n[i], linewidth=2)
-    xlabel("Input Value", fontsize=22)
-    ylabel("Output Value", fontsize=22)
-    xticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1], fontsize=20)
-    yticks([0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1],fontsize=20)
+        pylab.plot(x, normhill_tf(x,k[i],n[i]), linewidth=2, 
+                label="n=%s EC50=%s" % (n[i], ec50[i]))
+
+    pylab.xlabel("Input Value", fontsize=22)
+    pylab.ylabel("Output Value", fontsize=22)
+    pylab.legend(loc="lower right")
+    pylab.xticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], 
+            fontsize=fontsize)
+    pylab.yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], 
+            fontsize=fontsize)
        
-    savefig('tf2.pdf')
+    if save:
+        pylab.savefig('tf1.pdf')
+
+    pylab.figure(2)
+    pylab.clf()
+    n=[0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+    for i in range(0, len(n)):
+        pylab.plot(x, x*n[i], linewidth=2)
+    pylab.xlabel("Input Value", fontsize=22)
+    pylab.ylabel("Output Value", fontsize=22)
+    pylab.xticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], fontsize=fontsize)
+    pylab.yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], fontsize=fontsize)
+    if save:
+        pylab.savefig('tf2.pdf')
 
 
 

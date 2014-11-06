@@ -109,3 +109,24 @@ Converters
     :inherited-members:
     :synopsis: 
 
+
+MISC
+======
+
+.. automodule:: cno.misc.matfun
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+.. automodule:: cno.misc.models
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+.. automodule:: cno.misc.tools
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
