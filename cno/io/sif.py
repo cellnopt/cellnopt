@@ -19,11 +19,12 @@ import csv
 import os
 import re
 
-# could be replace since we just use 2 functions ?
-from numpy import sort, array
 
 from cno.io.reactions import Reactions
-from cno.io.sbml import SBML
+#from cno.io.sbml import SBML
+from cno.misc import CNOError
+
+import numpy as np
 
 __all__ = ["SIF"]
 
@@ -94,52 +95,47 @@ class SIF(Reactions):
         one for the and string.
 
     """
-    def __init__(self, filename=None, format="cno", ignore_and=False, convert_ands=True):
+    def __init__(self, filename=None, frmt="cno"):
         """.. rubric:: Constructor
 
         :param str filename: optional input SIF file.
-        :param str format: "cno" or "generic" are accepted (default is cno). The cno format
+        :param str frmt: "cno" or "generic" are accepted (default is cno). The cno format
             accepted only relation as "1" for activation, and "-1" for inhibitions. The "generic"
             format allows to have any relations. The "cno" format also interprets nodes that starts
-            with "and" as logical AND gates.
-        :param bool ignore_and: if you want to ignore the and nodes (see above), set to True.
-        :param bool convert_ands: if AND nodes are found (from cellnopt syntax, eg a^b), converts them
-            into a single reaction (default is True).
+            with "and" as logical AND gates. Such nodes are transformed into more cmpact notations.
+            That is reactions.
+
+
+        ::
+
+            A 1 and1
+            B -1 and1
+            and1 1 C
+
+        is transformed internally as 1 reaction: A^!B=C
+
         """
         super(SIF, self).__init__()
 
         self.format = format
-        self.ignore_and = ignore_and
-        self.convert_ands = convert_ands
+        self.ignore_and = False
+        self.convert_ands = True
         self.clear()
 
         # check that the extension is correct and the file exists
         if isinstance(filename, str):
             self.filename = filename
-            #extension = os.path.splitext(filename)[1]
-            #if extension not in [".sif", ".SIF"]:
-            #    raise ValueError("SIF file must have extension sif or SIF. %s found." % extension)
             if os.path.isfile(filename) == False:
                 raise IOError("File %s not found." % filename)
-            self.loadSIF(filename)
-        elif filename==None:
+            self.read_sif(filename)
+        elif filename == None:
             pass
         elif hasattr(filename, "reactions"):
             for reac in filename.reactions:
                 self.add_reaction(reac.name)
-
         else:
             raise ValueError("argument must be a valid filename (string)")
 
-    #def clear(self):
-    #    # simply reset the relevant attributes
-    #    self._edges = []
-    #    self._nodes1 = []
-    #    self._nodes2 = []
-    #    self._data = []
-    #    self._rawdata = []
-    #    for reac in self.reacID:
-    #        self.remove_reaction(reac)
     def clear(self):
         """remove all reactions and species"""
         self.remove_species(self.species)
@@ -157,7 +153,7 @@ class SIF(Reactions):
         for reac in toremove:
             self.remove_reaction(reac)
 
-    def loadSIF(self, filename):
+    def read_sif(self, filename):
         # Reads the data first
         self.clear()
         try:
@@ -186,8 +182,10 @@ class SIF(Reactions):
         # are converted to A^B=C
         dont_remove = []
         for andNode in self.andNodes:
-            if "^" in andNode:
+            if "^" in andNode: # if already if ^+ format, notthing to do
                 continue
+
+            # otherwise, this is the original cno format that needs to work:
             lhs_nodes = [ (x,e) for x,e,y in zip(self.nodes1, self.edges,self.nodes2) if y==andNode]
             rhs_node = [ y for x,e,y in zip(self.nodes1, self.edges,self.nodes2) if x==andNode]
             try:
@@ -253,15 +251,6 @@ class SIF(Reactions):
     edges = property(fget=_get_edges,
         doc="returns list of edges found in the reactions")
 
-    def _get_data(self):
-        data = array([(x,y,z) for x,y,z in
-            zip(self.nodes1, self.edges, self.nodes2)],
-            dtype=[('nodes1',object),('edges','int'),('nodes2',object)])
-        # instead of object, we can use a string type S but we must provide the
-        # length. So, we need to estimate the lnogest specy name first.
-        return data
-    data = property(fget=_get_data, doc="Returns list of relations")
-
     def __eq__(self, x):
         if isinstance(x, SIF) == False:
             return False
@@ -310,34 +299,38 @@ class SIF(Reactions):
             reac = lhs + "=" + rhs
             super(SIF, self).add_reaction(reac)
 
-    def save(self, filename, order="nodes1"):
+    def save(self, filename, order="predecessors"):
         """Save the reactions (sorting with respect to order parameter)
 
         :param str filename: where to save the nodes1 edges node2
-        :param str order: can be nodes1, edges or nodes2
+        :param str order: can be predecessors, successors, edges
 
         """
-        assert order in ["nodes1", "nodes2", "edges"]
+        rhs = [x.rhs for x in self.reactions]
+        lhs = [x.lhs for x in self.reactions]
+        signs = [x.sign for x in self.reactions]
         f = open(filename, "w")
-        for row in sort(self.data, order=order):
-            f.write("%s %s %s\n" % (row[0], str(row[1]), row[2]))
+        if order == 'predecessors':
+            for i in np.argsort(lhs):
+                f.write("%s %s %s\n" % (lhs[i], signs[i], rhs[i]))
+        elif order == 'successors':
+            for i in np.argsort(lhs):
+                f.write("%s %s %s\n" % (lhs[i], signs[i], rhs[i]))
+        else:
+            raise CNOError("valid order are successors or predecessors")
         f.close()
 
     def __str__(self):
         """prints in alphabetical order"""
-        msg = self._underline("Original file") + "\n\n"
-        M = max([len(x) for x in self.nodes1+self.nodes2])
-        M2 = max([len(x) for x in self.edges])
-        for row in sort(self.data, order="nodes1"):
-            msg += "%*s %*s %*s\n" % (M+2, row[0], M2+2 , str(row[1]), M+2,row[2])
+        msg = ""
         msg = msg.rstrip("\n")
-
+        reacs = Reactions(self.reactions)
         if self.format == "cno":
             msg += "\n\n"
             msg += self._underline("namesSpecies")+"\n"
-            msg += ", ".join([x for x in self.species]) + "\n\n"
-            msg += self._underline("reacID")+"\n"
-            msg += ", ".join([x for x in self.reaction_names]) + "\n\n"
+            msg += ", ".join(reacs.reactions) + "\n\n"
+            msg += self._underline("reactions")+"\n"
+            msg += ", ".join(self.reaction_names) + "\n\n"
         return msg
 
     def _underline(self, msg):
@@ -390,7 +383,7 @@ class SIF(Reactions):
         else:
             return ""
 
-    def sif2json(self):
+    def to_json(self):
         raise NotImplementedError
 
     def to_sbmlqual(self, filename=None):

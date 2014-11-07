@@ -44,6 +44,8 @@ class SIF2ASP(SIF):
         >>> s = SIF2ASP(filename)
         >>> s.to_net("PKN-ToyMMB.net")
 
+    .. todo:: what to do with AND nodes ?
+
     """
     def __init__(self, filename=None):
         """.. rubric:: Constructor
@@ -55,7 +57,7 @@ class SIF2ASP(SIF):
 
     def _get_signs(self):
         signs = ["+" if e=="1" else "-" for e in self.edges]
-        return signs 
+        return signs
     signs = property(_get_signs, doc="get the signs of the reactions")
 
     def to_net(self, filename):

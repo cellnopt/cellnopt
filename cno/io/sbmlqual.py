@@ -15,14 +15,7 @@
 ##############################################################################
 from __future__ import print_function
 
-import csv
-import os
-import re
 
-# could be replace since we just use 2 functions ?
-from numpy import sort, array
-
-from cno.io.reactions import Reactions
 from cno.io.sbml import SBML
 
 

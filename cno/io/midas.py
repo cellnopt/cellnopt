@@ -29,6 +29,7 @@ from midas_extra import Measurement
 import midas_normalisation as normalisation
 
 from cno.core import DevTools
+from cno.misc import CNOError
 
 __all__ = ["XMIDAS", "TypicalTimeSeries", 'MIDASReader']
 
@@ -66,29 +67,50 @@ class MIDAS(object):
 
 
 class MIDASReader(MIDAS):
+    """A MIDAS reader that converts the experiments and data into dataframes
+
+
+    Used by XMIDAS to read and convert the data.
+
+    .. todo:: link to documentation (cnodocs)
+
+    CellLine must be encoded in the header as follows::
+
+        TR:name:CellLine
+
+    If name is not provided, replace internally with "undefined".
+
+    Those columns are ignored in MIDASReader:
+
+        ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
+
+
+
+    """
     def __init__(self, filename, verbose='ERROR'):
         super(MIDASReader, self).__init__(filename, verbose)
+        self._missing_time_zero = True  # FIXME what is this ?
 
     def read(self):
+        # If the provided filename is not defined, nothing to do
         if self.filename == None:
             return
+
+        # skip spaces after delimiter
         self._data = pd.read_csv(self.filename, skipinitialspace=True, sep=",")
 
         # figure out the cell line names
         self._preprocess_cellines()
 
-        # remove columns that are invalid
+        # remove columns that are invalid and check MIDAS validity
         self._midas_validity()
 
         # some cleanup to remove columns that have to be ignored
         labels = ["TR:"+x for x in self.ignore_codes if "TR:"+x in self._data.columns]
         self._data = self._data.drop(labels, axis=1)
 
-        #try:
-        self._init()  # read MIDAS and convert to dataframe
-        #except Exception, e:
-        #    self.logging.warning("Could not interpret the MIDAS input data file")
-        #    self.logging.warning(e.message)
+        # from the data, build up the experiment and data dataframes
+        self._init()
 
     def _preprocess_cellines(self):
         #CellLine are tricky to handle with the MIDAS format because they use the
@@ -97,46 +119,43 @@ class MIDASReader(MIDAS):
         # provided
 
         # Those could be recognised but only CellLine is correct. So, let us
-        # enfore the correct one instead of dealing with all kind of user
+        # enforce the correct one instead of dealing with all kind of user
         # choices.
-
         cellLines = [col for col in self._data.columns if "CellLine" in col]
         if len(cellLines) == 0:
-            raise ValueError("Could not find any column with the required keyword 'CellLine'")
+            raise CNOError("Could not find any column with the required keyword 'CellLine'"
+            + "capitalisation matters !")
 
         for name in cellLines:
             if name.count(":") != 2:
-                txt = "column name related to CellLine %s must have 2 : characters"
-                txt += "{} has less or more than 2".format(name)
-                raise ValueError(txt)
+                txt = "Column name related to CellLine %s must have 2 : characters".format(name)
+                txt += "{} has less or more than 2"
+                raise CNOError(txt)
 
         # rename the cellLines if there are undefined
         # let us give thme the same name ('undefined')
         # this should be done at the level of the data
-        for i,name in enumerate(cellLines):
+        count = 0
+        for i, name in enumerate(cellLines):
             if name.split(":")[1] == "":
-                self.logging.warning("Found a column related to CellLine without a name. Renamed to undefined.")
+                self.logging.warning("Found a CellLine column without name. Renamed to undefined.")
                 columns = list(self._data.columns)
                 columns[i] = "TR:undefined:CellLine"
                 self._data.columns = columns
-
+                count += 1
+        if count > 1:
+            raise CNOError("More than 1 undefined cell line. " +
+            "Please name the cellLine columns with TR:name:CellLine")
         # if there is only one undefined, no need for an error.
         # otherwise they will be an ambiguity.
-        if len(cellLines) != len(set(cellLines)) and len(cellLines)>1:
-            raise ValueError("some cellLines have the same name.")
-
-        for this in self._data.columns:
-            if this.split(":")[0].startswith("TR") == True:
-                if "cellLine" in this.lower() and "CellLine" not in this:
-                    raise ValueError("Found column with invalid tag. A Cell Line must be written 'TR:<name>:CellLine' not {}. Capitalisation matters.".format(this))
 
         celltype_names = self._get_cellLines()
 
-        if len(cellLines) >=2:
+        if len(cellLines) >= 2:
             if self.cellLine == None or self.cellLine not in celltype_names:
-                txt = "Error:: More than 1 celline was found.\n"
+                txt = "More than 1 celline was found.\n"
                 txt += "You must select one amongst: {}".format([this.split(":")[1] for this in cellLines])
-                raise ValueError(txt)
+                raise CNOError(txt)
             else:
                 # we could remove columns and rows where cell type is not correct.
                 # but we are going to do it in the _init so that a user can
@@ -146,44 +165,30 @@ class MIDASReader(MIDAS):
         if len(celltype_names) == 1:
             self._cellLine = celltype_names[0]
 
-        #self._valid_cellLine_names = [this for this in self._]
-
     def _midas_validity(self):
-        # checks are made of self._data only not df that will be built later on.
-
-        if self._ignore_invalid_columns:
-            for this in self._data.columns:
-                columns = [this for this in self._data.columns if this[0:2] in self.valid_codes]
-                bad = [this for this in self._data.columns if this[0:2] not in self.valid_codes]
-                if len(bad):
-                    self.logging.warning("Found columns that are invalid (do not start with {}). There are removed.".format(self.valid_codes.keys()))
-                    self._data = self._data[columns]
-
-            #columns = [this in self._data.columns if this.startswith("")]
-            pass
 
         # check validity of TR:
         for this in self._data.columns:
             if ":" not in this:
                 txt = "Error in header of the input MIDAS file\n"
                 txt += "    Column's name must contain the special character ':'\n"
-                raise ValueError(txt)
+                txt += "    Found {0}".format(this)
+                raise CNOError(txt)
             if this.split(":")[0] not in self.valid_codes.keys():
                 txt = "Error in header of the input MIDAS file\n"
                 txt += "    Column's name must start with one of the valid code {}\n".format(self.valid_codes)
-                raise ValueError(txt)
-
+                raise CNOError(txt)
 
         # check if zero time data is available otherwise need to call
-        #maybe better to play with -df
+        # maybe better to play with -df
         #_duplicate_time_zero_using_inhibitors_only
         df = self._data[[this for this in self._data.columns if this.startswith("DA")]]
         unique_times = list(set(df.as_matrix().flatten()))
         unique_times.sort()
         if len(unique_times) <2:
-            raise ValueError("Must contains at least 2 time points including time zero")
+            raise CNOError("Must contains at least 2 time points including time zero")
         if 0 not in unique_times or len(unique_times)<=1:
-            raise ValueError("You must have zero times in the MIDAS file, that was not found.")
+            raise CNOError("You must have zero times in the MIDAS file, that was not found.")
         times = list(df.as_matrix().flatten())
         counter = {}
         for time in unique_times:
@@ -198,7 +203,172 @@ class MIDASReader(MIDAS):
                 pass
 
         if len([x for x in self._data.columns if x.startswith("DV")]) == 0:
-            raise ValueError("Header of MIDAS file has no columns starting with DV. expects at least one")
+            raise CNOError("Header of MIDAS file has no columns starting with DV. expects at least one")
+
+
+    def _init(self):
+
+        # select only data that matches the cell line choice made by the user.
+        cellLine = 'TR:%s:CellLine' % self.cellLine
+
+        # select data for the cell line provided by the user.
+        _data = self._data[self._data[cellLine] == 1]
+
+        # and remove all column with the CellLine keyword now
+        _data = _data[ [col for col in _data.columns if "CellLine" not in col]]
+
+        #drop ID columns if any
+        _data = _data[ [col for col in _data.columns if col.startswith("ID")==False]]
+
+        # figure out the treatments, times and measurements
+        df_tr = _data[[this for this in _data.columns if this.startswith("TR")]]
+        df_da = _data[[this for this in _data.columns if this.startswith("DA")]]
+        df_dv = _data[[this for this in _data.columns if this.startswith("DV")]]
+
+        # let us gather experiments nd replace empty fields with zeros ??
+        # FIXME filling NA with zero is it correct ?
+        value_experiments = _data[df_tr.columns].copy()
+        value_experiments.replace("NaN", 0, inplace=True)
+
+        value_signals = _data[df_dv.columns].as_matrix()
+        value_times = _data[df_da.columns]
+
+        names = [this for this in df_tr[:] if "CellLine" not in this]
+        self._experiments = _data[names].drop_duplicates()
+        self._experiments.index = range(0, self._experiments.shape[0])
+        self._experiments.index = ["experiment_{}".format(this)
+            for this in  self._experiments.index]
+
+        # FIXME: already done above ...
+        self._experiments.replace("NaN", 0, inplace=True)
+
+        # build the tuples that will be used by the MultiIndex dataframe
+        tuples = []
+        # make sure to read each row in the original data using .shape
+        for ix in _data.index:
+            # 1. find name of the experiment by
+            this_exp = value_experiments.ix[ix]
+            # scan unique experiments and figure out which one is this_exp
+            exp_name = None
+            for this_unique_exp in self._experiments.iterrows():
+                if all(this_unique_exp[1] == this_exp):
+                    #[1:] to ignore the cell line TODO
+                    # found it
+                    exp_name = this_unique_exp[0]
+            assert exp_name != None
+
+            # 2. times
+            time = set(value_times.ix[ix])
+            assert len(time) == 1
+            time = list(time)[0]
+            tuples.append((self.cellLine, exp_name, time))
+
+        # replace empty strings with 0
+        # note that ,,, is interpreted as ,NaN,NaN,NaN
+        # but , , , is interpreted as ," "," "," ",
+        self._experiments = self._experiments.applymap(lambda x: 0 if isinstance(x, basestring) and x.isspace() else x)
+        self._experiments = self._experiments.convert_objects(convert_numeric=True, copy=True)
+
+        index =  pd.MultiIndex.from_tuples(tuples, names=self._levels)
+        #keep = [this for this in self.df.columns if this not in ["experiments", "times"]]
+        names_species = [x for x in _data.columns if x.startswith('DV:')]
+        names_species = [x[3:] for x in names_species]
+
+        self.df = pd.DataFrame(value_signals, index=index, columns=names_species)
+        self.df = self.df.sortlevel(["experiment"])
+        self.df = self.df.sort_index(axis=1) # sort the species
+
+        if self._missing_time_zero == True:
+            self._duplicate_time_zero_using_inhibitors_only()
+
+        if self.df.shape[0] > len(self.times) * self.experiments.shape[0]:
+            self.logging.warning("you may have duplicated experiments" +
+            "please average the replicates using self.average_replicates(inplace=True)")
+
+        if self.df.max(skipna=True).max(skipna=True) > 1:
+            self.logging.warning("values larger than 1. " +
+            "You may want to normalise/scale the data")
+
+        # Get rid of TR in experiments
+        self._experiments.columns = [this.replace("TR:", "") for this in self._experiments.columns]
+
+
+        cues = []
+        for c in self._experiments.columns:
+            if c.count(":") >=2:
+                raise CNOError("Invalid header. Found more than 2 : sign in a column")
+
+            if c.endswith(":Stimuli"):
+                cues.append(c.split(":")[0])
+            elif c.endswith(":Inhibitors"):
+                cues.append(c.split(":")[0] + ":i")
+            elif c.endswith("i"):
+                cues.append(c[0:-1] + ":i")
+            else:
+                cues.append(c)
+        self._experiments.columns = cues
+
+        inh = [x for x in self._experiments.columns if x.endswith(":i") is True]
+        stim = [x for x in self._experiments.columns if x.endswith(":i") is False]
+
+        # Finally, build up the dataframe for experiments
+        self._experiments = pd.DataFrame(self._experiments.values,
+                     columns=[['Stimuli']*len(stim) + ['Inhibitors']*len(inh),
+                              [x.replace(":i","") for x in self._experiments.columns]],
+                        index= self._experiments.index)
+
+
+    def _duplicate_time_zero_using_inhibitors_only(self):
+        """
+        Sometimes the time zero data sets are not explicitly written in MIDAS
+        files. One example is MD-ExtLiverHepG2-MCP2010-mod4.csv from the
+
+        """
+        self.logging.warning("duplicating time zeros data to fit experiment at other times")
+        # first figure out the inhibitors
+
+        # find experiment that have missing time zero data
+        experiments = list(self.experiments.index)
+
+        tobeadded = None
+        for i, this_exp in enumerate(experiments):
+            times = self.df.ix[self.cellLine].ix[experiments[i]].index
+            if 0 in times:
+                pass
+            else:
+                # need to find the experiment with same inhibitors
+                # and time 0
+                # there should be only one ? maybe not if replicates.
+                these_inhibitors =  self.experiments.ix[this_exp][self.inhibitors]
+
+                for this_exp_intern in experiments:
+                    times = self.df.ix[self.cellLine].ix[this_exp_intern].index
+                    if 0 in times:
+                        if all(self.experiments.ix[this_exp_intern][these_inhibitors.index] ==
+                            these_inhibitors):
+                            break # so that if there are several replicates found,
+                            # we pick up the first one only
+
+                # get the times for this experimenti. it must contain the time zero
+                newdata = self.df.xs((self.cellLine, this_exp_intern))
+                # we only need the time 0
+                newrow = newdata[newdata.index == 0]
+                # let us add some index information that is now missing
+
+                newrow[self._levels[0]] = self.cellLine
+                newrow[self._levels[1]] = this_exp
+                newrow[self._levels[2]] = 0
+
+                # we can now merge with the full data set
+                if types.NoneType == type(tobeadded):
+                    tobeadded = newrow.copy()
+                else:
+                    tobeadded = pd.concat([tobeadded, newrow])
+        # finally concatenate all the rows with the dataframe df
+        df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
+        df = df.set_index(self._levels)
+        df = df.sortlevel([self._levels[1]]) # experiment
+        self.df = df.copy()
 
 
 class XMIDAS(MIDASReader):
@@ -283,34 +453,41 @@ class XMIDAS(MIDASReader):
 
         self.verbose = verbose
 
-        self._ignore_invalid_columns = True
+        #self._ignore_invalid_columns = True
 
 
         self._data = pd.DataFrame()
         self._experiments = pd.DataFrame()
         self.df = pd.DataFrame()
+        self.sim = self.df.copy() * 0
+        self.errors = self.df.copy() * 0
 
-        self.read()
+        if filename is None:
+            pass
+        elif isinstance(filename, str):
+            self.read()
+            self.create_empty_simulation()
+            self.errors = self.sim.copy()
+        else:
+            try:
+                md = filename
+                self.filename = md.filename
+                self.df = md.df.copy()
+                self._ = md._data.copy()
+                self._missing_time_zero = md._missing_time_zero
+                self.df = self.df.copy()
+                self._experiments = md.experiments.copy()
+                self._cellLine = md.cellLine
+                self.sim = md.sim.copy()
+                self.errors = md.errors.copy()
+            except Exception as e:
 
-        self.create_empty_simulation()
-        self.errors = self.sim.copy()
-        self._missing_time_zero = False
+                raise CNOError(e.message + "Invalid input file. Expecting an XMIDAS instance or valid filename")
+
+
 
     def _manage_replicates(self):
         """
-
-         tuples = [("HepG2", exp, time) for exp in ["exp1", "exp2"] for time in   [0,1,2,3,4]]
-         tuples += [("Liver", exp, time) for exp in ["exp1", "exp2"] for time in [0,1,2,3,4]]
-         tuples += [("HepG2", exp, time) for exp in ["exp1"] for time  in [0,1,2,3,4]]
-         index = pd.MultiIndex.from_tuples(tuples, names=["CellType", "experiment", "time"])
-         xx = pd.DataFrame(randn(25,2), index=index, columns=["Akt", "Erk"])
-
-        xxx = xx.groupby(level=["CellType", "experiment", "time"]).agg([mean, std])
-        xxx.to_csv("test.csv", tupleize_cols=False)
-        pd.read_csv("test.csv", index_col=[0,1,2], tupleize_cols=False, header=[0,1])
-
-        x.df = x.df[[this for this in x.df.columns if "mean" in this]]
-        x.df.columns = [this[0] for this in x.df.columns]
 
         """
         groups = self.df.groupby(level=self._levels).groups
@@ -370,7 +547,7 @@ class XMIDAS(MIDASReader):
 
             >>> m = XMIDAS("MD-ToyPB.csv")
             >>> m['p38']
-            >>> m['Cell','experiment_0', '0']
+            >>> m['Cell','experiment_0', 0]
 
         """
         if len(item)==3 and isinstance(item, str) != True:
@@ -396,10 +573,6 @@ class XMIDAS(MIDASReader):
     signals = property(_get_names_species,
             doc="Getter for the columns of the dataframe that represents the species/signals")
 
-    def _get_cues(self):
-        #cues = [x for x in self.experiments.columns if x.startswith('TR:')]
-        cues = [x for x in self.experiments.columns]
-        return cues
     def _get_names_cues(self):
         cues = self.names_stimuli + self.names_inhibitors
         return cues
@@ -449,163 +622,11 @@ class XMIDAS(MIDASReader):
             return []
     names_stimuli = property(_get_names_stimuli)
 
-    def _init(self):
-
-        # select only data that matches the cell line choice made by the user.
-        cellLine = 'TR:%s:CellLine' % self.cellLine
-        _data = self._data[self._data[cellLine] == 1]
-        # and remove all column with the CellLine keyword
-        _data = _data[ [col for col in _data.columns if "CellLine" not in col]]
-        #drop ID columns if any
-        _data = _data[ [col for col in _data.columns if col.startswith("ID")==False]]
-
-
-        df_tr = _data[[this for this in _data.columns if this.startswith("TR")]]
-        df_da = _data[[this for this in _data.columns if this.startswith("DA")]]
-        df_dv = _data[[this for this in _data.columns if this.startswith("DV")]]
-        # TODO sort alphabetical ignoring big caps
-        df_dv = _data[[this for this in _data.columns if this.startswith("DV")]]
-
-        value_experiments = _data[df_tr.columns].copy()
-        value_experiments.replace("NaN", 0, inplace=True)
-
-        value_signals = _data[df_dv.columns].as_matrix()
-        value_times = _data[df_da.columns]
-
-        names = [this for this in df_tr[:] if "CellLine" not in this]
-        self._experiments = _data[names].drop_duplicates()
-        self._experiments.index = range(0, self._experiments.shape[0])
-        self._experiments.index = ["experiment_{}".format(this) for this in  self._experiments.index]
-
-        self._experiments.replace("NaN", 0, inplace=True)
-
-        # build the tuples that will be used by the MultiIndex dataframe
-        tuples = []
-        # make sure to read each row in the original data using .shape
-        for ix in _data.index:
-            # 1. find name of the experiment by
-            this_exp = value_experiments.ix[ix]
-            # scan unique experiments and figure out which one is this_exp
-            exp_name = None
-            for this_unique_exp in self._experiments.iterrows():
-                if all(this_unique_exp[1] == this_exp):
-                    #[1:] to ignore the cell line TODO
-                    # found it
-                    exp_name = this_unique_exp[0]
-            assert exp_name != None
-
-            # 2. times
-            time = set(value_times.ix[ix])
-            assert len(time) == 1
-            time = list(time)[0]
-            tuples.append((self.cellLine, exp_name, time))
-
-        # replace empty strings with 0
-        # note that ,,, is interpreted as ,NaN,NaN,NaN
-        # but , , , is interpreted as ," "," "," ",
-        self._experiments = self._experiments.applymap(lambda x: 0 if isinstance(x, basestring) and x.isspace() else x)
-        self._experiments = self._experiments.convert_objects(convert_numeric=True, copy=True)
-
-        index =  pd.MultiIndex.from_tuples(tuples, names=self._levels)
-        #keep = [this for this in self.df.columns if this not in ["experiments", "times"]]
-        names_species = [x for x in _data.columns if x.startswith('DV:')]
-        names_species = [x[3:] for x in names_species]
-
-        self.df = pd.DataFrame(value_signals, index=index, columns=names_species)
-        self.df = self.df.sortlevel(["experiment"])
-        self.df = self.df.sort_index(axis=1) # sort the species
-
-        if self._missing_time_zero == True:
-            self._duplicate_time_zero_using_inhibitors_only()
-
-        if self.df.shape[0] > len(self.times) * self.experiments.shape[0]:
-            self.logging.warning("WARNING:: you may have duplicated experiments, pleiase average the replaicates using self.average_replicates(inplace=True)")
-
-        if self.df.max(skipna=True).max(skipna=True) > 1:
-            self.logging.warning("WARNING:: values larger than 1. You may want to normalise/scale the data")
-
-        # Get rid of TR in experiments
-        self._experiments.columns = [this.replace("TR:", "") for this in self._experiments.columns]
-        #
-
-        cues = []
-        for c in self._experiments.columns:
-            if c.count(":") >=2:
-                raise ValueError("Invalid header. Found more than 2 : sign in a column")
-
-            if c.endswith(":Stimuli"):
-                cues.append(c.split(":")[0])
-            elif c.endswith(":Inhibitors"):
-                cues.append(c.split(":")[0] + ":i")
-            elif c.endswith("i"):
-                cues.append(c[0:-1] + ":i")
-            else:
-                cues.append(c)
-        self._experiments.columns = cues
-
-        inh = [x for x in self._experiments.columns if x.endswith(":i") is True]
-        stim = [x for x in self._experiments.columns if x.endswith(":i") is False]
-        self._experiments = pd.DataFrame(self._experiments.values,
-                     columns=[['Stimuli']*len(stim) + ['Inhibitors']*len(inh),
-                              [x.replace(":i","") for x in self._experiments.columns]],
-                        index= self._experiments.index)
 
     def _check_consistency_data(self):
         # times consistency all times must have same length
         #
         pass
-
-    def _duplicate_time_zero_using_inhibitors_only(self):
-        """
-        Sometimes the time zero data sets are not explicitly written in MIDAS
-        files. One example is MD-ExtLiverHepG2-MCP2010-mod4.csv from the
-
-        """
-        self.logging.warning("WARNING:: duplicating time zeros data to fit experiment at other times")
-        # first figure out the inhibitors
-
-        # find experiment that have missing time zero data
-        experiments = list(self.experiments.index)
-
-        tobeadded = None
-        for i, this_exp in enumerate(experiments):
-            times = self.df.ix[self.cellLine].ix[experiments[i]].index
-            if 0 in times:
-                pass
-            else:
-                # need to find the experiment with same inhibitors
-                # and time 0
-                # there should be only one ? maybe not if replicates.
-                these_inhibitors =  self.experiments.ix[this_exp][self.inhibitors]
-
-                for this_exp_intern in experiments:
-                    times = self.df.ix[self.cellLine].ix[this_exp_intern].index
-                    if 0 in times:
-                        if all(self.experiments.ix[this_exp_intern][these_inhibitors.index] ==
-                            these_inhibitors):
-                            #print("{}(no time zero found) is similar to {}".format(this_exp,  this_exp_intern))
-                            break # so that if there are several replicates found, we pick up the first one only
-
-                # get the times for this experimenti. it must contain the time zero
-                newdata = self.df.xs((self.cellLine, this_exp_intern))
-                # we only need the time 0
-                newrow = newdata[newdata.index == 0]
-                # let us add some index information that is now missing
-
-                newrow[self._levels[0]] = self.cellLine
-                newrow[self._levels[1]] = this_exp
-                newrow[self._levels[2]] = 0
-
-                # we can now merge with the full data set
-                if types.NoneType == type(tobeadded):
-                    tobeadded = newrow.copy()
-                else:
-                    tobeadded = pd.concat([tobeadded, newrow])
-        # finally concatenate all the rows with the dataframe df
-        df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
-        df = df.set_index(self._levels)
-        df = df.sortlevel(self._levels[1]) # experiment
-        self.df = df.copy()
 
     def remove_species(self, labels):
         """Remove a set of species
@@ -645,7 +666,7 @@ class XMIDAS(MIDASReader):
         """
         if len(self.df):
             self.df.set_index(self._levels, inplace=True)
-            self.sim.set_index(self.levels, inplace=True)
+            self.sim.set_index(self._levels, inplace=True)
             self.errors.set_index(self._levels, inplace=True)
 
     def remove_cellLine(self, labels):
@@ -686,7 +707,7 @@ class XMIDAS(MIDASReader):
         This is a bit complicated but looks like the proper way
 
         """
-        labels = self._str_or_list_to_list(labels)
+        labels = self._dev.tolist(labels)
         if level == "experiment":
             labels = [x if "experiment" in str(x) else "experiment_"+str(x)
                     for x in labels]
@@ -694,7 +715,7 @@ class XMIDAS(MIDASReader):
         self.reset_index()
         for label in labels:
             if label not in set(self.df[level]):
-                self.logging.warning("{} not in times. Skipped".format(label))
+                self.logging.warning("{} not found. Skipped".format(label))
             else:
                 self.df.drop(self.df[self.df[level] == label].index, inplace=True)
                 self.sim.drop(self.sim[self.sim[level] == label].index, inplace=True)
@@ -709,22 +730,28 @@ class XMIDAS(MIDASReader):
 
         :param labels: a string or list of string representing the stimuli
         """
-        self._remove_column_experiment(labels)
+        self._remove_column_experiment(labels, level='Stimuli')
 
     def remove_inhibitors(self, labels):
         """Remove inhibitor(s) from the :attr:`experiment` dataframe
 
         :param labels: a string or list of string representing the inhibitor(s)
         """
-        self._remove_column_experiment(labels)
+        self._remove_column_experiment(labels, level='Inhibitors')
 
-    def _remove_column_experiment(self, labels):
-        labels = self._str_or_list_to_list(labels)
+    def _remove_column_experiment(self, labels, level):
+        if level == 'Inhibitors':
+            valid_names = self.names_inhibitors
+        elif level == 'Stimuli':
+            valid_names = self.names_stimuli
+        labels = self._dev.tolist(labels)
         for label in labels:
-            if label not in set(self.experiments.columns):
-                self.logging.warning("{} not in times. Skipped".format(label))
+            # m.experiments.columns.levels[1] contains all names even those that
+            # are removed so need to use names_inhibitors instead
+            if label not in set(valid_names):
+                self.logging.warning("{} not found. Skipped".format(label))
             else:
-                self.experiments.drop(labels, axis=1, inplace=True)
+                self.experiments.drop((level,label), axis=1, inplace=True)
 
     def rename_stimuli(self, names_dict):
         """Rename stimuli in the :attr:`experiment` dataframe
@@ -740,10 +767,9 @@ class XMIDAS(MIDASReader):
         .. seealso:: :meth:`rename_stimuli`, :meth:`rename_inhibitors`
 
         """
-        self._dev.check_param_in_list(names_dict.keys(), self.experiments.columns)
-        columns = list(self.experiments.columns)
-        columns = [c if c not in names_dict.keys() else names_dict[c] for c in columns]
-        self.experiments.columns = columns
+        self._dev.check_param_in_list(names_dict.keys(), self.names_stimuli)
+        self.experiments.rename(columns=names_dict, inplace=True)
+
 
     def rename_inhibitors(self, names_dict):
         """Rename inhibitors
@@ -764,10 +790,8 @@ class XMIDAS(MIDASReader):
 
 
         """
-        self._dev.check_param_in_list(names_dict.keys(), self.experiments.columnss)
-        columns = list(self.experiments.columns)
-        columns = [c if c not in names_dict.keys() else names_dict[c] for c in columns]
-        self.experiments.columns = columns
+        self._dev.check_param_in_list(names_dict.keys(), self.names_inhibitors)
+        self.experiments.rename(columns=names_dict, inplace=True)
 
     def rename_species(self, names_dict):
         """Rename species in the main :attr:`df` dataframe
@@ -785,7 +809,7 @@ class XMIDAS(MIDASReader):
 
 
         """
-        self.dev.check_param_in_list(names_dict.keys(), self.df.columns)
+        self._dev.check_param_in_list(names_dict.keys(), self.df.columns)
         columns = list(self.df.columns)
         columns = [c if c not in names_dict.keys() else names_dict[c] for c in columns]
         self.df.columns = columns
@@ -816,6 +840,8 @@ class XMIDAS(MIDASReader):
 
         """
         self.reset_index()
+        # key may be same as value, in which case replace method fails. So, we get rid of them
+        to_replace = dict([(k,v) for k,v in to_replace.iteritems() if k!=v])
         self.df.replace({"time": to_replace}, inplace=True)
         self.set_index()
 
@@ -825,39 +851,44 @@ class XMIDAS(MIDASReader):
     def add_experiment(self, e):
         raise NotImplementedError
 
-    def corr(self, names=None, cmap=None):
-        """plot correlation between the measured species
+    # SCALING
+    def scale_max_by_experiments(self, inplace=True):
+        """Divide each row by max across the rows with same experiment
 
-        :param list names: restriction to some species if provided.
-        :param string cmap: a valid colormap (e.g. jet). Can also use "green" or "heat".
+        IF an experiment has several values (times) max is found across that
+        time series, which is then divided by the max. If max is zero, results
+        will be filled with NA
 
-        .. plot::
-            :include-source:
-            :width: 80%
-
-            >>> from cellnopt.core import *
-            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"))
-            >>> m.corr(cmap="green")
-
+        So you get 1 for each experiment and each species
         """
-        cmap = self._get_cmap(cmap)
+        newdf = self.df.divide(self.df.max(level="experiment"), level="experiment")
+        if inplace:
+            self.df = newdf.copy()
+        else:
+            return newdf
 
-        corr = self.df.corr()
-        N = corr.shape[0]
-        names = self.df.columns[:]
+    def scale_min_max_by_experiments(self, inplace=True):
+        m = self.df.min(level="experiment")
+        M = self.df.max(level="experiment")
+        newdf = self.df.sub(m, level="experiment")
+        newdf = newdf.divide(M-m, level="experiment")
+        if inplace:
+            self.df = newdf.copy()
+        else:
+            return newdf
 
-        pylab.clf()
-        pylab.pcolor(corr, edgecolors="k", cmap=cmap);
-        pylab.xticks([x+0.5 for x in range(0,N)], names, rotation=90)
-        pylab.yticks([x+0.5 for x in range(0,N)], names)
-        pylab.tight_layout()
-        pylab.colorbar()
-        return corr
+    def scale_max(self, inplace=True):
+        """Divide all data by the maximum over the entire data set"""
+        M = self.df.max().max()
+        if inplace:
+            self.df /= M
+        else:
+            return self.df / M
 
     def scale_max_across_experiments(self, inplace=True):
         """Divide each species column by max acrosss all experiments
 
-        In the MIDAS plot, this is equivalent to dividig each column by
+        In the MIDAS plot, this is equivalent to dividing each column by
         the max over that column. So, on each column, you should get 1 max values
         set to 1 (if the max is unique). The minimum values may not be set to 0.
 
@@ -885,30 +916,6 @@ class XMIDAS(MIDASReader):
         else:
             return data
 
-    def scale_max_by_experiments(self, inplace=True):
-         newdf = self.df.divide(self.df.max(level="experiment"), level="experiment")
-         if inplace:
-             self.df = newdf.copy()
-         else:
-             return newdf
-
-    def scale_min_max_by_experiments(self, inplace=True):
-        m = self.df.min(level="experiment")
-        M = self.df.max(level="experiment")
-        newdf = self.df.sub(m, level="experiment")
-        newdf = newdf.divide(M-m, level="experiment")
-        if inplace:
-            self.df = newdf.copy()
-        else:
-            return newdf
-
-    def scale_max(self, inplace=True):
-        """Divide all data by the maximum over entire data set"""
-        M = self.df.max().max()
-        if inplace:
-            self.df /= M
-        else:
-            return self.df / M
 
     def scale_min_max(self, inplace=True):
         r"""Divide all data by the maximum over entire data set
@@ -932,6 +939,38 @@ class XMIDAS(MIDASReader):
             newdf = self.df - m
             newdf /= (M-m)
             return newdf
+
+
+    # PLOTTING
+
+    def corr(self, names=None, cmap='gist_heat_r', show=True):
+        """plot correlation between the measured species
+
+        :param list names: restriction to some species if provided.
+        :param string cmap: a valid colormap (e.g. jet). Can also use "green" or "heat".
+
+        .. plot::
+            :include-source:
+            :width: 80%
+
+            >>> from cellnopt.core import *
+            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"))
+            >>> m.corr(cmap="green")
+
+        """
+        cmap = self._get_cmap(cmap)
+        corr = self.df.corr()
+
+        if show is True:
+            N = corr.shape[0]
+            names = self.df.columns[:]
+            pylab.clf()
+            pylab.pcolor(corr, edgecolors="k", cmap=cmap);
+            pylab.xticks([x+0.5 for x in range(0,N)], names, rotation=90)
+            pylab.yticks([x+0.5 for x in range(0,N)], names)
+            pylab.tight_layout()
+            pylab.colorbar()
+        return corr
 
     def create_empty_simulation(self):
         """Populate the simulation dataframe with zeros.
@@ -1472,7 +1511,7 @@ class XMIDAS(MIDASReader):
 
     def to_measurements(self):
         """Returns a Measurements instance
-        
+
         Each datum in the dataframe :attr:`df` is converted into an
         instance of :class:`~cellnopt.core.xmidas.Experiment`.
 
@@ -1598,11 +1637,10 @@ class XMIDAS(MIDASReader):
     def copy(self):
         x = XMIDAS()
         x._data = self._data.copy()
-        # FIXME
-        #x._missing_time_zero = self._missing_time_zero
-        x.cellLine = self.cellLine
+        x._missing_time_zero = self._missing_time_zero
         x.df = self.df.copy()
         x._experiments = self.experiments.copy()
+        x._cellLine = self.cellLine
         x.sim = self.sim.copy()
         x.errors = self.errors.copy()
         return x

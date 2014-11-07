@@ -33,7 +33,7 @@ from cno.io.midas import XMIDAS
 
 from colormap import Colormap
 
-__all__ = ["CNOGraph", "CNOGraphMultiEdges", "CNOGraphAttributes"]
+__all__ = ["CNOGraph", "CNOGraphAttributes"]
 
 
 class Attributes(dict):
@@ -305,7 +305,7 @@ class CNOGraph(nx.DiGraph):
         # This is a DIgraph attribute
         # self.graph is a DiGraph attribute that is overwritten sometinmes
 
-        self.graph_options = { 
+        self.graph_options = {
                 'graph': {
                     "dpi":200,
                     'rankdir':'TB',
@@ -319,8 +319,8 @@ class CNOGraph(nx.DiGraph):
         #self.graph_options['node']['fontsize'] = 26
         #self.graph_options['node']['height']
         #self.graph_options['node']['width']
-                
-               
+
+
 
         #: the attributes for nodes and edges are stored within this attribute. See :class:`CNOGraphAttributes`
         self.attributes = CNOGraphAttributes()
@@ -352,12 +352,17 @@ class CNOGraph(nx.DiGraph):
             self.filename = None
         elif model is None:
             self.filename = None
-        elif model.endswith('.sif'):
+
+        elif isinstance(model, str):
+            if model.endswith('.sif'):
+                self.read_sif(model)
+                self.filename = model[:]
+            elif model.endswith(".xml"):
+                self.read_sbmlqual(model)
+                self.filename = model[:]
+        elif isinstance(model, SIF):
             self.read_sif(model)
-            self.filename = model[:]
-        elif model.endswith(".xml"):
-            self.read_sbmlqual(model)
-            self.filename = model[:]
+            self.filename = 'undefined'
 
         # the data
         self.midas = data
@@ -755,6 +760,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
         G.remove_nodes_from([n for n in G if n in other.nodes()])
         return G
 
+    def __str__(self):
+        nodes = len([x for x in self.nodes() if '^' not in x])
+        andnodes = len([x for x in self.nodes() if '^' in x])
+
+        msg = "The model contains %s nodes (and %s AND node)\n" % (nodes, andnodes)
+
+        self.logging.warning("Edge counting valid only if and node have only 2 inputs")
+        edges = len([e for e in self.edges() if '^' not in e[0] and '^' not in e[1]])
+        andedges = len([e for e in self.edges() if '^'  in e[0] or '^'  in e[1]])/3
+        msg += "%s Hyperedges found (%s+%s) \n" % (edges+andedges, edges, andedges)
+
+        return msg
+
     #def __rsub__(self, other):
     #    self.remove_nodes_from([n for n in self if n in other.nodes()])
 
@@ -869,18 +887,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         G.remove_nodes_from([n for n in G if n not in other])
         return G
 
-    def __str__(self):
-        nodes = len([x for x in self.nodes() if '^' not in x])
-        andnodes = len([x for x in self.nodes() if '^' in x])
-
-        msg = "The model contains %s nodes (and %s AND node)\n" % (nodes, andnodes)
-
-        self.logging.warning("Edge counting valid only if and node have only 2 inputs")
-        edges = len([e for e in self.edges() if '^' not in e[0] and '^' not in e[1]])
-        andedges = len([e for e in self.edges() if '^'  in e[0] or '^'  in e[1]])/3
-        msg += "%s Hyperedges found (%s+%s) \n" % (edges+andedges, edges, andedges)
-
-        return msg
 
     #def _get_link(self):
     #    return [self.edge[x[0]][x[1]]['link'] for x in self.edges_iter()]
@@ -1277,7 +1283,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         allranks = self.get_same_rank()
         ranks  = {}
         for k, v in allranks.iteritems():
-            ranks[k] = sorted([x for x in v if '=' not in x], 
+            ranks[k] = sorted([x for x in v if '=' not in x],
                     cmp=lambda x,y:cmp(x.lower(), y.lower()))
             # add invisible edges so that the nodes that have the same rank are
             # ordered.
@@ -1313,21 +1319,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
         doc="Returns list of Non observable and non controlable nodes (Read-only).")
 
     def _get_reactions(self):
-        # FIXME. A=B, C=B, expand_and_gates; reacID does not contain the and gate...
-        edges =  [x for x in self.edges()]
-        links = [str(self.edge[x[0]][x[1]]['link']) for x in edges]
-        nodes1 = [x[0] for x in edges]
-        nodes2 = [x[1] for x in edges]
-
-        reacs = []
-        for n1,link,n2 in zip(nodes1, links, nodes2):
-            if "=" in n1 or "=" in n2:
-                continue
-            if link == "+":
-                reacs.append(n1 + "=" + n2)
-            else:
-                reacs.append("!" + n1 + "=" + n2)
-        return reacs
+        sif = self.to_sif()
+        return sif.reaction_names
     reactions = property(_get_reactions, doc="return the reactions (edges)")
 
     def _get_namesSpecies(self):
@@ -1336,9 +1329,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         return sorted(nodes)
     namesSpecies = property(fget=_get_namesSpecies,
         doc="Return sorted list of species (ignoring and gates) Read-only attribute.")
-
-
-
 
     def swap_edges(self, nswap=1):
         """Swap two edges in the graph while keeping the node degrees fixed.
@@ -2248,9 +2238,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         """networkx method not to be used"""
         raise NotImplementedError
 
-    def to_directed(self):
-        """networkx method not to be used"""
-        raise NotImplementedError
 
     def add_star(self):
         """networkx method not to be used"""
@@ -2708,6 +2695,10 @@ not present in the model. Change your model or MIDAS file. """ % x)
         from networkx.readwrite import write_gexf
         write_gexf(self, filename)
 
+    def to_directed(self):
+        """networkx method not to be used"""
+        raise NotImplementedError
+
     def to_sif(self, filename=None):
         """Export CNOGraph into a SIF file.
 
@@ -2721,37 +2712,25 @@ not present in the model. Change your model or MIDAS file. """ % x)
         :param str filename:
 
         """
-        # FIXME: use the sif file 
-        andCounter = 0
-        fh = open(filename, "w")
+        sif = SIF()
+
         for edge in self.edges(data=True):
             n1 = edge[0]
             n2 = edge[1]
+            link = edge[2]['link']
+            reaction = ""
             if "^" not in n1 and "^" not in n2:
-                link = edge[2]['link']
-                if link == "+":
-                    fh.write("%s 1 %s\n" % (n1,n2))
-                else:
-                    fh.write("%s -1 %s\n" % (n1,n2))
+                if link == "-":
+                    reaction += "!"
+                reaction += n1 + "=" + n2
+                sif.add_reaction(reaction)
+        for edge in self._find_and_nodes():
+            sif.add_reaction(edge)
 
-        for node in self._find_and_nodes():
-            andCounter += 1
-            andNode = "and%s" % andCounter
-            succs = self.successors(node)
-            preds = self.predecessors(node)
-            for succ in succs:
-                link = self.edge[node][succ]['link']
-                if link == "+":
-                    fh.write("%s 1 %s\n" % (andNode,succ))
-                else:
-                    fh.write("%s -1 %s\n" % (andNode,succ))
-            for pred in preds:
-                link = self.edge[pred][node]['link']
-                if link == "+":
-                    fh.write("%s 1 %s\n" % (pred,andNode))
-                else:
-                    fh.write("%s -1 %s\n" % (pred,andNode))
-        fh.close()
+        if filename:
+            sif.to_sif(filename)
+        else:
+            return sif
 
     def to_json(self, filename):
         """Export the graph into a JSON format
@@ -2786,7 +2765,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             s.add_reaction(reac)
         return s.to_sbmlqual(filename=filename)
 
-    def loadjson(self, filename):
+    def read_json(self, filename):
         """Load a network in JSON format as exported from :meth:`export2json`
 
         :param str filename:
@@ -3122,17 +3101,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         if self.compressable_nodes :
              print("Warning: There still are compressable nodes after {mni} compression cycles".format(mni=max_num_iter))
-
-    def sif(self):
-        """Return a SIF instance corresponding to this graph
-
-
-        .. warning:: need to fix the reacID attribute to get AND gates
-        """
-        s = SIF()
-        for r in self.reactions:
-            s.add_reaction(r)
-        return s
 
     def findnonc(self):
         """Finds the Non-Observable and Non-Controllable nodes

@@ -56,12 +56,12 @@ class Reaction(ReactionBase):
     #. The **!** sign indicates a logical NOT.
     #. The **+** sign indicates a logical OR.
     #. The **=** sign indicates a relation (edge).
-    #. The **^** or **&** signs indicate a logical AND. Note that **&** signs 
+    #. The **^** or **&** signs indicate a logical AND. Note that **&** signs
        will be replaced by **^**.
 
 
-    Internally, reactions are checked for validity (e.g., !=C is invalid). 
-    
+    Internally, reactions are checked for validity (e.g., !=C is invalid).
+
     You can reset the name::
 
         >>> r.name = "A+B+C=D"
@@ -71,7 +71,7 @@ class Reaction(ReactionBase):
         >>> newr = Reaction(r)
 
     Sorting can be done inplace (default) or not. ::
-    
+
         >>> r = Reaction("F+D^!B+!A=Z")
         >>> r.sort(inplace=False)
         '!A+!B^D+F=Z'
@@ -86,7 +86,7 @@ class Reaction(ReactionBase):
         True
 
     If a reaction **A+A=B** is provided, it can be simplified by calling :meth:`simplify`.
-    ANDs operator are not simplified. More sophisticated simplifications using Truth 
+    ANDs operator are not simplified. More sophisticated simplifications using Truth
     Table could be used but will not be implemented in this class for now.
     """
     def __init__(self, reaction=None, strict_rules=True):
@@ -123,7 +123,7 @@ class Reaction(ReactionBase):
             >>> r = Reaction("!a+c^d^e^f+!h=b")
             >>> r.species
             ['a', 'c', 'd', 'e', 'f', 'h', 'b']
-            
+
 
         """
         if reac == None:
@@ -132,10 +132,10 @@ class Reaction(ReactionBase):
         species = [x for x in species if x]
         return species
     species = property(_get_species)
-    
+
     def _get_lhs(self):
         return self.name.split("=")[0]
-    lhs = property(_get_lhs, 
+    lhs = property(_get_lhs,
             doc="Getter for the left hand side of the = character")
 
     def _get_lhs_species(self):
@@ -149,6 +149,13 @@ class Reaction(ReactionBase):
         return self.name.split("=")[1]
     rhs = property(_get_rhs,
             doc="Getter for the right hand side of the = character")
+
+    def _get_sign(self):
+        if "!" in self.name and "^" not in self.name:
+            return "-1"
+        else:
+            return "1"
+    sign = property(_get_sign, doc="return sign of the reaction")
 
     def _valid_reaction(self, reaction):
         reaction = reaction.strip()
@@ -164,11 +171,11 @@ class Reaction(ReactionBase):
                 raise CNOError("Reaction (%s) cannot start with %s" %
                         (reaction, "=, ^, +"))
 
-        # 
+        #
         lhs, rhs = reaction.split("=")
         for this in self.valid_symbols:
             if this in rhs:
-                raise CNOError("Found an unexpected character (%s) in the LHS of reactions %s" % 
+                raise CNOError("Found an unexpected character (%s) in the LHS of reactions %s" %
                         (reaction, self.valid_symbols))
         return reaction
 
@@ -222,7 +229,7 @@ class Reaction(ReactionBase):
             >>> r.name
             "A=B"
 
-        Other cases (with ANDs) are not simplified.  Even though **A+A^B=C** truth table 
+        Other cases (with ANDs) are not simplified.  Even though **A+A^B=C** truth table
         could be simplified to **A=C** but we will not simplified it for now.
 
         """
@@ -255,10 +262,10 @@ class Reaction(ReactionBase):
 
 class Reactions(ReactionBase):
     """Data structure to handle list of :class:`Reaction` instances
-    
+
     For the syntax of a reaction, see :class:`Reaction`. You can
     use the **=**, **!**, **+** and **^** characters.
-    
+
     Reactions can be added using either string or instances of :class:`Reaction`::
 
         >>> from cno import Reaction, Reactions
@@ -281,17 +288,17 @@ class Reactions(ReactionBase):
         >>> r.reactions
         ["B=C", "C=D", "!D=E"]
 
-    .. note:: there is no simplifications made on reactions. For instance, if you add A=B and then 
+    .. note:: there is no simplifications made on reactions. For instance, if you add A=B and then
         A+B=C, A=B is redundant but will be kept.
 
     .. seealso:: :class:`cno.io.reactions.Reaction` and :class:`cno.io.sif.SIF`
     """
-    def __init__(self,  strict_rules=True, verbose=False):
-        self._reactions = []
+    def __init__(self, reactions=[], strict_rules=True, verbose=False):
+        self._reactions = reactions
         self._reaction = Reaction(strict_rules=strict_rules)
         self.verbose = verbose
         self.strict_rules = strict_rules
-       
+
     def to_list(self):
         """Return list of reaction names"""
         return [x.name for x in self.reactions]
@@ -317,7 +324,7 @@ class Reactions(ReactionBase):
     reaction_names = property(fget=_get_reaction_names, doc="return list of reaction names")
 
     def __str__(self):
-        _str = "Reactions() instance:\n" 
+        _str = "Reactions() instance:\n"
         _str += "- %s reactions\n" % len(self.reactions)
         _str += "- %s species\n" % len(self.species)
         return _str
@@ -328,7 +335,7 @@ class Reactions(ReactionBase):
         :param str,list species_to_remove:
 
 
-        .. note:: If a reaction is "a+b=c" and you remove specy "a", 
+        .. note:: If a reaction is "a+b=c" and you remove specy "a",
             then the reaction is not enterely removed but replace by "b=c"
 
         """
@@ -392,7 +399,7 @@ class Reactions(ReactionBase):
             !a=e
 
         Example:
-        
+
         .. doctest::
 
             >>> from cno import Reactions
@@ -404,7 +411,7 @@ class Reactions(ReactionBase):
         reac = Reaction(reaction, strict_rules=self.strict_rules)
         reac.sort()
 
-        # 
+        #
         if reac.name not in self.to_list():
             self.reactions.append(reac)
         else:
