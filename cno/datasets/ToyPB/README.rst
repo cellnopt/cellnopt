@@ -29,12 +29,12 @@ Node ask1 removed
 - SBML format available: 
   
   
- ```
- from cno import cnodata, CNOGraph
- c1 = CNOGraph(cnodata("PKN-ToyPB.xml"))
- c2 = CNOGraph(cnodata("PKN-ToyPB.sif"))
- c1 == c2
- ```
+```
+from cno import cnodata, CNOGraph
+c1 = CNOGraph(cnodata("PKN-ToyPB.xml"))
+c2 = CNOGraph(cnodata("PKN-ToyPB.sif"))
+c1 == c2
+```
 
 
 References
