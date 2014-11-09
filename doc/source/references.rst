@@ -30,7 +30,6 @@ CNOGraph
 .. automodule:: cno.io.cnograph
     :members:
     :undoc-members:
-    :inherited-members:
     :synopsis: 
 
 MIDAS
@@ -130,3 +129,21 @@ MISC
     :undoc-members:
     :inherited-members:
     :synopsis: 
+
+
+For developers
+===================
+
+.. automodule:: cno.admin.distribute
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+.. automodule:: cno.admin.install
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
+
+
