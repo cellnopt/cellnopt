@@ -42,11 +42,11 @@ def test_sifreader():
     # let us call the clear method:
     s1.clear()
 
-def test_loadSIF():
+def test_read_sif():
     s = SIF()
-    s.loadSIF(simple)
+    s.read_sif(simple)
     try:
-        s.loadSIF("rubbusish")
+        s.read_sif("rubbusish")
         assert False
     except:
         assert True
@@ -74,14 +74,14 @@ def test_sifreader_wrong():
     except IOError:
         assert True
 
-def test_sif2reaction():
+def test_to_reactions():
     from cno import cnodata
     filename = cnodata("PKN-ToyMMB.sif")
     s = SIF(filename)
     s.add_reaction("a=and1")
     s.add_reaction("b=and1")
     s.add_reaction("and1=c")
-    r = s.sif2reaction()
+    r = s.to_reactions()
     
 def test_operators():
     s1 = SIF()
@@ -148,7 +148,7 @@ def test_remove_and_gates():
     s.add_reaction("A^B=1")
     s.remove_and_gates()
 
-def test_constructor2():
+def _test_constructor2():
     """test the convert_ands parameter"""
     fh = tempfile.NamedTemporaryFile(delete=False)
     fh.write("A^B 1 C\n")
@@ -173,7 +173,7 @@ def test_constructor3():
         assert False
     except:
         assert True
-    s = SIF(fh.name, format="standard")
+    s = SIF(fh.name, frmt='generic')
     fh.delete = True
     fh.close()
 
@@ -193,7 +193,7 @@ def test_constructor_bad_and_gate():
     fh.delete = True
     fh.close()
 
-def test_constructor_ignore_and():
+def _test_constructor_ignore_and():
     fh = tempfile.NamedTemporaryFile(delete=False)
     fh.write("A 1 and1\n")
     fh.write("B 1 and1\n")

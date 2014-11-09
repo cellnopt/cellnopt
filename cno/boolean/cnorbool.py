@@ -73,7 +73,6 @@ class CNORbool(CNOBase):
         library(CellNOptR)
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
-        #cnolist = normaliseCNOlist(cnolist, mode="ctrl", changeTh=40)
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s, 
             expansion=%(expansion)s, maxInputsPerGate=3)
 
@@ -196,25 +195,47 @@ class CNORbool(CNOBase):
             txt += "{0}: {1}".format(cell, self.results['best_score']) + "\n"
         return txt
 
-    def simulate(self):
+    def simulate(self, bs=None, compression=True, expansion=True):
         """
+
+        input could be a bitstring with correct length and same order
+        OR a model
 
 
         c.results.cnorbool.best_bitstring
+        c.results.cnorbool.reactions
         array([1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0])
         c.results.cnorbool.reactions
 
 
         """
 
+        if bs == None:
+            bs = ",".join([str(x) for x in self.results.cnorbool.best_bitstring])
+        else:
+            bs = ",".join([str(x) for x in bs])
 
-        script = """
+
+        script_template = """
 
         library(CellNOptR)
-
+        pknmodel = readSIF("%(pkn)s")
+        cnolist = CNOlist("%(midas)s")
+        model = preprocessing(cnolist, pknmodel, compression=%(compression)s, 
+            expansion=%(expansion)s, maxInputsPerGate=3)
+        mse = computeScoreT1(cnolist, model, %(bs)s)
         """
 
+        script = script_template % {
+                'pkn': self.pknmodel.filename, 
+                'midas': self.data.filename,
+                'compression': bool2R(compression),
+                'expansion': bool2R(expansion),
+                'bs': "c(" + bs + ")"
+                }
+
         self.session.run(script)
+        return self.session.mse
        
     def _get_models(self):
         return self.results.cnorbool.models

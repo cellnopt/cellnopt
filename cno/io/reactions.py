@@ -37,6 +37,7 @@ __all__ = ["Reaction", "Reactions"]
 
 class ReactionBase(object):
     valid_symbols = ["+","!", "&", "^"]
+    and_symbol = "^"
 
 
 class Reaction(ReactionBase):
@@ -106,6 +107,8 @@ class Reaction(ReactionBase):
             # or a string
             elif isinstance(reaction, str):
                 self.name = reaction
+            else:
+                raise CNOError("neither a string nor a Reaction instance")
 
     def _set_name(self, reaction):
         if reaction is not None:
@@ -133,6 +136,14 @@ class Reaction(ReactionBase):
         return species
     species = property(_get_species)
 
+    def get_signed_lhs_species(self):
+        lhs = self.lhs[:]
+        species = re.split("[+|^]", lhs)
+        pos = [x for x in species if x.startswith("!") is False] 
+        neg = [x[1:] for x in species if x.startswith("!") is True] 
+        return {'-': neg, '+': pos}
+
+
     def _get_lhs(self):
         return self.name.split("=")[0]
     lhs = property(_get_lhs,
@@ -151,7 +162,7 @@ class Reaction(ReactionBase):
             doc="Getter for the right hand side of the = character")
 
     def _get_sign(self):
-        if "!" in self.name and "^" not in self.name:
+        if "!" in self.name and self.and_symbol not in self.name:
             return "-1"
         else:
             return "1"
@@ -159,7 +170,7 @@ class Reaction(ReactionBase):
 
     def _valid_reaction(self, reaction):
         reaction = reaction.strip()
-        reaction = reaction.replace("&", "^")
+        reaction = reaction.replace("&", self.and_symbol)
 
         # = sign is compulsary
         N = reaction.count("=")
@@ -240,6 +251,33 @@ class Reaction(ReactionBase):
         else:
             return name
 
+    def _rename_one_species(self, lhs, k, v):
+        symbols = ['+', '^', '!', '=']
+        new_name = ''
+        current_species = ''
+        for x in lhs:
+            if x in symbols:
+                # the current species should now be added to the new_name
+                if current_species == k:
+                    new_name += v
+                else:
+                    new_name += current_species
+                current_species = ''
+                new_name += x
+            else:
+                current_species += x
+        # in principle current_species should be the RHS
+        if current_species == k:
+            new_name += v
+        else:
+            new_name += current_species
+        return new_name
+
+    def rename_species(self, mapping={}):
+        for k,v in  mapping.iteritems():
+            newname = self._rename_one_species(self.name, k, v)
+            self.name = newname
+
     def __eq__(self, other):
         # The reaction may not be sorted and user may not want to it to be sorted,
         # so we create a new instance and sort it
@@ -294,20 +332,22 @@ class Reactions(ReactionBase):
     .. seealso:: :class:`cno.io.reactions.Reaction` and :class:`cno.io.sif.SIF`
     """
     def __init__(self, reactions=[], strict_rules=True, verbose=False):
-        self._reactions = reactions
+        super(Reactions, self).__init__()
+        # !! use a copy 
+        self._reactions = [Reaction(x) for x in reactions]
         self._reaction = Reaction(strict_rules=strict_rules)
         self.verbose = verbose
         self.strict_rules = strict_rules
 
     def to_list(self):
         """Return list of reaction names"""
-        return [x.name for x in self.reactions]
+        return [x.name for x in self._reactions]
 
     def _get_species(self):
         """Extract the specID out of reacID"""
 
         # extract species from all reacID and add to a set
-        species = [this for reaction in self.reactions for this in reaction.species]
+        species = [this for reaction in self._reactions for this in reaction.species]
         species = set(species)
 
         # sort (transformed to a list)
@@ -315,13 +355,13 @@ class Reactions(ReactionBase):
         return species
     species = property(_get_species, doc="return list of unique species")
 
-    def _get_reactions(self):
-        return self._reactions
-    reactions = property(fget=_get_reactions, doc="return list of reactions (objects)")
+    #def _get_reactions(self):
+    #    return self._reactions
+    #reactions2 = property(fget=_get_reactions, doc="return list of reactions (objects)")
 
     def _get_reaction_names(self):
-        return [reaction.name for reaction in self.reactions]
-    reaction_names = property(fget=_get_reaction_names, doc="return list of reaction names")
+        return [reaction.name for reaction in self._reactions]
+    reactions = property(fget=_get_reaction_names, doc="return list of reaction names")
 
     def __str__(self):
         _str = "Reactions() instance:\n"
@@ -349,7 +389,7 @@ class Reactions(ReactionBase):
 
         reacIDs_toremove = []
         reacIDs_toadd = []
-        for reac in self.reactions:
+        for reac in self._reactions:
             lhs = reac.lhs_species  # lhs without ! sign
             rhs = reac.rhs
 
@@ -386,6 +426,22 @@ class Reactions(ReactionBase):
 
         for reac in reacIDs_toadd:
             self.add_reaction(reac)
+    
+    def rename_species(self, mapping={}):
+        """Rename species in all reactions
+        
+        :param dict mapping:  The mapping between old and new names
+        """
+        for r in self._reactions:
+            r.rename_species(mapping)
+
+    def add_reactions(self, reactions):
+        """Add a list of reactions
+        
+        :param list reactions: list of reactions or strings
+        """
+        for reac in reactions:
+            self.add_reaction(Reaction(reac))
 
     def add_reaction(self, reaction):
         """Adds a reaction in the list of reactions
@@ -411,9 +467,8 @@ class Reactions(ReactionBase):
         reac = Reaction(reaction, strict_rules=self.strict_rules)
         reac.sort()
 
-        #
         if reac.name not in self.to_list():
-            self.reactions.append(reac)
+            self._reactions.append(reac)
         else:
             print("Reaction %s already in the list of reactions" % reaction)
 
@@ -426,10 +481,10 @@ class Reactions(ReactionBase):
             >>> c.remove_reaction("a=b")
             >>> assert len(c.reactions) == 0
         """
-        names = [x.name for x in self.reactions]
+        names = [x.name for x in self._reactions]
         if reaction_name in names:
             index2remove = names.index(reaction_name)
-            del self.reactions[index2remove]
+            del self._reactions[index2remove]
         else:
             if self.verbose:
                 print("Reaction {0} not found. Nothing done".format(reaction_name))
@@ -443,7 +498,7 @@ class Reactions(ReactionBase):
 
         """
         r = Reactions()
-        for x in self.reactions:
+        for x in self._reactions:
             list_species = x.lhs_species
             if strict == True:
                 for this in list_species:
@@ -461,5 +516,5 @@ class Reactions(ReactionBase):
         return r
 
     def __len__(self):
-        return len(self.reactions)
+        return len(self._reactions)
 

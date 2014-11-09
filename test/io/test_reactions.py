@@ -53,7 +53,6 @@ def test_reactions():
     assert len(c) == 1
     print(c)
     c.reactions
-    c.reaction_names
     c.remove_reaction("A=B")
     assert len(c) == 0
     c.remove_reaction("A=B")

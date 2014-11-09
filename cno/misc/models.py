@@ -100,7 +100,7 @@ class Models(object):
         self.compute_average(model_number=model_number, *args, **kargs)
         self.cnograph.plotdot(edge_attribute="average", **kargs)
 
-    def to_sif(self, filename):
+    def to_sif(self, filename=None):
         """Exports 2 SIF using the "and" convention
 
         can read the results with CellNOptR for instance
@@ -108,7 +108,7 @@ class Models(object):
             >>> library(CellNOptR)
             >>> plotModel(readSIF("test.sif"))
         """
-        self.cnograph.to_sif(filename)
+        return self.cnograph.to_sif(filename)
 
     def errorbar(self):
         """Plot the average presence of reactions over all models

@@ -19,7 +19,6 @@ import csv
 import os
 import re
 
-
 from cno.io.reactions import Reactions
 #from cno.io.sbml import SBML
 from cno.misc import CNOError
@@ -90,9 +89,6 @@ class SIF(Reactions):
     Reactions are stored in :attr:`reacID`.
 
 
-    .. todo:: explain more precisely or simplify the 2 parameter ignore_and
-        and convert_ands, which are different semantic ! one of r the ^ character,
-        one for the and string.
 
     """
     def __init__(self, filename=None, frmt="cno"):
@@ -117,10 +113,12 @@ class SIF(Reactions):
         """
         super(SIF, self).__init__()
 
-        self.format = format
+        self.frmt = frmt
         self.ignore_and = False
-        self.convert_ands = True
-        self.clear()
+        if frmt == 'cno':
+            self.convert_ands = True
+        else:
+            self.convert_ands = False
 
         # check that the extension is correct and the file exists
         if isinstance(filename, str):
@@ -129,10 +127,11 @@ class SIF(Reactions):
                 raise IOError("File %s not found." % filename)
             self.read_sif(filename)
         elif filename == None:
-            pass
+            self.clear()
+        # could be another instance of a SIF file (or cnograph, or reactions)
         elif hasattr(filename, "reactions"):
             for reac in filename.reactions:
-                self.add_reaction(reac.name)
+                self.add_reaction(reac)
         else:
             raise ValueError("argument must be a valid filename (string)")
 
@@ -140,68 +139,71 @@ class SIF(Reactions):
         """remove all reactions and species"""
         self.remove_species(self.species)
 
+    def is_and(self, value):
+        if self.convert_ands is True and self.and_symbol in value:
+            return True
+        if re.search('^[a,A][n,N][D,d]\d$', value) :
+            return True
+        return False
+
     def _get_and_nodes(self):
-        _andNodes = [x for x in set(self.nodes1 + self.nodes2) if
-                re.search('^[a,A][n,N][D,d]\d$',x)]
-        if self.convert_ands:
-            _andNodes += [x for x in set(self.nodes1 + self.nodes2) if "^" in x]
-        return _andNodes
-    andNodes = property(_get_and_nodes, doc="Returns list of AND nodes")
+        _and_nodes = [x for x in set(self.nodes1 + self.nodes2) 
+                if self.is_and(x)]
+        return _and_nodes
+    and_nodes = property(_get_and_nodes, doc="Returns list of AND nodes")
 
     def remove_and_gates(self):
-        toremove = [r for x in self.andNodes for r in self.reaction_names if x in r]
+        """Remove all AND gates"""
+        toremove = [r for x in self.and_nodes for r in self.reactions if x in r]
         for reac in toremove:
             self.remove_reaction(reac)
 
     def read_sif(self, filename):
+        """Read a SIF file"""
         # Reads the data first
         self.clear()
-        try:
-            f = open(filename, 'r')
-            reader = csv.reader(f)
+        with open(filename, 'r') as fh:
+            reader = csv.reader(fh)
             self._rawdata = [row for row in reader if len(row)]
 
-            for i, row in enumerate(self._rawdata):
-                if len(row[0].split()) < 3:
-                    raise Exception("Line %s contains a ill-formed reactions:%s" %(i+1, row))
-        except IOError, e:
-            raise IOError(e)
-        else:
-            # if the file was opened, let us close it.
-            f.close()
+        for i, row in enumerate(self._rawdata):
+            if len(row[0].split()) < 3:
+                raise Exception("Line %s contains a ill-formed reactions:%s" %(i+1, row))
 
         self._interpret_reactions()
-        self._convert_ands()
+        if self.convert_ands:
+            self._convert_ands()
 
     def _convert_ands(self):
         #TODO check consistency between OR and AND gates
-        if self.convert_ands == False:
-            return
 
         # the and species found in the SIF (e.g A 1 and1; B 1 and1; and1 1 C)
         # are converted to A^B=C
         dont_remove = []
-        for andNode in self.andNodes:
-            if "^" in andNode: # if already if ^+ format, notthing to do
+        for and_node in self.and_nodes:
+            if self.and_symbol in and_node: # if already if ^+ format, notthing to do
                 continue
 
-            # otherwise, this is the original cno format that needs to work:
-            lhs_nodes = [ (x,e) for x,e,y in zip(self.nodes1, self.edges,self.nodes2) if y==andNode]
-            rhs_node = [ y for x,e,y in zip(self.nodes1, self.edges,self.nodes2) if x==andNode]
+            # otherwise, this is the original cno format that needs some mangling
+            lhs_nodes = [(x,e) for x, e, y in zip(self.nodes1, self.edges, self.nodes2) 
+                    if y==and_node]
+            rhs_node = [ y for x,e,y in zip(self.nodes1, self.edges,self.nodes2) 
+                    if x==and_node]
+
             try:
-                assert len(rhs_node) == 1,  "%s %s %s" % (lhs_nodes, andNode, rhs_node)
+                assert len(rhs_node) == 1,  "%s %s %s" % (lhs_nodes, and_node, rhs_node)
                 rhs_node = rhs_node[0]
 
-                andNode = "^".join([self.notedge(e)+x for x,e in lhs_nodes])
-                reac =  andNode + "=" + rhs_node
+                and_node = self.and_symbol.join([self.notedge(e)+x for x,e in lhs_nodes])
+                reac =  and_node + "=" + rhs_node
                 self.add_reaction(reac)
             except:
-                dont_remove.append(andNode)
+                dont_remove.append(and_node)
 
-        # The andNode (e.g., and1) are finally removed
-        for andNode in self.andNodes:
-            if andNode not in dont_remove and "^" not in andNode:
-                self.remove_species(andNode)
+        # The and_node (e.g., and1) are finally removed
+        for and_node in self.and_nodes:
+            if and_node not in dont_remove and self.and_symbol not in and_node:
+                self.remove_species(and_node)
 
     def _interpret_reactions(self):
         """interpret the data read from the SIF file"""
@@ -209,19 +211,20 @@ class SIF(Reactions):
             row = row[0].split() # row0 is the rawdata (string)
             node1 = row[0]
             edge = row[1]
-            nodes = row[2:] # may be several nodes after edge (at least 1)
+            # SIF format allows several nodes on the RHS
+            nodes = row[2:]
             for node2 in nodes:
                 # some specific tests for CNO format
-                if self.format == "cno":
+                if self.frmt == "cno":
                     if edge not in ["1","-1"]:
-                        raise ValueError("Edges must be set to 1 or -1")
+                        raise CNOError("Edges must be set to 1 or -1")
                     if re.search('^[a,A][n,N][D,d]\d+$',node1):
                         if edge == "-1":
                             raise ValueError("ill-formed SIF file line %s: an AND gate cannot have -1 edge" % i)
 
                 # sometimes, we may want to ignore reactions with and reactions
                 if self.ignore_and:
-                    if "and" in node1 or "and" in node2:
+                    if self.is_and(node1) or self.is_and(node2):
                         continue
 
                 # otherwise, store reactions
@@ -235,32 +238,22 @@ class SIF(Reactions):
 
     # makes the nodes1, nodes2, edges and data read-only properties
     def _get_nodes1(self):
-        return [x.split("=")[0].replace("!","") for x in self.reaction_names]
+        return [x.split("=")[0].replace("!","") for x in self.reactions]
     nodes1 = property(fget=_get_nodes1,
         doc="returns list of nodes in the left-hand sides of the reactions")
 
     def _get_nodes2(self):
-        return [x.split("=")[1] for x in self.reaction_names]
+        return [x.split("=")[1] for x in self.reactions]
     nodes2 = property(fget=_get_nodes2,
         doc="returns list of nodes in the right-hand sides of the reactions")
 
     def _get_edges(self):
-        nodes1 = [x.split("=")[0] for x in self.reaction_names]
+        nodes1 = [x.split("=")[0] for x in self.reactions]
         edges =  ["-1" if x.startswith("!") else "1" for x in nodes1]
         return edges
     edges = property(fget=_get_edges,
         doc="returns list of edges found in the reactions")
 
-    def __eq__(self, x):
-        if isinstance(x, SIF) == False:
-            return False
-        if sorted(self.nodes1) != sorted(x.nodes1):
-            return False
-        if sorted(self.nodes2) != sorted(x.nodes2):
-            return False
-        if sorted(self.edges) != sorted(x.edges):
-            return False
-        return True
 
     def add_reaction(self, reaction):
         """Adds a reaction into the network.
@@ -306,9 +299,9 @@ class SIF(Reactions):
         :param str order: can be predecessors, successors, edges
 
         """
-        rhs = [x.rhs for x in self.reactions]
-        lhs = [x.lhs for x in self.reactions]
-        signs = [x.sign for x in self.reactions]
+        rhs = [x.rhs for x in self._reactions]
+        lhs = [x.lhs for x in self._reactions]
+        signs = [x.sign for x in self._reactions]
         f = open(filename, "w")
         if order == 'predecessors':
             for i in np.argsort(lhs):
@@ -320,25 +313,12 @@ class SIF(Reactions):
             raise CNOError("valid order are successors or predecessors")
         f.close()
 
-    def __str__(self):
-        """prints in alphabetical order"""
-        msg = ""
-        msg = msg.rstrip("\n")
-        reacs = Reactions(self.reactions)
-        if self.format == "cno":
-            msg += "\n\n"
-            msg += self._underline("namesSpecies")+"\n"
-            msg += ", ".join(reacs.reactions) + "\n\n"
-            msg += self._underline("reactions")+"\n"
-            msg += ", ".join(self.reaction_names) + "\n\n"
-        return msg
 
     def _underline(self, msg):
         import easydev
         return easydev.underline(msg)
 
-
-    def sif2reaction(self):
+    def to_reactions(self):
         """Returns a Reactions instance generated from the SIF file.
 
         AND gates are interpreted. For instance the followinf SIF::
@@ -352,27 +332,9 @@ class SIF(Reactions):
             A^B=C
 
         """
-        reacID = []
-        for n1, e, n2 in zip(self.nodes1, self.edges, self.nodes2):
-            if n1 not in self.andNodes and n2 not in self.andNodes:
-                if e == "-1":
-                    reacID.append("!" + "=".join([n1,n2]))
-                else:
-                    reacID.append("=".join([n1,n2]))
-
-        for andNode in self.andNodes: # what to do with and nodes ?
-            lhs_nodes = [ (x,e) for x,e,y in zip(self.nodes1, self.edges,self.nodes2) if y==andNode]
-            rhs_node = [ y for x,e,y in zip(self.nodes1, self.edges,self.nodes2) if x==andNode]
-            assert len(rhs_node) == 1, rhs_node
-            rhs_node = rhs_node[0]
-
-            reac = "^".join([self.notedge(e)+x for x,e in lhs_nodes])
-            reac +=  "="+rhs_node
-            reacID.append(reac)
-
         from reactions import Reactions
         reactions = Reactions()
-        for reac in reacID:
+        for reac in self._reactions:
             reactions.add_reaction(reac)
         return reactions
 
@@ -430,20 +392,19 @@ class SIF(Reactions):
         sif = qual.read_sbmlqual(filename)
         self.clear()
         for reac in sif.reactions:
-            self.add_reaction(reac.name)
+            self.add_reaction(reac)
         return sif
 
-
     def _rename_species(self, old, new):
-        print("Draft method. Use with care.")
-        # could be mced to  Interactions class
+        raise NotImplementedError
         for i, r in enumerate(self._reactions):
             self._reactions[i] = r.replace(old, new)
 
     def to_cnograph(self):
-        from cellnopt.core import CNOGraph
+        # local import to prevent import cycling
+        from cno.io.cnograph import CNOGraph
         c = CNOGraph()
-        for reaction in self.reaction_names:
+        for reaction in self.reactions:
             c.add_reaction(reaction)
         return c
 
@@ -459,5 +420,28 @@ class SIF(Reactions):
         c.graph_options['graph']['dpi'] = 200
         c.plot()
 
+    def __eq__(self, x):
+        if isinstance(x, SIF) == False:
+            return False
+        if sorted(self.reactions) != sorted(x.reactions):
+            return False
+        return True
+
+    def __str__(self):
+        msg = "SIF object\n"
+        msg += "- {0} reactions.\n".format(len(self.reactions))
+        msg += "- {0} species.".format(len(self.species))
+        msg += "\n"
+        for reac in self.reactions:
+            msg += reac + "\n"
+        return msg
+
     def __len__(self):
         return len(self.nodes1)
+
+    def __repr__(self):
+        msg = "SIF object\n"
+        msg += "- {0} reactions.\n".format(len(self.reactions))
+        msg += "- {0} species.".format(len(self.species))
+        return msg
+

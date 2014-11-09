@@ -454,7 +454,7 @@ class CNOGraph(nx.DiGraph):
 
         # add all reactions
         for reac in sif.reactions:
-            self.add_reaction(reac.name)
+            self.add_reaction(reac)
 
         # now, we need to set the attributes, only if we have a cnolist,
         # otherwise color is the default (white)
@@ -484,6 +484,11 @@ class CNOGraph(nx.DiGraph):
                     self.add_edge(lhs,rhs, link=link)
             else:
                 self.add_edge(lhs,rhs, link=link)
+
+
+    def add_reactions(self, reactions):
+        for reac in reactions:
+            self.add_reaction(reac)
 
     def add_reaction(self, reac):
         """Add nodes and edges given a reaction
@@ -1320,14 +1325,14 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
     def _get_reactions(self):
         sif = self.to_sif()
-        return sif.reaction_names
+        return sif.reactions
     reactions = property(_get_reactions, doc="return the reactions (edges)")
 
     def _get_namesSpecies(self):
         nodes = self.nodes()
         nodes = [x for x in nodes if "+" not in x and "=" not in x]
         return sorted(nodes)
-    namesSpecies = property(fget=_get_namesSpecies,
+    species = property(fget=_get_namesSpecies,
         doc="Return sorted list of species (ignoring and gates) Read-only attribute.")
 
     def swap_edges(self, nswap=1):
@@ -1394,10 +1399,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             assert Ninh2 == Ninh
 
             assert nx.is_connected(self.to_undirected()) == True
-
-
-
-
 
     def dependencyMatrix(self, fontsize=12):
         r"""Return dependency matrix
@@ -1870,6 +1871,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
             attr = self.attributes['inhibitors'].copy()
         return attr
 
+    def predecessors_as_reactions(self, node):
+        """Build up reactions for a given node from predecessors only"""
+        predecessors = self.predecessors(node)
+        reactions = []
+        for pred in predecessors:
+            if "^" in pred:
+                reactions.append(pred)
+            elif self[pred][node]['link'] == '+':
+                reactions.append(pred + "=" +node)
+            else:
+                reactions.append("!" + pred + "=" +node)
+        return reactions
+
 
     def set_default_node_attributes(self):
         """Set all node attributes to default attributes
@@ -2077,7 +2091,11 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         reac = "^".join(inputs)
         reac += "=" + output
-        return reac
+        from cno.io.reactions import Reaction
+        # FIXME: what aboit sorting while doing the instanciation.
+        reac = Reaction(reac)
+        reac.sort()
+        return reac.name
 
     def _find_nodes_with_multiple_inputs(self):
         """return a list of nodes that have multiple predecessors"""
@@ -2748,7 +2766,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         sif.read_sbmlqual(filename)
         self.clear()
         for reac in sif.reactions:
-            self.add_reaction(reac.name)
+            self.add_reaction(reac)
 
     def to_sbmlqual(self, filename=None):
         """Export the topology into SBMLqual and save in a file
