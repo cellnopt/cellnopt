@@ -3,9 +3,12 @@
     et al. (2011). This network is designed to output a variety of dynamics (oscillations, 
     transience etc.) to test all CNOR formalisms.
 
-Note that in the paper cited here below (MacNamara), the data was generated
-using CNORode software with a modified version of the model. The **True** Model
-is called **PKN-ToyPB_True.sif**. The differences are as follows:
+:Data: The data in MIDAS format is **MD-ToyPB.csv**. Note that in the paper cited 
+    here below (MacNamara), the data was generated
+    using CNORode software with a modified version of the model. The **True** Model, which
+    is called **PKN-ToyPB_True.sif**. 
+    
+The differences between **PKN-ToyPB** and **PKN-ToyPB_True** are as follows:
 
 ========================================= =====================================================================
 PKN-ToyPB                                 PKN-ToyPB_True
@@ -18,6 +21,7 @@ new node (rac) between pi3k and map3k1
 Node ask1 removed
 ========================================= =====================================================================
 
+Here is a representation of the ToyPB model (with the data).
 
 .. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/PKN-ToyPB.png
    :width: 200pt
@@ -26,7 +30,7 @@ Node ask1 removed
    :alt: ToyPB figure
 
 
-- SBML format available: 
+- The model in SBML-qual format is also available **PKN-ToyPB   .xml: 
   
   
 ```
@@ -44,9 +48,11 @@ References
     *State-time spectrum of signal transduction logic models* 
     Physical Biology, submitted (2012)
 
-.. note:: The directory contains a SIF file named ToyModelPB.sif but also a
-    PKN-ToyPB_shuffled.sif that has exactly the same topology. However, this second
-    file has a different arrangements of reactions. When compressed and expanded, 
-    the resulting  models are different. This is a known bug and these 2 files can 
-    be used to debug that issue. The file MD-ToyPB_2timePoints.csv is a subset of 
-    ToyModelPB.csv that contains the time points 0, 10 and 30 seconds only.
+Note
+-------
+
+The directory contains a SIF file named ToyModelPB.sif but also a
+**PKN-ToyPB_shuffled.sif** that has exactly the same topology. However, this second
+file has a different arrangements of reactions. When compressed and expanded, 
+the resulting  models are different. This is a known bug and these 2 files can 
+be used to debug that issue.
