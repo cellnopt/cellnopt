@@ -25,11 +25,11 @@ To be provided:
 - [ ] ode analysis
 - [ ] Visualisation
 - [ ] data : move cellnopt.data into here
-- [ ] move cellnopt.admin to here ? 
+- [x] move cellnopt.admin to here ? 
 - [ ] move cellnopt.core as cellnopt.io in here ?
   - [x] midas
   - [x] sif/reactions
-  - [ ] cnograph
+  - [] cnograph
   - [ ] normalisation
   - [ ] compression
   - [ ] mapback
