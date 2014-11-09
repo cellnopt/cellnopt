@@ -3,11 +3,11 @@
     manually from the matlab data in the CNO matlab repository
     (Data/SampleData/ToyModelPCB). Experiments with stimuli set to zero (all NA)
     were removed.
+:Data: The data in MIDAS format is **MD-ToyPCB.csv**. 
 
 
-.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/PKN-ToyPB.png
-   :alt: ToyPB figure
-
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPCB/PKN-ToyPCB.png
+   :alt: ToyPCB figure
 
 
 References
