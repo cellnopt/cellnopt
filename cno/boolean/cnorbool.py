@@ -57,7 +57,7 @@ class CNORbool(CNOBase):
     def __init__(self, model, data, verbose=True):
         super(CNORbool, self).__init__(model, data, verbose)
         self.verboseR = verbose
-        self.session = RSession(dump_stdout=self.verboseR)
+        self.session = RSession(verbose=self.verboseR)
         self.parameters = {} # fill with GA binary parameters
 
     def reconnect(self):
@@ -217,10 +217,9 @@ class CNORbool(CNOBase):
 
 
         script_template = """
-
-        library(CellNOptR)
-        pknmodel = readSIF("%(pkn)s")
-        cnolist = CNOlist("%(midas)s")
+        #library(CellNOptR)
+        #pknmodel = readSIF("%(pkn)s")
+        #cnolist = CNOlist("%(midas)s")
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s, 
             expansion=%(expansion)s, maxInputsPerGate=3)
         mse = computeScoreT1(cnolist, model, %(bs)s)
