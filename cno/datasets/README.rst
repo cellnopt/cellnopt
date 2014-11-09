@@ -88,48 +88,25 @@ change ToyPB to your identifier)::
         from cellnopt.core import CNOGraph
             CNOGraph(model_filename, data_filename).plot()
 
+1.5 Others
+-----------------
 You can of course add as much files as you want but please keep size as low as possible. 
 Examples of other files that can be provided are: 
 
- * SVG file of the network
- * dot file of the network
- * SBML-qual format
+* SVG file of the network
+* dot file of the network
+* SBML-qual format
 
 :Note: When using **cnodata** function provided in CellNOpt, all sub-directories are scanned
 for SIF, MIDAS and SBML-qual files. Type **cnodata()** without argument to get the list of
 filenames that are available.
 
 
+Once you have added a sub-directory, users and developers can then access to your data easily::
 
-
-The description file
-------------------------
-
-The description file is compulsary. It is used to build this documentation
-automatically and is of course important to keep track of the papers it was
-first published in, authorship and so on.
-
-The layout of the description file should be as faithful (keeping space and
-return carriage!!) as possible to the following layout so that it can be 
-intrepreted by the documentation builder automatically::
-
-    Description of the model, its origins and main features. Can be as long as
-    you want.
-
-    :References:
-
-    **authors of a paper**
-    *title of the paper*
-    Reference
-    `Citation <http://www.pubmedcentral.nih.gov/articlerender.fcgi?artid=XXXXXXXXX>`_
-
-    **authors of a paper**
-    *title of the paper*
-    Reference
-    `Citation <http://www.pubmedcentral.nih.gov/articlerender.fcgi?artid=XXXXXXXXX>`_
-
-    .. note:: alias to PKN-ToyMMB.sif are: ToyModelMMB.sif,  ToyModelMKM.sif (optional)
-    .. note:: another note (optional)
+    from cno import cnodata
+    pkn = cnodata("PKN-identifier.sif")
+    midas = cnodata("MD-identifier.csv")
 
 
 
