@@ -1,7 +1,9 @@
 Description
 ###############
 
-The **cno.datasets** package gathers published pairs of model/data files. You can add new directories as explained here below. You can browse the `source directory <https://github.com/cellnopt/cellnopt/tree/master/cno/datasets>`_ to visualise the models. Each sub-directory is actually a Python package, which means you can easily retrieve information, pathnames and visualise the model. For instance the **ToyMMB** can be retrieved as follows:: 
+The **cno.datasets** package gathers published pairs of model/data files. You can add new directories as explained here below. You can browse the `source directory <https://github.com/cellnopt/cellnopt/tree/master/cno/datasets>`_ to visualise the models. Each sub-directory is actually a Python package, which means you can easily retrieve information, pathnames and visualise the model. For instance the **ToyMMB** can be retrieved as follows
+
+.. code-block:: python
 
     >>> from cno.datasets import ToyMMB
     >>> ToyMMB.model_filename
@@ -20,24 +22,14 @@ How to add a new directory/package ?
 If you want to add a model/data, first figure out a unique identifier, which will be used to 
 create a new sub-directory.
 
+There is no strict rules on naming the identifier but please use 
 
-All model and data sets are stored in the **share/data** directory within a
-dedicated sub-directory. This sub-directory may contain several files but no
-sub-directories. 
-
-
-Although the directory names are not important because **cellnopt.data** scans the entire **share/data**
-directory, nevertheless it should reflect its contents and will be used as an identifier for the filenames.
-The naming conventions for the directories are simple:
-
-  #. The directory should use  `upper camel case convention <http://en.wikipedia.org/wiki/CamelCase>`_.
+  #. `upper camel case convention <http://en.wikipedia.org/wiki/CamelCase>`_.
   #. A directory that contain some data based on an existing directory should
      reuse the identifier of the existing directory and add a second identifier
      separated by an underscore.
 
-.. topic:: Examples: 
-
-    ::
+:Examples: ::
 
        ToyExample
        ToyExample_Feedback
@@ -47,46 +39,66 @@ The **ToyExample_Feedback_bis** is therefore based on **ToyExample_Feedback** th
 a variant of **ToyExample**. In this situation, we could have called the third
 directory simply **ToyExample_FeedbackBis** since it is also a variant of **ToyExample**.
 
-The choice is let to the user but note that the generic name is then used to name files contained in it. So, the option **ToyExample_FeedbackBis** may look nicer.
 
+2. Contents
+---------------
 
-
-Contents
------------
-
-In a directory, you should provide at least 3 files:
+In a directory, you must provide 4 files:
 
     #. a network (SIF format) named **PKN-Identifier.sif**
     #. a MIDAS file (csv format) named **MD-Identifier.csv**
-    #. a description file (see below) called **description.txt**
+    #. a README.rst file (contents does not require any specific template)
+    #. an __init__.py file
 
-.. warning:: note that the model Prior Knowledge Network (PKN) must starts with **PKN-** and end with **.sif** and the MIDAS filenames must start with **MD-** and end with **.csv**.
+1.1 PKN file
+------------
 
-You can of course add as much files as you want. Examples are: 
+The PKN file must be in SIF format and named **PKN-<identifier>.sif**
+
+1.2 MIDAS file
+---------------
+
+The data file must be MIDAS format and named **MD-<identifier>.csv**
+
+1.3 README file
+-----------------
+
+Must be in RST format. See example with the github repository.
+
+1.4 __init__ file
+--------------------
+
+Just copy and paste this file into your directory changinf the name (i.e. here below, 
+change ToyPB to your identifier)::
+
+    import os
+    from . import __path__
+
+    name = 'ToyPB'
+
+    __all__ = ['description', 'model_filename', 'data_filename', 'name']
+
+    model_filename = __path__[0] + os.sep + "PKN-{0}.sif".format(name)
+    data_filename = __path__[0] + os.sep + "MD-{0}.csv".format(name)
+    description = open(__path__[0] + os.sep + "README.rst").read()
+
+    __doc__ += description
+
+    def plot():
+        from cellnopt.core import CNOGraph
+            CNOGraph(model_filename, data_filename).plot()
+
+You can of course add as much files as you want but please keep size as low as possible. 
+Examples of other files that can be provided are: 
 
  * SVG file of the network
  * dot file of the network
- * data file using reactions/metabolites format like in CNA
- * file called Type.NA if your model contains AND gates. This file is an
-   attribute file for Cytoscape and is also used in the matlab version of CNO to
-   import AND gates
+ * SBML-qual format
 
+:Note: When using **cnodata** function provided in CellNOpt, all sub-directories are scanned
+for SIF, MIDAS and SBML-qual files. Type **cnodata()** without argument to get the list of
+filenames that are available.
 
-aliases
--------------
-
-We propose the above convention to start PKN model with **PKN-** and MIDAS file with **MD-**. The reason being that 
-quite a few models and data filenames were using various conventions (e.g., MIDAS file where tagged **Data** or **data** or **MIDAS** and could appear anywhere in the filenames). 
-
-Yet, some people used to use some specific filenames. If so, you can complete a
-special file called aliases.py that may be used in some specific tools such as
-:meth:`cellnopt.data.cnodata` to fetch a model or data set.
-
-The file looks like::
-
-    aliases = {
-        "PKN-ToyMMB.sif": ["ToyModelMMB.sif", "ToyModelMKM.sif"],
-        "MD-ToyMMB.csv": ["ToyModelMMB.csv", "ToyModelMKM.csv"]}
 
 
 
@@ -121,27 +133,6 @@ intrepreted by the documentation builder automatically::
 
 
 
-Filename convention
-------------------------------------------------
-
-MIDAS files should start with "MD-" followed by a tag and the extension must be
-".csv"::
-
-
-    MD-TAG1.csv
-
-SIF files should start with "PKN-" followed by a tag and the extension must be
-".sif"::
-
-    PKN-TAG1.sif
-
-TAG1 is a label corresponding to the model. Variant of a file should have second tag as follows::
-
-    PKN-TAG1_TAG2.sif
-
-A compressed and expanded model to be saved could be saved as follows::
-
-    CEN-Tag1.sif
 
 
 
