@@ -26,7 +26,15 @@ Node ask1 removed
    :alt: ToyPB figure
 
 
-- SBML format available: cnodata("PKN-ToyPB.xml")
+- SBML format available: 
+  
+  
+ ```
+ from cno import cnodata, CNOGraph
+ c1 = CNOGraph(cnodata("PKN-ToyPB.xml"))
+ c2 = CNOGraph(cnodata("PKN-ToyPB.sif"))
+ c1 == c2
+ ```
 
 
 References
