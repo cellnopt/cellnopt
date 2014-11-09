@@ -123,10 +123,10 @@ class SIF(Reactions):
         # check that the extension is correct and the file exists
         if isinstance(filename, str):
             self.filename = filename
-            if os.path.isfile(filename) == False:
+            if os.path.isfile(filename) is False:
                 raise IOError("File %s not found." % filename)
             self.read_sif(filename)
-        elif filename == None:
+        elif filename is None:
             self.clear()
         # could be another instance of a SIF file (or cnograph, or reactions)
         elif hasattr(filename, "reactions"):
@@ -186,9 +186,9 @@ class SIF(Reactions):
 
             # otherwise, this is the original cno format that needs some mangling
             lhs_nodes = [(x,e) for x, e, y in zip(self.nodes1, self.edges, self.nodes2) 
-                    if y==and_node]
+                    if y == and_node]
             rhs_node = [ y for x,e,y in zip(self.nodes1, self.edges,self.nodes2) 
-                    if x==and_node]
+                    if x == and_node]
 
             try:
                 assert len(rhs_node) == 1,  "%s %s %s" % (lhs_nodes, and_node, rhs_node)
@@ -346,7 +346,14 @@ class SIF(Reactions):
             return ""
 
     def to_json(self):
-        raise NotImplementedError
+        """Not a standard, do we want to keep this format ? 
+
+        """
+        json = """{"links":[\n"""
+        for n1, edge, n2 in zip(self.nodes1, self.edges, self.nodes2):
+            json += """     {"source":%s, "target":%s, "link":%s},\n""" % (n1, n2, edge)
+        json +="]}"
+        return json
 
     def to_sbmlqual(self, filename=None):
         """Exports SIF to SBMLqual format.
@@ -421,7 +428,7 @@ class SIF(Reactions):
         c.plot()
 
     def __eq__(self, x):
-        if isinstance(x, SIF) == False:
+        if isinstance(x, SIF) is False:
             return False
         if sorted(self.reactions) != sorted(x.reactions):
             return False

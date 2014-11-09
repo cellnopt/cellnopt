@@ -2750,7 +2750,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         else:
             return sif
 
-    def to_json(self, filename):
+    def to_json(self, filename=None):
         """Export the graph into a JSON format
 
         :param str filename:
@@ -2759,7 +2759,10 @@ not present in the model. Change your model or MIDAS file. """ % x)
         """
         from networkx.readwrite import json_graph
         data = json_graph.node_link_data(self)
-        json.dump(data, open(filename, "w"))
+        if filename is not None:
+            json.dump(data, open(filename, "w"))
+        else:
+            return data
 
     def read_sbmlqual(self, filename):
         sif = SIF()
