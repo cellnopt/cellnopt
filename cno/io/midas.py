@@ -18,7 +18,6 @@ from __future__ import unicode_literals
 import types
 
 import pylab
-import numpy
 import numpy as np
 import pandas as pd
 
@@ -427,9 +426,8 @@ class XMIDAS(MIDASReader):
         the letter i is used to encode inhibitor, which is not robust at all.
 
 
-    ..todo:: a MIDAS class to check validity just to simplfy the XMIDAs class itself.
-
-    .. todo:: inhibitors ends in :i to avoid clashes with same name in stimuli..
+    .. todo:: check carefully scaling functions
+    .. todo:: better randommisation?
 
 
     API:
@@ -454,7 +452,6 @@ class XMIDAS(MIDASReader):
         self.verbose = verbose
 
         #self._ignore_invalid_columns = True
-
 
         self._data = pd.DataFrame()
         self._experiments = pd.DataFrame()
@@ -483,7 +480,6 @@ class XMIDAS(MIDASReader):
             except Exception as e:
 
                 raise CNOError(e.message + "Invalid input file. Expecting an XMIDAS instance or valid filename")
-
 
 
     def _manage_replicates(self):
@@ -770,7 +766,6 @@ class XMIDAS(MIDASReader):
         self._dev.check_param_in_list(names_dict.keys(), self.names_stimuli)
         self.experiments.rename(columns=names_dict, inplace=True)
 
-
     def rename_inhibitors(self, names_dict):
         """Rename inhibitors
 
@@ -916,7 +911,6 @@ class XMIDAS(MIDASReader):
         else:
             return data
 
-
     def scale_min_max(self, inplace=True):
         r"""Divide all data by the maximum over entire data set
 
@@ -928,6 +922,7 @@ class XMIDAS(MIDASReader):
         with :math:`e` the experiment, with :math:`s` the species,
         with :math:`t` the time.
 
+        This is an easy (but naive way) to set all data points between 0 and 1.
         """
         m = self.df.min().min()
         M = self.df.max().max()
@@ -939,7 +934,6 @@ class XMIDAS(MIDASReader):
             newdf = self.df - m
             newdf /= (M-m)
             return newdf
-
 
     # PLOTTING
 
@@ -989,7 +983,7 @@ class XMIDAS(MIDASReader):
 
         The dataframe is stored in :attr:`sim`.
         """
-        self.sim = self.df *0 + numpy.random.uniform(size=self.df.shape)
+        self.sim = self.df *0 + np.random.uniform(size=self.df.shape)
 
     def get_diff(self, sim=None, norm="square", normed=True):
         """
@@ -1035,9 +1029,9 @@ class XMIDAS(MIDASReader):
             >>> m.plotSim()
 
         """
-        times = numpy.array(self.times)
+        times = np.array(self.times)
         # if simulation do not have the same number of points as data
-        simtimes = numpy.array(self.sim.index.levels[2])
+        simtimes = np.array(self.sim.index.levels[2])
 
         if logx == False:
             # a tick at x = 0, 0.5 in each box (size of 1) + last x=1 in last box
@@ -1134,7 +1128,7 @@ class XMIDAS(MIDASReader):
                 # divide data by 1.1 to see results close to 1.
 
                 y = self.df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
-                times = numpy.array(y.index) / max_time
+                times = np.array(y.index) / max_time
                 if mode == "trend":
                     ts._times = times
                 #vMax = self.df[self.names_species[j]][self.cellLine].max()
@@ -1230,8 +1224,8 @@ class XMIDAS(MIDASReader):
 
         # MAIN subplot with signals
         a = pylab.axes([margin, 2*margin, aW, aH])
-        M = numpy.nanmax(diffs) # figure out the maximum individual MSE
-        m = numpy.nanmin(diffs) # figure out the minimum individual MSE
+        M = np.nanmax(diffs) # figure out the maximum individual MSE
+        m = np.nanmin(diffs) # figure out the minimum individual MSE
         vmax_user = vmax
         vmax= max(1, M)         # if M below 1, set the max to 1 otherwise to M
         if vmax_user:
@@ -1239,10 +1233,12 @@ class XMIDAS(MIDASReader):
 
         if mode == "mse":
             diffs = masked_array = np.ma.array (diffs, mask=np.isnan(diffs))
-            cmap.set_bad("grey", 1.)
+            try:cmap.set_bad("grey", 1.)
+            except: pass
             pylab.pcolormesh(pylab.flipud(diffs)**self.cmap_scale, cmap=cmap, vmin=vmin, vmax=vmax, edgecolors='k');
         elif mode == "trend":
-            cmap.set_bad("grey", 1.)
+            try:cmap.set_bad("grey", 1.)
+            except:pass
             pylab.pcolor(pylab.flipud(diffs*0), cmap=cmap, edgecolors='k');
 
         a.set_yticks([],[])
@@ -1256,7 +1252,7 @@ class XMIDAS(MIDASReader):
 
         # the stimuli
         b = pylab.axes([margin*2+aW, 2*margin, bW, aH])
-        stimuli = numpy.where(numpy.isnan(self.stimuli)==False, self.stimuli, 0.5)
+        stimuli = np.where(np.isnan(self.stimuli)==False, self.stimuli, 0.5)
 
         pylab.pcolor(1-pylab.flipud(stimuli), edgecolors='gray', cmap='gray',vmin=0,vmax=1);
         b.set_yticks([],[])
@@ -1267,7 +1263,7 @@ class XMIDAS(MIDASReader):
         # the inhibitors
         if len(self.names_inhibitors)>0:
             bb = pylab.axes([margin*5+aW, 2*margin, bbW, aH])
-            inhibitors = numpy.where(numpy.isnan(self.inhibitors)==False, self.inhibitors, 0.5)
+            inhibitors = np.where(np.isnan(self.inhibitors)==False, self.inhibitors, 0.5)
             pylab.pcolor(1-pylab.flipud(inhibitors), edgecolors='gray', cmap='gray',vmin=0,vmax=1);
             bb.set_yticks([],[])
             bb.set_xticks([i+.5 for i,x in enumerate(self.names_inhibitors)])
@@ -1299,24 +1295,24 @@ class XMIDAS(MIDASReader):
 
             cbar = [cbar[i] for i in indices]
 
-            pylab.pcolor(numpy.array([cbar, cbar]).transpose(), cmap=cmap, vmin=0, vmax=1);
+            pylab.pcolor(np.array([cbar, cbar]).transpose(), cmap=cmap, vmin=0, vmax=1);
             #d.set_xticks([],[])
             e.yaxis.tick_right()
             #e.yaxis.xticks([0,1][0,1])
             # todo: why is it normalised by 20?
 
 
-            ticks = numpy.array(e.get_yticks())
+            ticks = np.array(e.get_yticks())
             M = max(ticks)
             indices = [int(N*x) for x in ticks**self.cmap_scale/(M**self.cmap_scale)]
             e.set_yticks(indices)
             if vmax == 1:
                 # set number of digits
-                tic = numpy.array(indices)/float(N)
+                tic = np.array(indices)/float(N)
                 tic = [int(x*100)/100. for x in tic]
                 e.set_yticklabels(tic)
             else:
-                e.set_yticklabels([int(x*100)/100. for x in numpy.array(indices)/float(N)*vmax])
+                e.set_yticklabels([int(x*100)/100. for x in np.array(indices)/float(N)*vmax])
 
             e.set_xticks([],[])
 
@@ -1351,7 +1347,7 @@ class XMIDAS(MIDASReader):
         return xtlabels
 
     def xplot(self,  bbox=False, *args, **kargs):
-        """Same as :meth:`plot` using the xkcd layout !"""
+        """Same as :meth:`plot` using the xkcd layout for fun!"""
         with pylab.xkcd():
             self.plot(*args, **kargs)
             mybbox = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -1501,8 +1497,6 @@ class XMIDAS(MIDASReader):
         elif mode == "control":
             n = normalisation.XMIDASNormalise(self, **kargs)
             normed_midas = n.control_normalisation()
-
-
 
         if inplace == False:
             return normed_midas
@@ -1730,7 +1724,7 @@ class XMIDAS(MIDASReader):
         from pandas.tools.plotting import radviz
         df = self.df.reset_index()
         del df['time']
-        del df['cellLine']
+        del df['cell']
         pylab.figure(1)
         pylab.clf()
         radviz(df[['experiment']+species], "experiment")

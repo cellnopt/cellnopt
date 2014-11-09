@@ -11,8 +11,6 @@ from easydev.easytest import assert_list_almost_equal, TempFile
 from cno.testing import getdata
 from cno.misc import CNOError
 
-#filenames = ['MD-ToyMMB_bis.csv',
-#             'MD-LiverDREAM.csv']
 
 filenames = getdata(pattern="MD*")
 
@@ -20,6 +18,8 @@ filenames = getdata(pattern="MD*")
 # Trying
 def test_reading_and_saving():
     for filename in filenames:
+        if filename.endswith('xml'):
+            continue
         yield reading_and_saving, filename
 
 def reading_and_saving(filename):
@@ -32,8 +32,6 @@ def reading_and_saving(filename):
             assert False
         except:
             assert True
-
-
     # if wrong MIDAS, a CNOError should be raised
     elif 'wrong' in filename:
         try:
@@ -147,12 +145,43 @@ def test_operators():
 
 #plotting
 
-
-
-
 def test_xmidas_corr():
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
     m.corr()
+
+def test_xmidas_plot():
+    m = XMIDAS(cnodata("MD-ToyPB.csv"))
+    m.create_random_simulation()
+    m.plot(mode="trend")
+    m.plot(mode="mse", vmax=.9) # vmax useful for mse only
+    m.xplot()
+
+    #m = XMIDAS(getdata("MD-unnorm.csv"))
+    #m.plot(mode="mse", logx=True)
+    #m.df -= 2
+    ## TODO should raise an erro
+    # m.plot(mode="mse")
+
+def test_boxplot():
+    m = XMIDAS(cnodata("MD-ToyPB.csv"))
+    m.boxplot(mode="time")
+    m.boxplot(mode="experiment")
+
+def test_radviz():
+    m = XMIDAS(cnodata("MD-ToyPB.csv"))
+    m.radviz()
+
+def test_dicretise():
+    m = XMIDAS(cnodata("MD-ToyPB.csv"))
+    m.discretise(inplace=False)
+    m.discretize(inplace=False)
+    m.discretise(N=3)
+    assert set(m.df.values.flatten()) == {0,1,.5}
+
+def test_heatmap():
+    m = XMIDAS(cnodata("MD-ToyPB.csv"))
+    m.heatmap()
+
 
 
 # scaling
@@ -165,9 +194,13 @@ def test_scaling():
     m.scale_max()
     assert (m.df == 1).sum().sum() == 40
 
+    # SCALE MIN/MAX
+    m1 = XMIDAS(cnodata("MD-ToyMMB.csv"))
+    m2 = XMIDAS(cnodata("MD-ToyMMB.csv"))
+    m2.scale_min_max()
+    # because min is 0 and max is 1, scale_min_max should not affect the datafame
+    assert m1 == m2
 
-    m = XMIDAS(m)
-    m.scale_min_max()
 
     m = XMIDAS(m)
     m.scale_max_by_experiments()
@@ -226,52 +259,10 @@ def _compare_pycno_vs_cnor(filename):
 
 
 
-
-
-
-
-
-
-def _test_xmidas_plot():
-
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.create_random_simulation()
-    m.plot(mode="trend",vmax=.9)
-    m.plot(mode="mse")
-    m.xplot()
-
-
-    m = XMIDAS(getdata("MD-unnorm.csv"))
-    m.plot(mode="mse", logx=True)
-    m.df -= 2
-    m.plot(mode="mse")
-
-def test_boxplot():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.boxplot(mode="time")
-    m.boxplot(mode="experiment")
-
-def test_radviz():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.radviz()
-
-def test_dicretise():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.discretise(inplace=False)
-    m.discretize(inplace=False)
-    m.discretise(N=3)
-
-
-def test_heatmap():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.heatmap()
-
 @attr('fixme')
 def test_hcluster():
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
     m.hcluster()
-
-
 
 def test_xmidas_experiments():
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
@@ -295,10 +286,7 @@ def test_xmidas_add_noise():
 
 
 
-
-
 def test_shuffle():
-
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
 
     # shuffling over signals should keep the sum over signal constan
@@ -321,25 +309,6 @@ def test_shuffle():
     m.shuffle(mode="all")
     a2 = m.df.sum().sum()
     assert_list_almost_equal([a1], [a2])
-
-
-def test_scale():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.scale_max()
-    m.scale_min_max()
-    m.scale_max_by_experiments()
-    m.scale_min_max_by_experiments()
-    m.scale_max_across_experiments()
-    m.scale_min_max_across_experiments()
-
-
-    m.scale_max(inplace=False)
-    m.scale_min_max(inplace=False)
-    m.scale_max_by_experiments(inplace=False)
-    m.scale_min_max_by_experiments(inplace=False)
-    m.scale_max_across_experiments(inplace=False)
-    m.scale_min_max_across_experiments(inplace=False)
-
 
 
 """
