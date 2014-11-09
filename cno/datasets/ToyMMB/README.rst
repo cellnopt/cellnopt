@@ -1,8 +1,8 @@
 
 :Description: This directory contains the file **PKN-ToyMMB.sif**, a model used in 
-    several articles and for many tests in CellNOpt. The accompanying data **MD-ToyMMB.csv** was generated 
-    manually by Camille Terfve for the CellNOptR tutorial.
-
+    several articles and for many tests in CellNOpt. A SBML-qual version (**PKN-ToyMMB.xml**) 
+    is also provided
+:Data: The file **MD-ToyMMB.csv** contains the data generated 
 
 .. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyMMB/PKN-ToyMMB.png
    :alt: ToyMMB figure

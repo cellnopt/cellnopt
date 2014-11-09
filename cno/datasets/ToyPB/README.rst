@@ -33,7 +33,7 @@ Here is a representation of the ToyPB model (with the data).
 - The model in SBML-qual format is also available **PKN-ToyPB   .xml: 
   
   
-```
+```python
 from cno import cnodata, CNOGraph
 c1 = CNOGraph(cnodata("PKN-ToyPB.xml"))
 c2 = CNOGraph(cnodata("PKN-ToyPB.sif"))

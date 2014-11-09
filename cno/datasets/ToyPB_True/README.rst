@@ -32,9 +32,3 @@ References
     *State-time spectrum of signal transduction logic models* 
     Physical Biology, submitted (2012)
 
-.. note:: The directory contains a SIF file named ToyModelPB.sif but also a
-    PKN-ToyPB_shuffled.sif that has exactly the same topology. However, this second
-    file has a different arrangements of reactions. When compressed and expanded, 
-    the resulting  models are different. This is a known bug and these 2 files can 
-    be used to debug that issue. The file MD-ToyPB_2timePoints.csv is a subset of 
-    ToyModelPB.csv that contains the time points 0, 10 and 30 seconds only.
