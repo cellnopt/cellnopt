@@ -1,9 +1,8 @@
 """This test file cover the cno.midas module"""
 from nose.plugins.attrib import attr
-from os.path import join as pj
-import os.path
 
 from cno.io.midas import  XMIDAS
+from cno.io.measurements import MIDASBuilder
 from cno import cnodata
 
 from easydev.easytest import assert_list_almost_equal, TempFile
@@ -48,7 +47,7 @@ def reading_and_saving(filename):
     # we can also test the following: writing the XMIDAS into a file (MIDAS
     # format) and read it back. the 2 objects must be identical !
     f = TempFile()
-    m1.save2midas(f.name)
+    m1.to_midas(f.name)
     m2 = XMIDAS(f.name)
     f.delete()
     assert m1 == m2
@@ -115,7 +114,6 @@ def test_xmidas():
     m.remove_inhibitors("dummy")
     m.remove_stimuli("dummy")
 
-
     mm = m.copy()
     mm.remove_cellLine("Cell")
     del mm
@@ -154,13 +152,18 @@ def test_xmidas_plot():
     m.create_random_simulation()
     m.plot(mode="trend")
     m.plot(mode="mse", vmax=.9) # vmax useful for mse only
-    m.xplot()
+    m.xplot(bbox=True)
 
     #m = XMIDAS(getdata("MD-unnorm.csv"))
     #m.plot(mode="mse", logx=True)
     #m.df -= 2
     ## TODO should raise an erro
     # m.plot(mode="mse")
+
+
+def test_hcluster():
+    m = XMIDAS(cnodata("MD-ToyPB.csv"))
+    m.hcluster()
 
 def test_boxplot():
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
@@ -229,6 +232,59 @@ def test_scaling():
     m.scale_min_max_across_experiments(inplace=False)
 
 
+def test_shuffle():
+    m = XMIDAS(cnodata("MD-ToyPB.csv"))
+
+    # shuffling over signals should keep the sum over signal constan
+    a1 = m.df.sum(axis=0)
+    for this in ['signal', 'column']:
+        m.shuffle(mode=this)
+        a2 = m.df.sum(axis=0)
+        assert_list_almost_equal(a1, a2)
+        m.reset()
+
+    # shuffling over index keep sum over a given experiment constant
+    a1 = m.df.sum(level="experiment").sum(axis=1)
+    m.shuffle(mode="index")
+    a2 = m.df.sum(level="experiment").sum(axis=1)
+    assert_list_almost_equal(a1, a2)
+    m.reset()
+
+    m.shuffle(mode="timeseries")
+
+    m.reset()
+    a1 = m.df.sum().sum()
+    m.shuffle(mode="all")
+    a2 = m.df.sum().sum()
+    assert_list_almost_equal([a1], [a2])
+
+
+# NORMALISATION
+
+
+def test_norm_time():
+    m = XMIDAS(getdata("MD-test_unnorm.csv"))
+    m.normalise(mode="time")
+
+def test_norm_control():
+    m = XMIDAS(getdata("MD-test_unnorm_exp.csv"))
+    m.normalise(mode="control")
+
+
+#MEASUREMENTS
+
+def test_xmidas_experiments():
+    m = XMIDAS(cnodata("MD-ToyPCB.csv"))
+    ms = m.to_measurements()
+    assert len(ms) == 60
+    # we can create a MIDASBuilder, exoprts and can check we get the same ?
+    # does not work for now
+    mb = MIDASBuilder()
+    mb.add_measurements(ms)
+    m2 = mb.xmidas
+    assert m == m2
+
+
 """
 
 
@@ -259,22 +315,6 @@ def _compare_pycno_vs_cnor(filename):
 
 
 
-@attr('fixme')
-def test_hcluster():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.hcluster()
-
-def test_xmidas_experiments():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    exps = m.export2experiments()
-
-def _test_norm_time():
-    m = XMIDAS(getdata("MD-unnorm.csv"))
-    m.normalise(mode="time")
-
-def _test_norm_control():
-    m = XMIDAS(getdata("MD-unnorm_exp.csv"))
-    m.normalise(mode="control")
 
 def test_xmidas_add_noise():
     m = XMIDAS(cnodata("MD-ToyPB.csv"))
@@ -286,29 +326,6 @@ def test_xmidas_add_noise():
 
 
 
-def test_shuffle():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-
-    # shuffling over signals should keep the sum over signal constan
-    a1 = m.df.sum(axis=0)
-    m.shuffle(mode="signals")
-    a2 = m.df.sum(axis=0)
-    assert_list_almost_equal(a1, a2)
-    m.reset()
-
-    # shuffling over index keep sum over a given experiment constant
-    a1 = m.df.sum(level="experiment").sum(axis=1)
-    m.shuffle(mode="indices")
-    a2 = m.df.sum(level="experiment").sum(axis=1)
-    assert_list_almost_equal(a1, a2)
-
-    m.shuffle(mode="timeseries")
-
-    m.reset()
-    a1 = m.df.sum().sum()
-    m.shuffle(mode="all")
-    a2 = m.df.sum().sum()
-    assert_list_almost_equal([a1], [a2])
 
 
 """

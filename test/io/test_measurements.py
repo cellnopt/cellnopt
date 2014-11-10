@@ -45,6 +45,12 @@ def test_experiment():
 
 def test_midasbuilder():
     m = MIDASBuilder()
+
+    # what would happen if we try to get XMIDAS from 0 measuremnts
+    xm = m.xmidas
+    assert len(xm.df) == 0
+
+
     e1 = Measurement("AKT", 0, {"EGFR":1}, {"AKT":0}, 0.1)
     e2 = Measurement("AKT", 5, {"EGFR":1}, {"AKT":0}, 0.5)
     e3 = Measurement("AKT", 10, {"EGFR":1}, {"AKT":0}, 0.9)
@@ -59,6 +65,9 @@ def test_midasbuilder():
     m.inhibitors
     xm = m.xmidas
 
+    # Constructor from existing measurements:
+
+
 
 def test_experimentS():
 
@@ -70,7 +79,8 @@ def test_experimentS():
      assert es.species == ['AKT']
 
 
-
+     m = Measurements(es)
+     #assert m.xmidas == xm
 
 
 
