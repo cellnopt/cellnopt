@@ -131,7 +131,7 @@ class CNOGraph(nx.DiGraph):
     populate the graph. However, it is also possible to read a network
     stored in a file in :class:`cellnopt.core.sif.SIF` format::
 
-        >>> from cellnopt.core import *
+        >>> from cno import CNOGraph 
         >>> pknmodel = cnodata("PKN-ToyPB.sif")
         >>> c = CNOGraph(pknmodel)
 
@@ -189,7 +189,7 @@ class CNOGraph(nx.DiGraph):
         :include-source:
         :width: 30%
 
-        from cellnopt.core import *
+        from cno import CNOGraph 
         c1 = CNOGraph()
         c1.add_edge("A","B", link="+")
         c1.add_edge("A","C", link="-")
@@ -200,7 +200,7 @@ class CNOGraph(nx.DiGraph):
         :include-source:
         :width: 30%
 
-        from cellnopt.core import *
+        from cno import CNOGraph 
         c2 = CNOGraph()
         c2.add_edge("A","E", link="+")
         c2.add_edge("C","E", link="+")
@@ -214,7 +214,7 @@ class CNOGraph(nx.DiGraph):
     .. plot::
         :width: 50%
 
-        from cellnopt.core import *
+        from cno import CNOGraph 
         c1 = CNOGraph()
         c1.add_edge("A","B", link="+")
         c1.add_edge("A","C", link="-")
@@ -245,7 +245,7 @@ class CNOGraph(nx.DiGraph):
         :include-source:
         :width: 50%
 
-        from cellnopt.core import *
+        from cno import CNOGraph 
         pknmodel = cnodata("PKN-ToyPB.sif")
         data = cnodata("MD-ToyPB.csv")
         c = CNOGraph(pknmodel, data)
@@ -264,7 +264,7 @@ class CNOGraph(nx.DiGraph):
         :include-source:
         :width: 50%
 
-        from cellnopt.core import *
+        from cno import CNOGraph
         pknmodel = cnodata("PKN-ToyPB.sif")
         data = cnodata("MD-ToyPB.csv")
         c = CNOGraph(pknmodel, data)
@@ -381,12 +381,13 @@ class CNOGraph(nx.DiGraph):
         self._dot_mode = "end_signals_bottom"
 
         self.dotattrs = {}
-        self.dotattrs['graph'] = {"title": "CNOGraph output from cellnopt.core.cnograph.plotdot",
-                    'fontname': 'helvetica',
-                    'fontsize': 22,
-                    'size': "25,25",
-                    'ordering': "out",
-                    'splines':True}
+        self.dotattrs['graph'] = {
+                "title": "CNOGraph output from cellnopt.core.cnograph.plotdot",
+#                'fontname': 'helvetica',
+                'fontsize': 22,
+                'size': "25,25",
+                'ordering': "out",
+                'splines':True}
 
         self.dotattrs['edge'] = {
             'minlen':1,
@@ -507,7 +508,7 @@ class CNOGraph(nx.DiGraph):
             :width: 50%
             :include-source:
 
-            from cellnopt.core import *
+            from cno import CNOGraph
             c = CNOGraph()
             c.add_reaction("a+b^c+e+d^h=Z")
             c.plotdot()
@@ -607,7 +608,7 @@ class CNOGraph(nx.DiGraph):
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph
             c = CNOGraph()
             c.add_edge("A","B",link="+")
             c.add_edge("A","C",link="-")
@@ -788,7 +789,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -825,7 +826,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -863,7 +864,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -1412,7 +1413,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 80%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.dependencyMatrix()
 
@@ -1497,7 +1498,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         .. plot::
             :width: 70%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plotdot(hold=True)
@@ -1506,7 +1507,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :width: 70%
             :include-source:
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plotAdjacencyMatrix()
@@ -1607,7 +1608,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :width: 80%
             :include-source:
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.preprocessing()
             c.plotdot()
@@ -1628,7 +1629,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.plotdot()
@@ -1651,7 +1652,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.compress()
@@ -2122,7 +2123,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -2194,7 +2195,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import subplot, title
 
             c = CNOGraph()
@@ -2234,7 +2235,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph()
             c.add_edge("A", "C", link="+")
             c.add_edge("B", "C", link="+")
@@ -2362,7 +2363,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import subplot,show, title
             c = cnograph.CNOGraph()
             c.add_edge("a", "c", link="-")
@@ -2573,7 +2574,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_degree()
             c.plotdot(node_attribute="centrality_degree")
@@ -2596,7 +2597,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.degree_histogram()
 
@@ -2631,7 +2632,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_closeness()
             c.plotdot(node_attribute="centrality_closeness")
@@ -2679,7 +2680,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_betweeness()
             c.plotdot(node_attribute="centrality_betweeness")
@@ -2881,7 +2882,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.plot_in_out_degrees()
 
@@ -2905,7 +2906,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"))
             c.plot_degree_rank()
 
@@ -2950,7 +2951,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import subplot
             c = CNOGraph()
             c.add_edge("AKT2", "B", link="+")
@@ -3013,7 +3014,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             from pylab import subplot
             c = CNOGraph()
             c.add_reaction("!A=C")
@@ -3142,8 +3143,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         .. doctest::
 
-            >>> from cellnopt.core import *
-            >>> from cellnopt.core.nonc import findNONC
+            >>> from cno import CNOGraph
             >>> model = cnodata('PKN-ToyMMB.sif')
             >>> data = cnodata('MD-ToyMMB.csv')
             >>> c = CNOGraph(model, data)
@@ -3197,7 +3197,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cellnopt.core import *
+            from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.hcluster()
 

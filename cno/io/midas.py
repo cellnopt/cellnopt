@@ -24,7 +24,7 @@ import pandas as pd
 from easydev.logging_tools import Logging
 import colormap
 
-from midas_extra import Measurement
+from .measurements import Measurement
 import midas_normalisation as normalisation
 
 from cno.core import DevTools
@@ -36,13 +36,13 @@ __all__ = ["XMIDAS", "TypicalTimeSeries", 'MIDASReader']
 
 class MIDAS(object):
     """This is s a description of the MIDAS format (let us call it 1.0)"""
-    valid_codes = {
+    _valid_codes = {
                    'ID':'identifier',
                    'TR':'stimuli/inhibitors',
                    'DA':'times',
                    'DV':'measurements'}
 
-    ignore_codes = ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
+    _ignore_codes = ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
 
     def __init__(self, filename=None, verbose=False):
         """.. rubric:: Constructor
@@ -105,7 +105,7 @@ class MIDASReader(MIDAS):
         self._midas_validity()
 
         # some cleanup to remove columns that have to be ignored
-        labels = ["TR:"+x for x in self.ignore_codes if "TR:"+x in self._data.columns]
+        labels = ["TR:"+x for x in self._ignore_codes if "TR:"+x in self._data.columns]
         self._data = self._data.drop(labels, axis=1)
 
         # from the data, build up the experiment and data dataframes
@@ -173,9 +173,9 @@ class MIDASReader(MIDAS):
                 txt += "    Column's name must contain the special character ':'\n"
                 txt += "    Found {0}".format(this)
                 raise CNOError(txt)
-            if this.split(":")[0] not in self.valid_codes.keys():
+            if this.split(":")[0] not in self._valid_codes.keys():
                 txt = "Error in header of the input MIDAS file\n"
-                txt += "    Column's name must start with one of the valid code {}\n".format(self.valid_codes)
+                txt += "    Column's name must start with one of the valid code {}\n".format(self._valid_codes)
                 raise CNOError(txt)
 
         # check if zero time data is available otherwise need to call
@@ -316,6 +316,8 @@ class MIDASReader(MIDAS):
                               [x.replace(":i","") for x in self._experiments.columns]],
                         index= self._experiments.index)
 
+        self._experiments.sortlevel(axis=1, inplace=True)
+
 
     def _duplicate_time_zero_using_inhibitors_only(self):
         """
@@ -371,78 +373,50 @@ class MIDASReader(MIDAS):
 
 
 class XMIDAS(MIDASReader):
-    """XMIDAS dat structure. X stands for extended and replaces
-    :class:`MIDASReader` class.
-
-    ::
-
-        from cellnopt.core import XMIDAS
-        m = XMIDAS(cnodata("tes.csv"))
-        m.df # access to the data frame
-        m.scale_max(gain=0.9)   # scale over all experiments and time finding the max
-                        # and scaling (divide by max) for each species individually.
-        m.corr()        # alias to m.df.corr() removing times/experiments
-        columns
+    """The extended MIDAS data structure.
 
 
+    .. plot::
+        :include-source:
+        :width: 80%
 
-        tuples = [(exp, time) for exp in ["exp1", "exp2"] for time in [0,1,2,3,4]]
-        index = pd.MultiIndex.from_tuples(tuples, names=["experiment", "time"])
-        xx = pd.DataFrame(randn(10,2), index=index, columns=["Akt", "Erk"])
+        from cno import XMIDAS, cnodata
+        m = XMIDAS(cnodata("MD-ToyPB.csv"))
+        m.df            # access to the data frame
+        m.experiments   # access to experiments
+        m.sim           # access to simulation
+        m.plot()
 
-
-    What remains to be done ?
-
-        * average over celltypes  To be done in MultiMIDAS
-
+    Please see main documentation for extended explanation and documentation
+    of the methods here below.
 
     .. warning:: if there are replicates, call average_replicates before creating a
         simulation or calling plot"mode="mse")
 
-    .. todo:: when using MSE, an option could be to average the errors by taking into
-        account the time. In other words, a weight/integral. if t = 1,2,3,4,5,10,60, the
-        errors on 1,2,3,4,5 are more  important than between 5,10,60. does it make sense ?
+    When reading a MIDAS file with several cell lines, all data is stored but
+    only one cell line can be visualised and manipulated at a time::
 
-    .. todo:: make df a property to handle sim properly, if not scaled,
-        sim and exp seems to have the same scale also errors are large as expected
-
-    .. warning:: MD-TR-33333-JITcellData.csv contains extra ,,,, at the end. should
-        be removed or ignored
-
-    .. todo:: colorbar issue with  midas.XMIDAS("share/data/MD-test_4andgates.csv")
-
-
-    .. todo:: when plotting, if there is only 1 stimuli and 5-6 inhibitors, the
-        width of the stimuli is the same as the one with the inhibitors. cell size
-        should be identical, not stretched. See e..g., "EGFR-ErbB_PCB2009.csv"
-:
-
-    .. todo:: when ploting the mse, we should be able to plotonly a subset of the time
-      indices (useful for bollean analysis at a given time)
-
-
-    .. todo::MIDAS have two ways of coding stimuli/inhibitors a short and long version
-        TR:aa / TR::aai or TR:aa:Stimuli / TR:aa:Inhibitors note that in the shotr case,
-        the letter i is used to encode inhibitor, which is not robust at all.
-
-
-    .. todo:: check carefully scaling functions
-    .. todo:: better randommisation?
-
-
-    API:
-
-        - you can store several cell line within one MIDAS file. However, XMIDAS
-          handles only 1 for now.
+        # when reading, you must give the cell line name you want to activate
+        multiple_cell = XMIDAS('somedata', 'cell1')
+        # valid cell line names are stored in this attribute
+        multiple_cell.cellLines
+        # activating another cell line needs to set this attribute:
+        multiple_cell.cellLine = 'cell2'
 
     """
     def __init__(self, filename=None, cellLine=None, verbose=False):
+        """.. topic:: **Constructor**
+
+        :param str filename: filename of a MIDAS file or a XMIDAS instance
+        :param str cellLine: name of a cell Line (compulsary if several
+            cell lines are present)
+
+        """
         super(XMIDAS, self).__init__(filename)
 
         self._cellLine = cellLine
 
-        # multi index related
-        # position of the columns for the multi index
+        # multi index related (position of the columns)
         self._celltype_index = 0
         self._experiment_index = 1
         self._time_index = 2
@@ -478,9 +452,8 @@ class XMIDAS(MIDASReader):
                 self.sim = md.sim.copy()
                 self.errors = md.errors.copy()
             except Exception as e:
-
-                raise CNOError(e.message + "Invalid input file. Expecting an XMIDAS instance or valid filename")
-
+                raise CNOError(e.message +
+                "Invalid input file. Expecting a XMIDAS instance or valid filename")
 
     def _manage_replicates(self):
         """
@@ -494,9 +467,18 @@ class XMIDAS(MIDASReader):
             return newdf
 
     def average_replicates(self, inplace=False):
+        """Average replicates if any
+
+        :param bool inplace: default to False
+
+        If inplace, a new dataframe :attr:`errors` is created
+        and contains the errors (standard deviation)
+
+
+        """
         df = self._manage_replicates()
 
-        if isinstance(df,pd.DataFrame):
+        if isinstance(df, pd.DataFrame):
             dfstd = df[[this for this in df.columns if "std" in this]]
 
             df = df[[this for this in df.columns if "mean" in this]]
@@ -537,14 +519,17 @@ class XMIDAS(MIDASReader):
         return m
 
     def __getitem__(self, item):
-        """
+        """Simple alias to the dataframe's columns
 
         .. doctest::
 
-            >>> m = XMIDAS("MD-ToyPB.csv")
-            >>> m['p38']
-            >>> m['Cell','experiment_0', 0]
+            >>> from cno import XMIDAS, cnodata
+            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"))
+            >>> m['p38'].ix[0]
+            0.1076
+            >>> # equivalent to m.df['p38'].ix[0]
 
+        .. note:: this is a read-only access
         """
         if len(item)==3 and isinstance(item, str) != True:
             i1, i2, i3 = item
@@ -585,44 +570,68 @@ class XMIDAS(MIDASReader):
         else:
             names = self.df.index.levels[0]
             return names
-    cellLines = property(_get_cellLines)
+    cellLines = property(_get_cellLines, doc="Return available cell lines")
 
     def _get_cellLine(self):
         return self._cellLine
     def _set_cellLine(self, name):
-        # TODO check valid name
-        names = self.cellLines
-        if name not in names:
-            raise ValueError("Invalid cellLine name {}. Valid ones are {}".format(name, names))
+        if name not in self.cellLines:
+            raise CNOError("Invalid cellLine name {}. Valid ones are {}".format(name,
+                           self.cellLines))
         self._cellLine = name
         # TODO: do we need to call _init again ?
         self._init()
-    cellLine = property(_get_cellLine, _set_cellLine)
+    cellLine = property(_get_cellLine, _set_cellLine,
+                        doc="Getter/Setter of the active cell line")
 
     def _get_times(self):
         times = self.df.index.levels[self._time_index]
         return sorted(list(times))
-    times = property(_get_times)
+    times = property(_get_times, doc="Getter to the different times")
 
     def _get_names_inhibitors(self):
         try:
             return list(self.experiments.Inhibitors.columns)
         except:
             return []
-    names_inhibitors = property(_get_names_inhibitors)
+    names_inhibitors = property(_get_names_inhibitors,
+                                doc="return list of inhibitors")
 
     def _get_names_stimuli(self):
         try:
             return list(self.experiments.Stimuli.columns)
         except:
             return []
-    names_stimuli = property(_get_names_stimuli)
+    names_stimuli = property(_get_names_stimuli,
+                             doc="returns list of stimuli")
 
+    def reset(self):
+        """Reset the dataframe to original data set"""
+        self._init()
 
     def _check_consistency_data(self):
         # times consistency all times must have same length
         #
         pass
+
+    def reset_index(self):
+        """Remove all indices (cellLine, time, experiment)
+
+        Done in the 3 dataframes :attr:`df`, :attr:`sim` and :attr:`errors`
+        """
+        self.df.reset_index(inplace=True)
+        self.sim.reset_index(inplace=True)
+        self.errors.reset_index(inplace=True)
+
+    def set_index(self):
+        """Reset all indices (cellLine, time, experiment)
+
+        Done in the 3 dataframes :attr:`df`, :attr:`sim` and :attr:`errors`
+        """
+        if len(self.df):
+            self.df.set_index(self._levels, inplace=True)
+            self.sim.set_index(self._levels, inplace=True)
+            self.errors.set_index(self._levels, inplace=True)
 
     def remove_species(self, labels):
         """Remove a set of species
@@ -646,32 +655,16 @@ class XMIDAS(MIDASReader):
                 self.sim.drop(label, axis=1, inplace=True)
                 self.errors.drop(label, axis=1, inplace=True)
 
-    def reset_index(self):
-        """Remove all indices (cellLine, time, experiment)
-
-        Done in the 3 dataframes :attr:`df`, :attr:`sim` and :attr:`errors`
-        """
-        self.df.reset_index(inplace=True)
-        self.sim.reset_index(inplace=True)
-        self.errors.reset_index(inplace=True)
-
-    def set_index(self):
-        """Reset all indices (cellLine, time, experiment)
-
-        Done in the 3 dataframes :attr:`df`, :attr:`sim` and :attr:`errors`
-        """
-        if len(self.df):
-            self.df.set_index(self._levels, inplace=True)
-            self.sim.set_index(self._levels, inplace=True)
-            self.errors.set_index(self._levels, inplace=True)
-
     def remove_cellLine(self, labels):
         """Remove a cellLine from the dataframe.
 
         Does not really work since there is only one cellLine in the dataframe.
-        all data is contained in :attr:`data` but the current dataframe contains only
-        one, which can be changed simply by setting the cellLine attribute with one of the
-        valid cellLine found in the :attr:`cellLines` attribute
+        If you call this method with the active cell line, the dataframe will
+        be empty. You can set it back by activating a new cell line.
+
+        Valid cellLine found in the :attr:`cellLines` attribute.
+
+        This method may be useful later with multi cell line.
 
         """
         self._remove_labels_from_level(labels, self._levels[0])
@@ -679,8 +672,8 @@ class XMIDAS(MIDASReader):
     def remove_times(self, labels):
         """Remove time values from the data
 
-        :param list labels: one time point or a list of time points. Valid time points
-            are in the :attr:`times` attribute.
+        :param list labels: one time point or a list of time points.
+            Valid time points are in the :attr:`times` attribute.
 
         """
         self._remove_labels_from_level(labels, "time")
@@ -756,7 +749,7 @@ class XMIDAS(MIDASReader):
 
         ::
 
-            from cellnopt.core import *
+            from cno import XMIDAS, cnodata
             m = XMIDAS(cnodata("MD-ToyPB.csv"))
             m.rename_species({"erk":"ERK", "akt":"AKT"})
 
@@ -773,15 +766,11 @@ class XMIDAS(MIDASReader):
 
         ::
 
-            from cellnopt.core import *
+            from cno import XMIDAS, cnodata
             m = XMIDAS(cnodata("MD-ToyPB.csv"))
-            m.rename_species({"raf:i":"RAF:i"})
+            m.rename_species({"raf":"RAF"})
 
         .. seealso:: :meth:`rename_stimuli`, :meth:`rename_species`
-
-        .. warning:: inhibitor name must end with the string **:i**
-
-        .. todo:: sanity check that the pair of key/value contain the :i characters
 
 
         """
@@ -795,14 +784,13 @@ class XMIDAS(MIDASReader):
 
         ::
 
-            from cellnopt.core import *
+
+            from cno import cnodata, XMIDAS
             m = XMIDAS(cnodata("MD-ToyPB.csv"))
             m.rename_species({"erk":"ERK", "akt":"AKT"})
 
 
         .. seealso:: :meth:`rename_stimuli`, :meth:`rename_inhibitors`
-
-
         """
         self._dev.check_param_in_list(names_dict.keys(), self.df.columns)
         columns = list(self.df.columns)
@@ -815,7 +803,7 @@ class XMIDAS(MIDASReader):
 
         :param dict to_replace: dictionary with mapping of values to be replaced.
 
-        For example; to convert time in minutes to time in seconds, use something like::
+        For example; to rename a valid cell line use::
 
             m.rename_cellLine({"undefined": "PriHu"})
 
@@ -829,7 +817,8 @@ class XMIDAS(MIDASReader):
 
         :param dict to_replace: dictionary with mapping of values to be replaced.
 
-        For example; to convert time in minutes to time in seconds, use something like::
+        For example; to convert time in minutes to time in seconds, use
+        something like::
 
             m.rename_time({0:0,1:1*60,5:5*60})
 
@@ -841,39 +830,23 @@ class XMIDAS(MIDASReader):
         self.set_index()
 
     def merge_times(self, how="mean"):
+        """Not implemented yet"""
         raise NotImplementedError
 
     def add_experiment(self, e):
+        """Not implemented yet"""
         raise NotImplementedError
 
-    # SCALING
-    def scale_max_by_experiments(self, inplace=True):
-        """Divide each row by max across the rows with same experiment
-
-        IF an experiment has several values (times) max is found across that
-        time series, which is then divided by the max. If max is zero, results
-        will be filled with NA
-
-        So you get 1 for each experiment and each species
-        """
-        newdf = self.df.divide(self.df.max(level="experiment"), level="experiment")
-        if inplace:
-            self.df = newdf.copy()
-        else:
-            return newdf
-
-    def scale_min_max_by_experiments(self, inplace=True):
-        m = self.df.min(level="experiment")
-        M = self.df.max(level="experiment")
-        newdf = self.df.sub(m, level="experiment")
-        newdf = newdf.divide(M-m, level="experiment")
-        if inplace:
-            self.df = newdf.copy()
-        else:
-            return newdf
-
     def scale_max(self, inplace=True):
-        """Divide all data by the maximum over the entire data set"""
+        r"""Divide all data by the maximum over the entire data set
+
+         .. math::
+
+            X = \frac{X}{M}
+
+        where :math:`M = \max_{e,s,t} X` (with :math:`e` the experiment,
+        :math:`s` the species, and :math:`t` the time).
+        """
         M = self.df.max().max()
         if inplace:
             self.df /= M
@@ -881,7 +854,12 @@ class XMIDAS(MIDASReader):
             return self.df / M
 
     def scale_max_across_experiments(self, inplace=True):
-        """Divide each species column by max acrosss all experiments
+        r"""Rescale each species column across all experiments
+
+
+        .. math::
+
+            X_s = \frac{X}{M_s}
 
         In the MIDAS plot, this is equivalent to dividing each column by
         the max over that column. So, on each column, you should get 1 max values
@@ -899,8 +877,11 @@ class XMIDAS(MIDASReader):
 
         .. math::
 
-            X = \frac{X-m}{M-m}
+            X_s = \frac{X-m_s}{M-m_s}
 
+         where :math:`m = min_{e,s,t} X` and :math:`M = max_{e,s,t} X`,
+        with :math:`e` the experiment, with :math:`s` the species,
+        with :math:`t` the time.
 
         """
         m = self.df.min()
@@ -935,8 +916,62 @@ class XMIDAS(MIDASReader):
             newdf /= (M-m)
             return newdf
 
-    # PLOTTING
+    def create_empty_simulation(self):
+        """Populate the simulation dataframe with zeros.
 
+        The simulation has the same layout as the experiment.
+
+        The dataframe is stored in :attr:`sim`.
+
+        """
+        self.sim = self.df * 0
+
+    def create_random_simulation(self):
+        """Populate the simulation dataframe with uniformly random values.
+
+        The simulation has the same layout as the experiment.
+
+        The dataframe is stored in :attr:`sim`.
+        """
+        self.sim = self.df * 0 + np.random.uniform(size=self.df.shape)
+
+    def get_diff(self, sim=None, squared=True, normed=True):
+        r"""Return dataframe with differences between the data and simulation
+
+        The dataframe returned contains the MSE (mean square error) by default.
+
+        :param sim: if not provided, uses the :attr:`sim` attribute.
+        :param normed:
+        :param bool square: set to True to get MSE otherwise, returns the absolute
+            values without squaring
+
+
+        if square is True and normed is True:
+
+        .. math::
+
+            \epsilon = \frac{1}{N_t} \left(X - X^s\right)^2
+
+        We then sum over time and if *normed* is False, :math:`N_t` is set to 1.
+
+        """
+        # dataframe cannot be compared to None so, we need this trick:
+        if isinstance(sim, types.NoneType):
+            sim = self.sim
+
+        if squared is True:
+            diff = (sim - self.df).abs()**2
+        else:
+            diff = (sim - self.df).abs()
+
+        diff = diff.sum(level="experiment")
+
+        if normed:
+            N = len(self.times)
+            diff = diff/float(N)
+        return diff
+
+    # PLOTTING
     def corr(self, names=None, cmap='gist_heat_r', show=True):
         """plot correlation between the measured species
 
@@ -947,7 +982,7 @@ class XMIDAS(MIDASReader):
             :include-source:
             :width: 80%
 
-            >>> from cellnopt.core import *
+            >>> from cno import XMIDAS, cno
             >>> m = XMIDAS(cnodata("MD-ToyPB.csv"))
             >>> m.corr(cmap="green")
 
@@ -966,55 +1001,7 @@ class XMIDAS(MIDASReader):
             pylab.colorbar()
         return corr
 
-    def create_empty_simulation(self):
-        """Populate the simulation dataframe with zeros.
-
-        The simulation has the same layout as the experiment.
-
-        The dataframe is stored in :attr:`sim`.
-
-        """
-        self.sim = self.df * 0
-
-    def create_random_simulation(self):
-        """Populate the simulation dataframe with uniformly random values.
-
-        The simulation has the same layout as the experiment.
-
-        The dataframe is stored in :attr:`sim`.
-        """
-        self.sim = self.df *0 + np.random.uniform(size=self.df.shape)
-
-    def get_diff(self, sim=None, norm="square", normed=True):
-        """
-
-        return difference between X and simulation. Take absolute.
-        if norm == square or norm == absolute takes absolute values.
-        if norm == square, also take power of 2.
-
-        divide by number of time points.
-
-        .. todo:: doc
-
-        """
-        # dataframe cannot be compared to None so, we need this trick:
-        assert norm in ["absolute", "square"]
-        if isinstance(sim, types.NoneType):
-            sim = self.sim
-
-        if norm == "square":
-            diff = (sim - self.df).abs()**2
-        else:
-            diff = (sim - self.df).abs()
-
-        diff = diff.sum(level="experiment")
-
-        if normed:
-            N = len(self.times)
-            diff = diff/float(N)
-        return diff
-
-    def plotSim(self, markersize=3, logx=False, linestyle="--", lw=1,
+    def plot_sim_data(self, markersize=3, logx=False, linestyle="--", lw=1,
             color="b", marker="x", **kargs):
         """plot experimental curves
 
@@ -1022,11 +1009,11 @@ class XMIDAS(MIDASReader):
             :width: 80%
             :include-source:
 
-            >>> from cellnopt.core import *
-            >>> m = midas.MIDASReader(cnodata("MD-ToyPB.csv"));
-            >>> m.plotMSEs()
-            >>> m.plotExp()
-            >>> m.plotSim()
+            >>> from cno import XMIDAS, cnodata
+            >>> m = MIDASReader(cnodata("MD-ToyPB.csv"));
+            >>> m.plot_mses()
+            >>> m.plot_data()
+            >>> m.plot_sim_data()
 
         """
         times = np.array(self.times)
@@ -1073,20 +1060,20 @@ class XMIDAS(MIDASReader):
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize", 10))
         pylab.gca().set_xticks(xt)
 
-    def plotExp(self, markersize=3, logx=False,color="black", **kargs):
+    def plot_data(self, markersize=3, logx=False,color="black", **kargs):
         """plot experimental curves
 
         .. plot::
             :width: 80%
             :include-source:
 
-            >>> from cellnopt.core import *
+            >>> from cno import XMIDAS, cnodata
             >>> m = midas.MIDASReader(cnodata("MD-ToyPB.csv"));
-            >>> m.plotMSEs()
-            >>> m.plotExp()
+            >>> m.plot_mses()
+            >>> m.plot_data()
 
         .. note:: called by :meth:`plot`
-        .. seealso:: :meth:`plot`, :meth:`plotMSEs`, :meth:`plotSim`
+        .. seealso:: :meth:`plot`, :meth:`plot_mses`, :meth:`plot_sim_data`
         """
         mode = kargs.get("mode", "trend")
         normalise = kargs.get("normalise", True)
@@ -1105,8 +1092,6 @@ class XMIDAS(MIDASReader):
                     for i,x in enumerate(xtlin)]
             xtlabels = self._get_xtlabels()
             times = pylab.log10(1+times)/max(pylab.log10(1+times))
-
-        #for isim, sim in enumerate(self.sim):
 
         # vMax over all data
         if normalise:
@@ -1176,7 +1161,7 @@ class XMIDAS(MIDASReader):
             cmap = self._colormap.get_cmap_red_green()
         return cmap
 
-    def plotMSEs(self, cmap="heat", N=10, norm="square",
+    def plot_mses(self, cmap="heat", N=10,
         rotation=90,margin=0.05, colorbar=True, vmax=None, vmin=0.,
         mode="trend", **kargs):
         """plot MSE errors and layout
@@ -1186,27 +1171,22 @@ class XMIDAS(MIDASReader):
             :width: 80%
             :include-source:
 
-            >>> from cellnopt.core import *
-            >>> m = midas.MIDASReader(cnodata("MD-ToyPB.csv"));
-            >>> m.plotMSEs()
-
-        .. todo:: error bars
-
-        .. todo:: dynamic fontsize in the signal names ?
+            >>> from cno import cnodata, XMIDAS
+            >>> m = MIDASReader(cnodata("MD-ToyPB.csv"));
+            >>> m.plot_mses()
 
         .. note:: called by :meth:`plot`
-        .. seealso:: :meth:`plot`, :meth:`plotMSEs`, :meth:`plotSim`
+        .. seealso:: :meth:`plot`, :meth:`plot_mses`, :meth:`plot_sim_data`
 
-        .. todo:: need to make it more modular e.g. no cues matrices
         """
-        if mode == "trend":
+        if mode == "data":
             #should be one with zero being white
             cmap = self._colormap.get_cmap_heat_r()
         else:
             cmap = self._get_cmap(cmap)
 
 
-        diffs = self.get_diff(self.sim, norm=norm)
+        diffs = self.get_diff(self.sim, squared=True)
         diffs = diffs.ix[self.experiments.index]
 
         pylab.clf();
@@ -1232,11 +1212,12 @@ class XMIDAS(MIDASReader):
             vmax = vmax_user
 
         if mode == "mse":
-            diffs = masked_array = np.ma.array (diffs, mask=np.isnan(diffs))
+            diffs = np.ma.array (diffs, mask=np.isnan(diffs))
             try:cmap.set_bad("grey", 1.)
             except: pass
-            pylab.pcolormesh(pylab.flipud(diffs)**self.cmap_scale, cmap=cmap, vmin=vmin, vmax=vmax, edgecolors='k');
-        elif mode == "trend":
+            pylab.pcolormesh(pylab.flipud(diffs)**self.cmap_scale, cmap=cmap,
+                             vmin=vmin, vmax=vmax, edgecolors='k');
+        elif mode == "data":
             try:cmap.set_bad("grey", 1.)
             except:pass
             pylab.pcolor(pylab.flipud(diffs*0), cmap=cmap, edgecolors='k');
@@ -1254,7 +1235,8 @@ class XMIDAS(MIDASReader):
         b = pylab.axes([margin*2+aW, 2*margin, bW, aH])
         stimuli = np.where(np.isnan(self.stimuli)==False, self.stimuli, 0.5)
 
-        pylab.pcolor(1-pylab.flipud(stimuli), edgecolors='gray', cmap='gray',vmin=0,vmax=1);
+        pylab.pcolor(1-pylab.flipud(stimuli), edgecolors='gray', cmap='gray',
+                     vmin=0,vmax=1);
         b.set_yticks([],[])
         b.set_xticks([i+.5 for i,x in enumerate(self.names_stimuli)])
         b.set_xticklabels(self.names_stimuli, rotation=rotation)
@@ -1263,8 +1245,11 @@ class XMIDAS(MIDASReader):
         # the inhibitors
         if len(self.names_inhibitors)>0:
             bb = pylab.axes([margin*5+aW, 2*margin, bbW, aH])
-            inhibitors = np.where(np.isnan(self.inhibitors)==False, self.inhibitors, 0.5)
-            pylab.pcolor(1-pylab.flipud(inhibitors), edgecolors='gray', cmap='gray',vmin=0,vmax=1);
+            inhibitors = np.where(np.isnan(self.inhibitors)==False,
+                                  self.inhibitors, 0.5)
+            pylab.pcolor(1-pylab.flipud(inhibitors), edgecolors='gray',
+                         cmap='gray',
+                         vmin=0,vmax=1);
             bb.set_yticks([],[])
             bb.set_xticks([i+.5 for i,x in enumerate(self.names_inhibitors)])
             bb.set_xticklabels(self.names_inhibitors, rotation=rotation)
@@ -1280,7 +1265,8 @@ class XMIDAS(MIDASReader):
 
         if len(self.names_inhibitors)>0:
             dd = pylab.axes([margin*5+aW, margin*3+aH, bbW, cH])
-            pylab.text(0.5,0.5, "Inhibitors", color="blue", horizontalalignment="center",
+            pylab.text(0.5,0.5, "Inhibitors", color="blue",
+                       horizontalalignment="center",
                 verticalalignment="center", fontsize=self.fontsize)
             #pcolor(1-numpy.zeros((1, 1)), edgecolors='b', cmap='gray', vmax=1, vmin=0);
             dd.set_xticks([],[])
@@ -1295,7 +1281,8 @@ class XMIDAS(MIDASReader):
 
             cbar = [cbar[i] for i in indices]
 
-            pylab.pcolor(np.array([cbar, cbar]).transpose(), cmap=cmap, vmin=0, vmax=1);
+            pylab.pcolor(np.array([cbar, cbar]).transpose(), cmap=cmap,
+                         vmin=0, vmax=1);
             #d.set_xticks([],[])
             e.yaxis.tick_right()
             #e.yaxis.xticks([0,1][0,1])
@@ -1355,46 +1342,85 @@ class XMIDAS(MIDASReader):
                 pylab.text(3, 12, "XMIDAS", fontsize=14,
                            verticalalignment='top', bbox=mybbox)
 
-            tx = pylab.title("XMIDAS", bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+            tx = pylab.title("XMIDAS", bbox=dict(boxstyle='round',
+                                                 facecolor='wheat', alpha=0.5))
             tx.set_position((0.6, 1.15))
 
-    def plot(self, **kargs):
-        """
+    def plot(self, mode='data', **kargs):
+        """Plot data contained in :attr:`experiment` and :attr:`df` dataframes.
 
-        :param string mode: must be either "mse" or "trend" (defaults to trend)
+        :param string mode: must be either "mse" or "data" (defaults to data)
 
-        calls plotMSEs and plotExp
-
-        if mode == mse, calls also plotSim
+        if mode is 'mse', calls also plot_mses, plot_data and plot_sim_data
+        else calls plot_mses and plot_data
 
         .. plot::
             :include-source:
             :width: 80%
 
-            from cellnopt.core import *
+            from cno import XMIDAS, cnodata
             m = XMIDAS(cnodata("MD-ToyPB.csv"))
-            m.plot(mode="trend")
+            m.plot(mode="mse")
 
-        .. todo:: a zero line
-
-        .. no stimuli or inhibitors
         """
-        mode = kargs.get("mode", "trend")
-        kargs['mode'] = mode
-        assert mode in ["mse", "trend"]
-
         if mode == "mse":
             if self.df.min().min()<0:
                 self.logging.warning("values are expected to be positive")
             if self.df.max().max()>1:
                 self.logging.warning("values are expected to be normalised")
-        self.plotMSEs(**kargs)
 
-        self.plotExp(**kargs)
-        if mode == "mse":
-            self.plotSim(**kargs)
+            self.plot_mses(**kargs)
+            self.plot_data(**kargs)
+            self.plot_sim_data(**kargs)
+        else:
+            self.plot_mses(**kargs)
+            self.plot_data(**kargs)
 
-    def save2midas(self, filename, expand_time_column=False):
+    def boxplot(self, mode="time"):
+        """Plot boxplot of the dataframe with the data
+
+        :param str mode: time or species
+
+        .. plot::
+
+            from cno import XMIDAS, cnodata
+            m = XMIDAS(cnodata("MD-ToyPB.csv"))
+            m.boxplot(mode="species")
+            m.boxplot(mode="time")
+
+        """
+        if mode == "time":
+             self.df.reset_index().boxplot(by="time")
+             pylab.tight_layout()
+        else:
+            self.df.boxplot()
+
+    def radviz(self, species=None, fontsize=10):
+        """
+
+        .. plot::
+            :include-source:
+            :width: 80%
+
+            from cno import XMIDAS, cnodata
+            m = XMIDAS(cnodata("MD-ToyPB.csv"))
+            m.radviz(["ap1", "gsk3", "p38"])
+
+        """
+        if species == None:
+            species = list(self.df.columns)
+        from pandas.tools.plotting import radviz
+        df = self.df.reset_index()
+        del df['time']
+        del df['cell']
+        pylab.figure(1)
+        pylab.clf()
+        radviz(df[['experiment']+species], "experiment")
+        pylab.legend(fontsize=fontsize)
+
+
+
+    def to_midas(self, filename, expand_time_column=False):
         """Save XMIDAS into a MIDAS CSV file.
 
         :param str filename:
@@ -1462,33 +1488,19 @@ class XMIDAS(MIDASReader):
 
         f.close()
 
-    def _todelete_get_control(self, experiment_name):
-        inhibitors = self.inhibitors.ix[experiment_name]
-        # here is a sub selction where experiment matches the experiment_name
-        mask = (self.inhibitors == inhibitors).all(axis=1)
-        # indices contains all experiment that have the same inhibitors
-        indices = self.inhibitors[mask].index
-
-        # now from those experiment, which one is the control (i.e., all stimuli are off)
-        stimuli = self.stimuli.ix[indices]
-        mask = stimuli.sum(axis=1)==0
-        control = stimuli[mask].index
-
-        # TODO assert control is unique
-        assert len(control) == 1
-        return control[0]
-
     def normalise(self, mode, inplace=True, changeThreshold=0, **kargs):
         """Normalise the data
 
-        :param mode: time or  controle
+        :param mode: 'time' or  'control'
         :param bool inplace:  Defaults to True.
 
-        see :mod:`normalise.XMIDASNormalise`
-
         .. warning:: not fully tested. the mode "time" should work. The
-            control mode has been tested on 2 MIDAS file only.
+            control mode has been tested on 2 MIDAS files only. This is
+            a complex normalisation described in
+            :class:`~cno.io.midas_normalisation.XMIDASNormalise`
         """
+        if self.df.max().max() <=1  and self.df.min.min()>=0:
+            raise CNOError("dataalready between 0 and 1")
         assert mode in ["time", "control"], "mode must be control or time"
         kargs['changeThreshold'] = changeThreshold
         if mode == "time":
@@ -1507,7 +1519,7 @@ class XMIDAS(MIDASReader):
         """Returns a Measurements instance
 
         Each datum in the dataframe :attr:`df` is converted into an
-        instance of :class:`~cellnopt.core.xmidas.Experiment`.
+        instance of :class:`~cno.io.measurement.Measurements`.
 
         :return: list of experiments.
 
@@ -1521,11 +1533,11 @@ class XMIDAS(MIDASReader):
         for row in self.df.iterrows():
             cellLine, exp, time = row[0]
             data = row[1]
-            inhibitors = self.experiments.ix[exp][self.inhibitors]
-            stimuli = self.experiments.ix[exp][self.stimuli]
+            inhibitors = self.experiments.ix[exp].Inhibitors
+            stimuli = self.experiments.ix[exp].Stimuli
             for species in data.index:
                 e = Measurement(species, time=time, stimuli=dict(stimuli),
-                        inhibitors=dict(inhibitors), measurement=data[species],
+                        inhibitors=dict(inhibitors), value=data[species],
                         cellLine=cellLine)
                 experiments.append(e)
         return experiments
@@ -1534,29 +1546,22 @@ class XMIDAS(MIDASReader):
             mode="bounded"):
         """add random (uniformaly distributed) noise to the dataframe
 
-        The noise is uniformliy distributed between -0.5 and 0.5 and added to the
+        The noise is uniformly distributed between -0.5 and 0.5 and added to the
         values contained in the dataframe (for each combinaison of species and
-        time/experiment). New values are :math:`\hat{X}=X + noise(-.5, .5)*dr`,
+        time/experiment). New values are :math:`\hat{X}=X + \mathcal{U}(-.5, .5)*dr`,
         where dr is the dynamical range. Note that final values may be below
         zero or above 1. If you do not want this feature, set the mode to
-        "bounded" (The default is **free**). **bounded** mens
+        "bounded" (The default is **free**). **bounded** means
 
         :param bool inplace: False by default
         :param float dynamic_range: a multiplicative value set to the noise
-        :param bool min_value: final values below min are set to min (default is 0)
-        :param bool max_value: final values above max are set to max (default is 1)
-
+        :param str mode: bounded (between min and max of the current data) or free
         """
         # axis=1 means each values is modified
         # axis=0 means the same value is added to the entire column
         dr = dynamic_range
         # add a unique random number to each value irrespective of level/axis
-        # N = len(self.df.index)
-        # x.df = x.df.apply(lambda x: x + np.random.normal(0, 10, size=N), axis=0)
-        # OR change N to be column length and loop over axis 1
-        # N = len(self.df.columns)
-        # x.df = x.df.apply(lambda x: x + np.random.normal(0, 10, size=N), axis=1)
-        if mode=="bounded":
+        if mode == "bounded":
             # because we use min() and max(), we cannot use apply but must use
             # applymap. Otherwise, identical random are generated for each
             # species
@@ -1565,21 +1570,30 @@ class XMIDAS(MIDASReader):
         elif mode == "free":
             newdf = self.df + np.random.uniform(self.df) * dr
         else:
-            raise ValueError("mode can be bounded or free")
-
+            raise CNOError("mode can be bounded or free")
         if inplace:
             self.df = newdf.copy()
         else:
             return newdf
 
-    def add_gaussian_noise(self, sigma=0.1, inplace=False):
-        """add gaussian noise to the data. Results may be negative or above 1"""
+    def add_gaussian_noise(self, mu=0, sigma=0.1, inplace=False):
+        r"""add gaussian noise to the data. Results may be negative or above 1
+
+        :param float beta: see equation
+        :param float sigma: see equation (default to 0.1)
+        :param bool inplace: Default to False
+
+        .. math::
+
+            \hat{X} = X + \mathcal{N}(\mu, \sigma)
+
+        """
         # random.normal accepts x and takes its shape to return random values.
         # so, the addition of x and the ouptut of np.random.normal is as
         # expected: points by point.
-        newdf = self.df.apply(lambda x:x+np.random.normal(x, scale=sigma))
+        newdf = self.df.apply(lambda x:x + np.random.normal(mu, scale=sigma))
         if inplace:
-            self.df = newdf.copy()
+            self.df = newdf
         else:
             return newdf
 
@@ -1592,7 +1606,7 @@ class XMIDAS(MIDASReader):
         raise NotImplementedError
 
     def get_residual_errors(self, level="time", normed=False):
-        """Return vector with residuals errors
+        r"""Return vector with residuals errors
 
         The residual errors are interesting to look at in the context
         of a boolean analysis. Indeed, residual errors is the minimum error
@@ -1602,13 +1616,14 @@ class XMIDAS(MIDASReader):
         is the optimisation, the value of the goodness of fit term cannot go
         under this residual error.
 
-        :param: level to sum over.
-        :return: returns residual errors :math:`\sum (round(x)-x)^2`
-            the summation is performed over species and experiment by default
+        :param: level to sum over
+        :return: a time series with summed residual errors
+            :math:`\sum (round(x)-x)^2` the summation is performed over species
+            and experiment by default.
 
         .. doctest::
 
-            >>> from cellnopt.core import cnodata, XMIDAS
+            >>> from cno import cnodata, XMIDAS
             >>> m = XMIDAS(cnodata("MD-ToyMMB_T2.csv"))
             >>> m.get_residual_errors()
             time
@@ -1617,13 +1632,23 @@ class XMIDAS(MIDASReader):
             100     0.954000
             dtype: float64
 
+        if normed is False, returns:
+
+        .. math::
+
+            \sum_{level} \left( X - \bf{round}( X) \right)^2
+
+        where level can be either over time or experiment.
+        If normed is True, divides the time series by number of experiments
+        and number of times
+
+        .. note:: if normed set to False, same results as in
+            CellNOptR for mode set to time.
         """
-        #FIXME use normed to divide residual errors by appropriate N
         diff = (self.df - self.df.apply(lambda x: x.round(), axis=1))
         diff_square = diff.apply(lambda x: x**2, axis=1)
-        S = diff_square.sum(level="time").sum(axis=1)
+        S = diff_square.sum(level=level).sum(axis=1)
 
-        # FIXME. do we take time 0 into account ?
         if normed :
             S /= len(self.experiments) * len(self.times)
         return S
@@ -1651,28 +1676,18 @@ class XMIDAS(MIDASReader):
                 self.names_stimuli)
         return txt
 
-    def correlation_experiment_one_signal(self, name):
-        t = self.df[name]
-        pylab.pcolor(t.unstack(1).corr())
-
-    def pca(self, signal, pca_components=2):
-        """Not sure this is the proper way...
-
-        get all experiment related to 1 signal
+    def pca(self, pca_components=2, fontsize=16):
+        """PCA analysis
 
         .. plot::
             :include-source:
             :width: 80%
 
-            from cellnopt.core import *
-            m = midas.XMIDAS(cnodata("MD-ToyPB.csv"))
-            #m.df = abs(m.df)
-            #m.df/=m.df.max()
-            m.pca("gsk3")
+            from cno import XMIDAS, cnodata
+            m = XMIDAS(cnodata("MD-ToyPB.csv"))
+            m.pca()
 
 
-        .. todo::  pls = PLSRegression(n_components=3)
-            from sklearn.pls import PLSCanonical, PLSRegression
 
         """
         from sklearn.decomposition import PCA
@@ -1680,61 +1695,22 @@ class XMIDAS(MIDASReader):
         #t = self.df[signal]
         #pca.fit(t.unstack(1))
 
-        t = self.df[signal].fillna(0)
-        X = t.unstack()
-        X_r = pca.fit(X).transform(X)
-        pylab.plot(X_r[:,0], X_r[:,1], 'o')
-        print(pca.explained_variance_ratio_)
+        for signal in self.df.columns:
+            t = self.df[signal].fillna(0)
+            X = t.unstack()
+            X_r = pca.fit(X).transform(X)
+            pylab.plot(X_r[:,0], X_r[:,1], 'o', label=signal)
+            print(signal, pca.explained_variance_ratio_)
+        pylab.legend(fontsize=fontsize)
 
         return pca
 
-    def boxplot(self, mode="time"):
-        """
-
-        :param str mode: time or species
-
-        .. plot::
-
-            from cellnopt.core import *
-            m = XMIDAS(cnodata("MD-ToyPB.csv"))
-            m.boxplot(mode="other")
-            m.boxplot(mode="time")
-
-        """
-        if mode == "time":
-             self.df.reset_index().boxplot(by="time")
-             pylab.tight_layout()
-        else:
-            self.df.boxplot()
-
-    def radviz(self, species=None, fontsize=10):
-        """
-
-        .. plot::
-            :include-source:
-            :width: 80%
-
-            from cellnopt.core import *
-            m = XMIDAS(cnodata("MD-ToyPB.csv"))
-            m.radviz(["ap1", "gsk3", "p38"])
-
-        """
-        if species == None:
-            species = list(self.df.columns)
-        from pandas.tools.plotting import radviz
-        df = self.df.reset_index()
-        del df['time']
-        del df['cell']
-        pylab.figure(1)
-        pylab.clf()
-        radviz(df[['experiment']+species], "experiment")
-        pylab.legend(fontsize=fontsize)
 
     def discretize(self, **kargs):
         return self.discretise(**kargs)
 
-    def discretise(self, inplace=True,N=2):
-        """
+    def discretise(self, inplace=True, N=2):
+        """Discretise data by rounding up the values
 
         :param int N: number of discrete values (defaults to 2). If set to
             2, values will be either 0 or 1. If set to 5, values wil lbe in
@@ -1743,58 +1719,65 @@ class XMIDAS(MIDASReader):
 
         .. warning. data has to be normalised
         """
-        assert N>=1
+        assert N >= 2, "N must be at least equal to 2"
         N = N-1.
         self.logging.info("Discretization between 0-1 assuming normalised data")
         if inplace:
             self.df = self.df.apply(lambda x: (x*N).round()/N)
         else:
             df = self.df.apply(lambda x: (x*N).round()/N)
-            #df = df.values.round(1)
             return df
 
     def round(self, inplace=True, decimals=0):
+        """Round values to a given decimal"""
         if inplace == True:
             self.df = self.df.apply(lambda x : x.round(decimals=decimals))
         else:
             return self.df.values.apply(lambda x : x.round(decimals=decimals))
 
-    def hcluster(self, mode="experiment"):
-        """
-
+    def hcluster(self, mode="experiment", metric='euclidean', leaf_rotation=90,
+                 leaf_font_size=12, **kargs):
+        """Plot the hiearchical cluster (simple approach)
 
         .. plot::
             :include-source:
             :width: 80%
 
-            from cellnopt.core import *
+            from cno import XMIDAS, cnodata
             m = midas.XMIDAS(cnodata("MD-ToyPB.csv"))
             m.hcluster("species")
 
         """
+        kargs['leaf_font_size'] = leaf_font_size
+        kargs['leaf_rotation'] = leaf_rotation
+
         assert mode in ["experiment", "time", "species"]
         from scipy.spatial.distance import pdist, squareform
         from scipy.cluster.hierarchy import linkage, dendrogram
         pylab.clf()
         if mode == "experiment":
-            distxy = squareform(pdist(self.df.unstack("time"), metric='euclidean'))
+            distxy = squareform(pdist(self.df.unstack("time"), metric=metric))
         elif mode == "time":
-            distxy = squareform(pdist(self.df.unstack("experiment"), metric='euclidean'))
+            distxy = squareform(pdist(self.df.unstack("experiment"), metric=metric))
         elif mode == "species":
-            distxy = squareform(pdist(self.df.transpose(), metric='euclidean'))
-        R = dendrogram(linkage(distxy, method='complete'))
+            distxy = squareform(pdist(self.df.transpose(), metric=metric))
 
 
+        R = dendrogram(linkage(distxy, method='complete'), **kargs)
+        self._debug = R
+        leaves = R['leaves']
         if mode == "time":
-            pylab.xticks(pylab.xticks()[0], self.times)
+            pylab.xticks(pylab.xticks()[0], self.times[leaves])
             pylab.title("Clustering by time")
         elif mode == "experiment":
-            pylab.xticks(pylab.xticks()[0], self.experiments.index)
+            pylab.xticks(pylab.xticks()[0], self.experiments.index[leaves])
             pylab.title("Clustering by experiments")
-
         else:
-            pylab.xticks(pylab.xticks()[0],self.species)
+            pylab.xticks(pylab.xticks()[0], self.species[leaves])
             pylab.title("Clustering by species")
+        ylim = pylab.ylim()
+        if ylim[0] == 0:
+            pylab.ylim([0-ylim[1]*.05, ylim[1]])
 
     def heatmap(self, cmap="heat", transpose=False):
         """Hierarchical clustering on species and one of experiment/time level
@@ -1803,10 +1786,12 @@ class XMIDAS(MIDASReader):
             :include-source:
             :width: 80%
 
-            from cellnopt.core import *
-            m = midas.XMIDAS(cnodata("MD-ToyPB.csv"))
+            from cno import XMIDAS, cnodata
+            m = XMIDAS(cnodata("MD-ToyPB.csv"))
             m.heatmap()
 
+        .. note:: time zero is ignored. Indeed, data at time zero is mostly set
+            to zero, which biases clustering.
         """
         #FIXME 1 looks like dendograms are not shown. why?
         from biokit.viz.heatmap import Heatmap
@@ -1819,76 +1804,72 @@ class XMIDAS(MIDASReader):
         return h
 
     def shuffle(self, mode="experiment", inplace=True):
-
         """Shuffle data
 
-        :param str mode: `timeseries` shuffles experiments and species; timeseries
-            are unchanged. `all` shuflles through time, experiment and species.
+        this method does not alter the data but shuffle it around
+        depending on the user choice.
 
+        :param str mode: type of shuffling (see below)
+        :param bool inplace: Defaults to True
 
-        mode can be
+        The **mode** parameter can be
 
-        # `timeseries` that is
-        # `all`
-        # `signals` or `species`: sum over signals is constant
-
-
-        #. by_signals (or by_species, by_columns, species, signals,
-            columns) shuffles each column independently. All values are shuffled
-            but the sum over a column/species remains identical.
-            constqnt is df.sum()
+        #. `timeseries` shuffles experiments and species; timeseries
+            are unchanged.
+        #. `all`: through time, experiment and species. No structure kept
+        #. `signal` (or `species` or `column`): sum over signals is constant
+           shuffles each column independently. All values are shuffled
+           but the sum over a column/species remains identical.
+           constqnt is df.sum()
+        #. `experiment` (or `index`): sum over signals is constant
         # shuffle over index. This means that values with same cell/exp/time are shuffled;
           This is therefore over species as well but keep a kind of time information
           constqnt is sum over experiment: m.df.sum(level="experiment").sum(axis=1)
 
-
         .. plot::
             :width: 80%
 
-            from cellnopt.core import *
-            m = midas.XMIDAS(cnodata("MD-ToyPB.csv"))
+            from cno import XMIDAS, cnodata
+            m = XMIDAS(cnodata("MD-ToyPB.csv"))
             m.plot()
 
-        Shuffling qll timeseries keeping their structures:
+        Shuffling all timeseries (shuffling rows and columsn in the plot):
 
         .. plot::
             :include-source:
             :width: 80%
 
-            from cellnopt.core import *
-            m = midas.XMIDAS(cnodata("MD-ToyPB.csv"))
+            from cno import XMIDAS, cnodata
+            m = XMIDAS(cnodata("MD-ToyPB.csv"))
             m.shuffle(mode="timeseries")
             m.plot()
 
+        .. warning:: shuffling is made inplace.
 
         """
-        if inplace != True:
-            raise NotImplementedError
-
-        if mode == "experiment":
-            self.df.reindex(self.df.index, key=lambda x:
-                list(self.experiments.index).index(x[1]))
-        elif mode == "all":
-            # The random.shuffle function does not work!! somehow sum of data increases or decreases
+        if mode == "all":
+            # The random.shuffle function does not work!! somehow sum of
+            # data increases or decreases
             # One must use numpy.random.shuffle instead
-            #print(shuffle)
             shape = self.df.shape
             data = self.df.values.reshape(shape[0]*shape[1])
             np.random.shuffle(data)
             count = 0
             # not very efficient but works for now
-            for i in range(0,shape[0]):
-                for j in range(0,shape[1]):
+            for i in range(0, shape[0]):
+                for j in range(0, shape[1]):
                     self.df.values[i][j] = data[count]
                     count += 1
-        elif mode in ["signals", "species",  "columns"]:
+        elif mode in ["signal", "species",  "column"]:
+            # m.df.sum() is constant
             for c in self.df.columns:
                 self.df[c] = np.random.permutation(self.df[c].values)
-        elif mode == "indices":
+        elif mode in ["index", "experiment"]:
             # m.df.sum(level="experiment").sum(axis=1) is constant
             for this_index in self.df.index:
                 np.random.shuffle(self.df.ix[this_index].values)
         elif mode == "timeseries":
+            # swap boxes
             species = list(self.species)
             exps = list(self.experiments.index)
             pairs = []
@@ -1909,32 +1890,31 @@ class XMIDAS(MIDASReader):
                     self.df[s].ix[self.cellLine].ix[e] = data
                     count += 1
         else:
-            raise NotImplementedError
+            raise CNOError("unknown mode {0} in shuffle()".format(mode))
 
-    # works for simple cases where only one stimuli is on at a time
     def sort_experiments_by_stimuli(self):
-        list_exps = []
+        """Sort experiments by stimuli
 
-        for stimulus in self.names_stimuli:
-            list_exps.append(('Stimuli', stimulus))
-        for inhibitor in self.names_inhibitors:
-            list_exps.append(('Inhibitors', inhibitor))
-        new_order = self.experiments.groupby(list_exps).groups.values()
-        new_order = list(pylab.flatten(new_order))
-        print(new_order)
+        Affects the experiment dataframe for th rendering but do not
+        change the dataframe that contains the data.
+
+        """
+        list_exps = [('Stimuli', stimulus) for stimulus in self.names_stimuli]
+        list_exps += [('Inhibitors', inhibitor) for inhibitor in self.names_inhibitors]
+        new_order = self.experiments.groupby(list_exps).groups
+        new_order = [new_order[x][0] for x in sorted(new_order.keys())]
         self._experiments = self.experiments.reindex_axis(new_order, axis=0)
 
     def sort_experiments_by_inhibitors(self):
-        list_exps = []
-        for inhibitor in self.names_inhibitors:
-            list_exps.append(('Inhibitors', inhibitor))
-        for stimulus in self.names_stimuli:
-            list_exps.append(('Stimuli', stimulus))
+        """Sort the experiments by inhibitors
 
-        new_order = self.experiments.groupby(list_exps).groups.values()
-        new_order = list(pylab.flatten(new_order))
-        print(new_order)
-
+        Affects the experiment dataframe for th rendering but do not
+        change the dataframe that contains the data.
+        """
+        list_exps = [('Inhibitors', inhibitor) for inhibitor in self.names_inhibitors]
+        list_exps += [('Stimuli', stimulus) for stimulus in self.names_stimuli]
+        new_order = self.experiments.groupby(list_exps).groups
+        new_order = [new_order[x][0] for x in sorted(new_order.keys())]
         self._experiments = self.experiments.reindex_axis(new_order, axis=0)
 
     def __eq__(self, other):
@@ -2062,32 +2042,40 @@ class TypicalTimeSeries(object):
 
     def plot(self, data):
         corrs = self._get_correlation(data)
-        clf()
-        pylab.plot(self.times, self._normed(data), label="data", lw=2, ls="--")
+        pylab.clf()
+        pylab.plot(self.times, self._normed(data),
+                   label="data", lw=2, ls="--")
         # transient
-        pylab.plot(self.times, self.transient(), 'o-', label="transient " + str(corrs['transient']))
+        pylab.plot(self.times, self.transient(), 'o-',
+                   label="transient " + str(corrs['transient']))
         # earlier
-        pylab.plot(self.times, self.earlier(), 'o-', label="earlier " + str(corrs['earlier']))
-        pylab.plot(self.times, self.earlier(n=1, N=10), 'o-', label="earlier2 " + str(corrs['earlier2']))
+        pylab.plot(self.times, self.earlier(), 'o-',
+                   label="earlier " + str(corrs['earlier']))
+        pylab.plot(self.times, self.earlier(n=1, N=10), 'o-',
+                   label="earlier2 " + str(corrs['earlier2']))
         # later
-        pylab.plot(self.times, self.later(), 'o-', label="later " + str(corrs['later']))
+        pylab.plot(self.times, self.later(), 'o-',
+                   label="later " + str(corrs['later']))
         # constant
-        pylab.plot(self.times, self.constant(.5), 'o-', label="constant " + str(corrs['constant_half']))
+        pylab.plot(self.times, self.constant(.5), 'o-',
+                   label="constant " + str(corrs['constant_half']))
         # sustained
-        pylab.plot(self.times, self.sustained(L=.5), 'o-', label="sustained" + str(corrs['sustained']))
-        pylab.plot(self.times, self.inverse_sustained(L=.5), 'o-', label="inv sustained" + str(corrs['inverse_sustained']))
+        pylab.plot(self.times, self.sustained(L=.5), 'o-',
+                   label="sustained" + str(corrs['sustained']))
+        pylab.plot(self.times, self.inverse_sustained(L=.5), 'o-',
+                   label="inv sustained" + str(corrs['inverse_sustained']))
         pylab.legend()
 
     def get_bestfit(self, data):
         corrs = self._get_correlation(data)
         keys,values = (corrs.keys(), corrs.values())
-        M  = max(values)
+        #M  = max(values)
         return keys[np.argmax(values)]
 
     def get_bestfit_color(self, data):
         corrs = self._get_correlation(data)
         keys,values = (corrs.keys(), corrs.values())
-        M  = max(values)
+        #M  = max(values)
         res = keys[np.argmax(values)]
 
         if "constant" in res:

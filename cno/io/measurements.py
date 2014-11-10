@@ -146,7 +146,7 @@ class Measurements(list):
     """
     def __init__(self, measurements=None):
         if measurements:
-            self.append(measurements)
+            self.add_measurements(measurements)
 
     def add_measurements(self, measurements):
         from cno.core import devtools
@@ -173,7 +173,7 @@ class Measurements(list):
             inhibitors = inhibitors.union(e.inhibitors.keys())
         return inhibitors
     inhibitors = property(_get_inhibitors)
-            
+
     def get_protein(self):
         return [x.protein_name for x in self]
     def get_data(self):
@@ -292,7 +292,7 @@ class MIDASBuilder(object):
 
         # this is the slowest part in the 2 next loops.
         for stimulus in stimuli:
-             df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] if stimulus 
+             df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] if stimulus
                      in x.stimuli.keys() else 0 for x in  self.measurements]
         for inhibitor in inhibitors:
              df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] if inhibitor
@@ -314,9 +314,12 @@ class MIDASBuilder(object):
         experiment_names = ['experiment_%s' % i for i in range(0, len(groups.keys()))]
 
         df.reset_index(inplace=True)
-        # FIXME this is a copy ?
+        df = df[['experiment', 'Inhibitors', 'Stimuli']]
+        # drop time and cell info
+        #
         df['experiment'] = experiment_names
-        df.set_index(['cell', 'experiment', 'time'], inplace=True)
+        #df.set_index(['cell', 'experiment', 'time'], inplace=True)
+        df.set_index(['experiment'], inplace=True)
         return df, groups
 
     def get_df_data(self):
@@ -328,12 +331,13 @@ class MIDASBuilder(object):
             })
         df.reset_index(inplace=True)
         df.rename(columns={'index':'experiment'}, inplace=True)
-
+        return df
         # NOTE the pivot method does not allow multi index in the pandas
-        # version used during the development of this method.
-        return pd.pivot_table(df,
-                            index=['cell', 'experiment', 'time'],
-                            columns='protein', values='data')
+        # version used during the development of this method. So, we use
+        # the pivot_table function instead
+        #return pd.pivot_table(df,
+        #                    index=['cell', 'experiment', 'time'],
+        #                    columns='protein', values='data')
 
     def _get_xmidas(self):
         # FIXME if no time zero provided, assumes this is a fold change and set values to zero.
@@ -344,7 +348,7 @@ class MIDASBuilder(object):
             return xm
 
         xm.df = self.get_df_data()
-        xm.create_empty_simulation()
+
         df_exps, groups = self.get_df_exps()
 
         # set the name of the experiments in the first df (df_exps)
@@ -353,7 +357,7 @@ class MIDASBuilder(object):
         # set name of the experiments in second df (based on the group)
         # FIXME: multi cell line fails here
         mapping = {}
-        for i, name in enumerate(df_exps.index.levels[1]): # loop over experiments
+        for i, name_exp in enumerate(df_exps.index): # loop over experiments
             # looking for the indices (row index) of the experiments
             # within a group
             exps = groups[tuple(df_exps.ix[i].values)]
@@ -361,12 +365,23 @@ class MIDASBuilder(object):
             # all those rows should be named with same experiment name
             # that is the variabe we are looping on (name)
             for j in exp_index:
-                mapping[j] = name
+                mapping[j] = name_exp
 
-        xm.df.reset_index(inplace=True)
-        xm.df['experiment'] = [mapping[x] for x in xm.df['experiment'].values]
-        xm.df.set_index(['cell', 'experiment', 'time'], inplace=True)
+            # we can now rename the experiment in the dataframe that containts the data
+            # indeed for now experiments are just values from 0 to N
+            xm.df.loc[exp_index, 'experiment'] = name_exp
 
+        self._df_data = xm.df.copy()
+        # now that experiments have been renamed, we can pivot the dataframe
+        xm.df  = pd.pivot_table(xm.df,
+                            index=['cell', 'experiment', 'time'],
+                            columns='protein', values='data')
+
+        #xm.df.reset_index(inplace=True)
+        #xm.df['experiment'] = [mapping[x] for x in xm.df['experiment'].values]
+        #xm.df.set_index(['cell', 'experiment', 'time'], inplace=True)
+
+        xm.create_empty_simulation()
         # TODO
         #xm._cellLine = x.cellLines[0]
 

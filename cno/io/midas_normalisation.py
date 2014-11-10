@@ -174,9 +174,9 @@ class XMIDASNormalise(NormaliseMIDASBase):
         self.df = data.df.copy()
         self.cellLine = data.cellLine
         self._df_ref = data # do not touch df_reference
-        #self.rescale_negative = rescale_negative
 
-        self._level_exp_name = "experiment"
+        self._level_exp_name = data._levels[1]  # "experiment"
+        self._level_cell_name = data._levels[0]  # cell
 
     def _get_masked_neg(self):
         # note the - sign before changeThreshold
@@ -400,7 +400,8 @@ class XMIDASNormalise(NormaliseMIDASBase):
         y = self.df.mask((self.df>self.saturation)|(self.df<self.detection))
 
         # Note the double max to max over signals and time
-        signalMax = y.groupby(level=['cellLine', 'experiment']).max().max()
+        signalMax = y.groupby(level=[self._level_cell_name,
+                                     self._level_exp_name]).max().max()
         self._signalMax = signalMax
         #experiment = list(set(y.reset_index()['experiment']))
 
@@ -418,8 +419,8 @@ class XMIDASNormalise(NormaliseMIDASBase):
             else:
                 # according to       http://stackoverflow.com/questions/17552997/how-to-update-a-subset-of-a-multiindexed-pandas-dataframe?rq=1
                 # get_level_values is the fastest way
-                df1 = y[y.index.get_level_values('experiment') == control]
-                df2 = y[y.index.get_level_values('experiment') == exp]
+                df1 = y[y.index.get_level_values(self._level_exp_name) == control]
+                df2 = y[y.index.get_level_values(self._level_exp_name) == exp]
                 # !!! here, we use df2-df1.values not the inverse in order to
                 # maje sure that the update is made on the experiment of the data
                 #, not the control. The inverse would be buggy.
@@ -466,8 +467,8 @@ class XMIDASNormalise(NormaliseMIDASBase):
         NormData[masked_ignore] = 0
 
         # search for min and max over each colum ignoring time=t0
-        m = NormData.min(level="experiment")
-        M = NormData.max(level="experiment")
+        m = NormData.min(level=self._level_exp_name)
+        M = NormData.max(level=self._level_exp_name)
 
         # if minimum  is negative and minimum != maximum
 
@@ -475,7 +476,7 @@ class XMIDASNormalise(NormaliseMIDASBase):
         cond = (m < 0) & (m!=M)
         m[cond==False] = 0
         M[cond==False] = 1
-        NormData = NormData.sub(m, level="experiment")
-        NormData = NormData.divide(M-m, level="experiment")
+        NormData = NormData.sub(m, level=self._level_exp_name)
+        NormData = NormData.divide(M-m, level=self._level_exp_name)
 
         return NormData

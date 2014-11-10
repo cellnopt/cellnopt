@@ -419,8 +419,8 @@ class SIF(Reactions):
         """Plot the network
 
 
-        .. note:: this method uses :class:`cellnopt.core.cnograph` so AND gates appear
-            as small circles.
+        .. note:: this method uses :class:`~cno.io.cnograph.CNOGraph` so 
+            AND gates appear as small circles.
 
         """
         c = self.to_cnograph()
