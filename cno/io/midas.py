@@ -30,7 +30,7 @@ import midas_normalisation as normalisation
 from cno.core import DevTools
 from cno.misc import CNOError
 
-__all__ = ["XMIDAS", "TypicalTimeSeries", 'MIDASReader']
+__all__ = ["XMIDAS", "Trend", 'MIDASReader']
 
 
 
@@ -68,22 +68,19 @@ class MIDAS(object):
 class MIDASReader(MIDAS):
     """A MIDAS reader that converts the experiments and data into dataframes
 
-
     Used by XMIDAS to read and convert the data.
-
-    .. todo:: link to documentation (cnodocs)
 
     CellLine must be encoded in the header as follows::
 
         TR:name:CellLine
 
-    If name is not provided, replace internally with "undefined".
+    If name is not provided, it is replaced internally with "undefined".
 
     Those columns are ignored in MIDASReader:
 
         ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
 
-
+    User should not need to use this class. Use :class:`XMIDAS instead`.
 
     """
     def __init__(self, filename, verbose='ERROR'):
@@ -454,6 +451,14 @@ class XMIDAS(MIDASReader):
             except Exception as e:
                 raise CNOError(e.message +
                 "Invalid input file. Expecting a XMIDAS instance or valid filename")
+        self._params = {
+                'plot.layout.space': 0.5,
+                'plot.fontsize':16,
+                'plot.fontsize.times':16,
+                'plot.fontsize.species':16,
+                'plot.fontsize.perturbations':16,
+                'plot.fontsize.titles':16,
+                }
 
     def _manage_replicates(self):
         """
@@ -1010,8 +1015,8 @@ class XMIDAS(MIDASReader):
             :include-source:
 
             >>> from cno import XMIDAS, cnodata
-            >>> m = MIDASReader(cnodata("MD-ToyPB.csv"));
-            >>> m.plot_mses()
+            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"));
+            >>> m.plot_layout()
             >>> m.plot_data()
             >>> m.plot_sim_data()
 
@@ -1027,7 +1032,6 @@ class XMIDAS(MIDASReader):
             times = times/float(max(times))
             simtimes = simtimes/float(M)
             xtlabels = self._get_xtlabels()
-
         else:
             M = float(max(times))
             xtlin = pylab.linspace(0, self.nSignals, self.nSignals*2+1)
@@ -1044,7 +1048,6 @@ class XMIDAS(MIDASReader):
                 # divide data by 1.1 to see results close to 1.
                 signal = self.names_signals[j]
                 exp = self.experiments.index[i]
-
                 data = self.sim[signal][self.cellLine][exp]
 
                 # sometimes we may want to get rid of all NA and show the lines.
@@ -1068,14 +1071,14 @@ class XMIDAS(MIDASReader):
             :include-source:
 
             >>> from cno import XMIDAS, cnodata
-            >>> m = midas.MIDASReader(cnodata("MD-ToyPB.csv"));
-            >>> m.plot_mses()
+            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"));
+            >>> m.plot_layout()
             >>> m.plot_data()
 
         .. note:: called by :meth:`plot`
-        .. seealso:: :meth:`plot`, :meth:`plot_mses`, :meth:`plot_sim_data`
+        .. seealso:: :meth:`plot`, :meth:`plot_layout`, :meth:`plot_sim_data`
         """
-        mode = kargs.get("mode", "trend")
+        mode = kargs.get("mode", "data")
         normalise = kargs.get("normalise", True)
         times = np.array(self.times)
         max_time = float(max(self.times))
@@ -1099,55 +1102,25 @@ class XMIDAS(MIDASReader):
         else:
             vMax = 1.
 
-        #norm = np.trapz([1]*len(self.times), self.times/max_time)
-        #print(norm)
-
-        if mode == "trend":
-            ts = TypicalTimeSeries(self.times)
+        trend = Trend()
 
         # TODO must be using the index instead of a range ince indices may not
         # start at zero
         for i in range(0, len(self.experiments)):
             #vMax = float(self.df.max(skipna=True).max(skipna=True))
             for j in range(0, self.nSignals):
-                # divide data by 1.1 to see results close to 1.
-
                 y = self.df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
-                times = np.array(y.index) / max_time
-                if mode == "trend":
-                    ts._times = times
-                #vMax = self.df[self.names_species[j]][self.cellLine].max()
+                trend.set(y)
 
-                y = y / vMax / 1.05
-
-                #y = numpy.array([x[i,j] for x in self.exp])/vMax/1.05
-                if mode == "trend":
-                    try:
-                        # time must be normalised by max so alpha is <=1
-                        alpha = np.trapz(y.values, times)
-                    except:
-                        color="white"
-
-                    try:
-                        color = ts.get_bestfit_color(y.values)
-                    except Exception:
-                        color="white"
-
-                    if color == "white":
-                        colorc = "k"
-                    else:
-                        colorc=color
-
-                    try:
-                        pylab.plot(times+j, y+self.nExps-i-1 , 'k-o',
-                                   markersize=markersize, color=colorc)
-                        pylab.fill_between(times+j, y+self.nExps-1-i ,
-                                           self.nExps-1-i, alpha=alpha,
-                                           color=color)
-                    except:
-                        pass
+                if mode == "data":
+                    color = trend.get_bestfit_color()
+                    pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 , 
+                            'k-o', markersize=markersize, color=color)
+                    pylab.fill_between(trend.normed_times+j, trend.normed_values+self.nExps-1-i ,
+                                       self.nExps-1-i, alpha=trend.alpha,
+                                       color=color)
                 else:
-                    pylab.plot(times+j, y+self.nExps-i-1 , 'k-o',
+                    pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 , 'k-o',
                                markersize=markersize, color="k")
 
                 #    plot(times+j, sim[i,j]/1.05+(self.nExps-i-1), 'b--o', markersize=markersize)
@@ -1161,121 +1134,168 @@ class XMIDAS(MIDASReader):
             cmap = self._colormap.get_cmap_red_green()
         return cmap
 
-    def plot_mses(self, cmap="heat", N=10,
-        rotation=90,margin=0.05, colorbar=True, vmax=None, vmin=0.,
-        mode="trend", **kargs):
+
+    def _get_diff_data(self, mode, squared=True):
+        diffs = self.get_diff(self.sim, squared=squared)
+        # we re-order the dataframe with the indices of the experiments
+        # we will do the same with the data !
+        diffs = diffs.ix[self.experiments.index]
+
+        if mode == "mse":
+            diffs = np.ma.array (diffs, mask=np.isnan(diffs))
+        elif mode == "data":
+            pass
+        return diffs
+
+    def plot_layout(self, cmap="heat", N=10,
+        rotation=90, margin=0.05, colorbar=True, vmax=None, vmin=0.,
+        mode="data", **kargs):
         """plot MSE errors and layout
 
-
+        :param cmap:
+        :param N:
+        :param rotation:
+        :param margin:
+        :param colorbar:
+        :param vmax:
+        :param vmin:
+        :param mode:
+        
         .. plot::
             :width: 80%
             :include-source:
 
             >>> from cno import cnodata, XMIDAS
-            >>> m = MIDASReader(cnodata("MD-ToyPB.csv"));
-            >>> m.plot_mses()
+            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"));
+            >>> m.plot_layout()
 
         .. note:: called by :meth:`plot`
-        .. seealso:: :meth:`plot`, :meth:`plot_mses`, :meth:`plot_sim_data`
+        .. seealso:: :meth:`plot`, :meth:`plot_layout`, :meth:`plot_sim_data`
 
         """
+        # Get the cmap
         if mode == "data":
             #should be one with zero being white
             cmap = self._colormap.get_cmap_heat_r()
         else:
             cmap = self._get_cmap(cmap)
 
+        # The data to show in the main subplot
+        diffs = self._get_diff_data(mode)
 
-        diffs = self.get_diff(self.sim, squared=True)
-        diffs = diffs.ix[self.experiments.index]
+        # aliases
+        fct = self._params['plot.fontsize.times']
+        fcs = self._params['plot.fontsize.species']
+        fcp = self._params['plot.fontsize.perturbations']
+        fcti = self._params['plot.fontsize.titles']
 
-        pylab.clf();
+        # The layout
+        gs = pylab.GridSpec(10, 10, 
+                wspace=self._params['plot.layout.space'], 
+                hspace=self._params['plot.layout.space'])
+        fig = pylab.figure(figsize=(10, 6))
+        ax_main = fig.add_subplot(gs[2:, 0:7])
+        ax_main.set_yticks([], [])
+        ax_main.set_xticks([], [])
 
-        bW = 0.1
-        cH = 0.1
+        # stimuli
+        ax_stim = fig.add_subplot(gs[2:, 7:8])
+        ax_stim.set_yticks([], [])
+        ax_stim.set_xticks([], [])
+        ax_stim_top = fig.add_subplot(gs[0:2, 7:8])
+        ax_stim_top.set_yticks([], [])
+        ax_stim_top.set_xticks([], [])
 
-        if len(self.names_inhibitors)>0:
-            bbW = 0.1
-        else:
-            bbW = 0
+        # inhibitors
+        ax_inh = fig.add_subplot(gs[2:, 8:9])
+        ax_inh.set_yticks([], [])
+        ax_inh.set_xticks([], [])
+        ax_inh_top = fig.add_subplot(gs[0:2, 8:9])
+        ax_inh_top.set_yticks([], [])
+        ax_inh_top.set_xticks([], [])
 
-        aH = 1-cH-4*margin
-        aW = 1-bW-5*margin - bbW
+        # colorbar
+        if colorbar and mode == 'mse':
+            ax_cb = fig.add_subplot(gs[2:, 9:10])
+            #ax_cb.set_yticks([], [])
+            ax_cb.set_xticks([], [])
+
 
         # MAIN subplot with signals
-        a = pylab.axes([margin, 2*margin, aW, aH])
         M = np.nanmax(diffs) # figure out the maximum individual MSE
         m = np.nanmin(diffs) # figure out the minimum individual MSE
+
         vmax_user = vmax
-        vmax= max(1, M)         # if M below 1, set the max to 1 otherwise to M
+        vmax = max(1, M)         # if M below 1, set the max to 1 otherwise to M
         if vmax_user:
             vmax = vmax_user
 
+        pylab.sca(ax_main)
         if mode == "mse":
-            diffs = np.ma.array (diffs, mask=np.isnan(diffs))
-            try:cmap.set_bad("grey", 1.)
+            try: cmap.set_bad("grey", 1.)
             except: pass
             pylab.pcolormesh(pylab.flipud(diffs)**self.cmap_scale, cmap=cmap,
                              vmin=vmin, vmax=vmax, edgecolors='k');
         elif mode == "data":
             try:cmap.set_bad("grey", 1.)
-            except:pass
-            pylab.pcolor(pylab.flipud(diffs*0), cmap=cmap, edgecolors='k');
-
-        a.set_yticks([],[])
+            except: pass
+            pylab.pcolormesh(pylab.flipud(diffs*0), cmap=cmap, edgecolors='k');
+    
+        # Some tuning of the main plot
+        pylab.sca(ax_main)
         pylab.axis([0, diffs.shape[1], 0, diffs.shape[0]])
-        # Could add the names
-        ax2 = a.twiny()
+
+        # the species name on the top
+        ax2 = ax_main.twiny()
         ax2.set_xticks([i+.5 for i,x in enumerate(self.names_species)])
         N = len(self.names_species)
-        ax2.set_xticks(pylab.linspace(0.5,N-1, N))
-        ax2.set_xticklabels(self.names_species, rotation=90)
+        ax2.set_xticks(pylab.linspace(0.5, N-1, N))
+        ax2.set_xticklabels(self.names_species, rotation=90, 
+                fontsize=fcs)
 
         # the stimuli
-        b = pylab.axes([margin*2+aW, 2*margin, bW, aH])
-        stimuli = np.where(np.isnan(self.stimuli)==False, self.stimuli, 0.5)
-
-        pylab.pcolor(1-pylab.flipud(stimuli), edgecolors='gray', cmap='gray',
+        if len(self.names_stimuli)>0:
+            pylab.sca(ax_stim)
+            stimuli = np.where(np.isnan(self.stimuli)==False, self.stimuli, 0.5)
+            pylab.pcolor(1-pylab.flipud(stimuli), edgecolors='gray', cmap='gray',
                      vmin=0,vmax=1);
-        b.set_yticks([],[])
-        b.set_xticks([i+.5 for i,x in enumerate(self.names_stimuli)])
-        b.set_xticklabels(self.names_stimuli, rotation=rotation)
-        pylab.axis([0,self.stimuli.shape[1], 0, self.stimuli.shape[0]])
+            #ax_stim.set_yticks([], [])
+            ax_stim.set_xticks([i+.5 for i,x in enumerate(self.names_stimuli)])
+            ax_stim.set_xticklabels(self.names_stimuli, rotation=rotation, 
+                    fontsize=fcp)
+            pylab.axis([0,self.stimuli.shape[1], 0, self.stimuli.shape[0]])
 
         # the inhibitors
         if len(self.names_inhibitors)>0:
-            bb = pylab.axes([margin*5+aW, 2*margin, bbW, aH])
+            pylab.sca(ax_inh)
             inhibitors = np.where(np.isnan(self.inhibitors)==False,
                                   self.inhibitors, 0.5)
             pylab.pcolor(1-pylab.flipud(inhibitors), edgecolors='gray',
                          cmap='gray',
                          vmin=0,vmax=1);
-            bb.set_yticks([],[])
-            bb.set_xticks([i+.5 for i,x in enumerate(self.names_inhibitors)])
-            bb.set_xticklabels(self.names_inhibitors, rotation=rotation)
+            #ax_inh.set_yticks([],[])
+            ax_inh.set_xticks([i+.5 for i,x in enumerate(self.names_inhibitors)])
+            ax_inh.set_xticklabels(self.names_inhibitors, rotation=rotation, 
+                    fontsize=fcp)
             pylab.axis([0,self.inhibitors.shape[1], 0, self.inhibitors.shape[0]])
 
+        # the stimuli
+        if len(self.names_stimuli) > 0:
+            pylab.sca(ax_stim_top)
+            pylab.text(0.5,0.5, "Stimuli", color="blue", horizontalalignment="center",
+                verticalalignment="center", fontsize=int(fcti/1.5))
 
-        d = pylab.axes([margin*2+aW, margin*3+aH, bW, cH])
-        pylab.text(0.5,0.5, "Stimuli", color="blue", horizontalalignment="center",
-            verticalalignment="center", fontsize=self.fontsize)
-        #pcolor(1-numpy.zeros((1, 1)), edgecolors='b', cmap='gray', vmax=1, vmin=0);
-        d.set_xticks([],[])
-        d.set_yticks([],[])
-
-        if len(self.names_inhibitors)>0:
-            dd = pylab.axes([margin*5+aW, margin*3+aH, bbW, cH])
+        # the inhibitors
+        if len(self.names_inhibitors) > 0:
+            pylab.sca(ax_inh_top)
             pylab.text(0.5,0.5, "Inhibitors", color="blue",
-                       horizontalalignment="center",
-                verticalalignment="center", fontsize=self.fontsize)
-            #pcolor(1-numpy.zeros((1, 1)), edgecolors='b', cmap='gray', vmax=1, vmin=0);
-            dd.set_xticks([],[])
-            dd.set_yticks([],[])
+                       horizontalalignment="center", verticalalignment="center", 
+                       fontsize=int(fcti/1.5))
 
         #colorbar
         # we build our own colorbar to place it on the RHS
-        if colorbar and mode=="mse":
-            e = pylab.axes([margin*3.5+aW+bW+bbW, 2*margin, margin/2, aH])
+        if colorbar and mode == "mse":
+            pylab.sca(ax_cb)
             cbar = pylab.linspace(0, 1, N)
             indices = [int(x) for x in cbar**self.cmap_scale*(N-1)]
 
@@ -1283,27 +1303,22 @@ class XMIDAS(MIDASReader):
 
             pylab.pcolor(np.array([cbar, cbar]).transpose(), cmap=cmap,
                          vmin=0, vmax=1);
-            #d.set_xticks([],[])
-            e.yaxis.tick_right()
-            #e.yaxis.xticks([0,1][0,1])
-            # todo: why is it normalised by 20?
-
-
-            ticks = np.array(e.get_yticks())
+            ax_cb.yaxis.tick_right()
+            ticks = np.array(ax_cb.get_yticks())
             M = max(ticks)
             indices = [int(N*x) for x in ticks**self.cmap_scale/(M**self.cmap_scale)]
-            e.set_yticks(indices)
+            ax_cb.set_yticks(indices)
             if vmax == 1:
                 # set number of digits
                 tic = np.array(indices)/float(N)
                 tic = [int(x*100)/100. for x in tic]
-                e.set_yticklabels(tic)
+                ax_cb.set_yticklabels(tic)
             else:
-                e.set_yticklabels([int(x*100)/100. for x in np.array(indices)/float(N)*vmax])
+                ax_cb.set_yticklabels([int(x*100)/100. for x in np.array(indices)/float(N)*vmax])
+            ax_cb.set_xticks([],[])
 
-            e.set_xticks([],[])
-
-        pylab.sca(a)
+        pylab.sca(ax_main)
+        return ax_main
 
     def _get_nExps(self):
          return len(self.experiments)
@@ -1351,8 +1366,8 @@ class XMIDAS(MIDASReader):
 
         :param string mode: must be either "mse" or "data" (defaults to data)
 
-        if mode is 'mse', calls also plot_mses, plot_data and plot_sim_data
-        else calls plot_mses and plot_data
+        if mode is 'mse', calls also plot_layout, plot_data and plot_sim_data
+        else calls plot_layout and plot_data
 
         .. plot::
             :include-source:
@@ -1368,12 +1383,13 @@ class XMIDAS(MIDASReader):
                 self.logging.warning("values are expected to be positive")
             if self.df.max().max()>1:
                 self.logging.warning("values are expected to be normalised")
-
-            self.plot_mses(**kargs)
+            kargs['mode'] = 'mse'
+            self.plot_layout(**kargs)
             self.plot_data(**kargs)
             self.plot_sim_data(**kargs)
         else:
-            self.plot_mses(**kargs)
+            kargs['mode'] = 'data'
+            self.plot_layout(**kargs)
             self.plot_data(**kargs)
 
     def boxplot(self, mode="time"):
@@ -1762,8 +1778,11 @@ class XMIDAS(MIDASReader):
         elif mode == "species":
             distxy = squareform(pdist(self.df.transpose(), metric=metric))
 
+        try:
+            R = dendrogram(linkage(distxy), **kargs)
+        except:
+            R = dendrogram(linkage(distxy, method='complete'), **kargs)
 
-        R = dendrogram(linkage(distxy, method='complete'), **kargs)
         self._debug = R
         leaves = R['leaves']
         if mode == "time":
@@ -1778,6 +1797,7 @@ class XMIDAS(MIDASReader):
         ylim = pylab.ylim()
         if ylim[0] == 0:
             pylab.ylim([0-ylim[1]*.05, ylim[1]])
+        pylab.tight_layout()
 
     def heatmap(self, cmap="heat", transpose=False):
         """Hierarchical clustering on species and one of experiment/time level
@@ -1816,15 +1836,13 @@ class XMIDAS(MIDASReader):
 
         #. `timeseries` shuffles experiments and species; timeseries
             are unchanged.
-        #. `all`: through time, experiment and species. No structure kept
-        #. `signal` (or `species` or `column`): sum over signals is constant
-           shuffles each column independently. All values are shuffled
-           but the sum over a column/species remains identical.
-           constqnt is df.sum()
-        #. `experiment` (or `index`): sum over signals is constant
-        # shuffle over index. This means that values with same cell/exp/time are shuffled;
-          This is therefore over species as well but keep a kind of time information
-          constqnt is sum over experiment: m.df.sum(level="experiment").sum(axis=1)
+        #. `all`: through times, experiments and species. No structure kept
+        #. `signal` (or `species` or `column`): within a column, timeseries
+           are shuffled. So, sum over signals is constant.
+        #. `experiment` (or `index`): with a row (experiment), 
+           timeseries are shuffled. 
+
+        Original data:
 
         .. plot::
             :width: 80%
@@ -1924,57 +1942,65 @@ class XMIDAS(MIDASReader):
             return False
         return True
 
-"""
-class TrendTimeSeries(object):
-    def __init__(self, data=None, times=None):
-        if isinstance(data, pd.TimeSeries):
-            self.data = data
 
-        # pd.DataFrame([0,2,4,6,8], index=[0,10,20,30,40])
-
-    def _set_times(self):
-        pass
-    def _get_times(self):
-        pass
-    times = property(_set_times, _get_times, doc="")
-
-    def _set_data(self):
-        # if a timeseries ok
-        # otherwise transform to timeseries
-        pass
-    def _get_data(self):
-
-        pass
-    data = property(_get_data,_set_data)
-"""
-
-
-class TypicalTimeSeries(object):
+class Trend(object):
     """Utility that figures out the trend of a time series
 
-    Returns color similar to what is contained in DataRail.
+    .. plot::
+        :include-source:
+        :width: 80%
 
+        from cno import cnodata
+        from cno.io import midas
 
-    .. todo:: must deal with NA
+        # get a time series
+        xm = midas.XMIDAS(cnodata("MD-ToyPB.csv"))
+        ts = xm.df['ap1']['Cell']['experiment_0']
+
+        # set a trend instance
+        trend = midas.Trend()
+        trend.set(ts)
+        trend.plot()
+
+        trend.get_bestfit_color()
 
 
     """
-    def __init__(self, times=None):
-        self._times = times  # ref do not change
+    def __init__(self):
+        self.data = None
+
+    def set(self, ts):
+        """Set the data with the parameter
+        
+        :param ts: a Pandas TimeSeries
+        """
+        self.data = ts
+
     def _get_times(self):
-        return self._times
-    times = property(_get_times)
+        return self.data.index.values
+    times = property(_get_times, doc="return time array")
+
+    def _get_values(self):
+        return self.data.values
+    values = property(_get_values, doc="return the value array")
+
+    def _get_normed_times(self):
+        return self.times / float(self.times.max())
+    normed_times = property(_get_normed_times, doc="return normed time array")
+
+    def _get_normed_values(self):
+        return self.values / float(self.values.max())
+    normed_values = property(_get_normed_values, doc="return normed value array")
+
+    def _get_alpha(self):
+        try:
+            alpha = np.trapz(self.normed_values, self.normed_times)
+        except:
+            alpha = 'white'
+        return alpha
+    alpha = property(_get_alpha, doc="return strength of the signal")
 
     def transient(self, x=None):
-        """
-
-        m = MIDASReader(...)
-        y = transient(m.times)
-        x = m.times
-        plot(x,y)
-
-        returns normqlised vector
-        """
         if x == None:
             x = self.times
         M = max(x)
@@ -2013,7 +2039,6 @@ class TypicalTimeSeries(object):
         v = np.array([(M-y) if y < m else M-m for y in x])
         return self._normed(v)
 
-
     def later(self, x=None, L=0.5):
         if x == None:
             x = self.times
@@ -2037,14 +2062,15 @@ class TypicalTimeSeries(object):
         correlation['constant_unity'] = self._correlate(a, self.constant(1))
         correlation['sustained'] = self._correlate(a, self.sustained(L=.5))
         correlation['inverse_sustained'] = self._correlate(a, self.inverse_sustained(L=.5))
-
         return correlation
 
-    def plot(self, data):
+    def plot(self):
+        """Plots the data and possible choices of trends"""
+        data = self.values
         corrs = self._get_correlation(data)
         pylab.clf()
         pylab.plot(self.times, self._normed(data),
-                   label="data", lw=2, ls="--")
+                   label="data", lw=4, ls="--", color='k')
         # transient
         pylab.plot(self.times, self.transient(), 'o-',
                    label="transient " + str(corrs['transient']))
@@ -2064,16 +2090,16 @@ class TypicalTimeSeries(object):
                    label="sustained" + str(corrs['sustained']))
         pylab.plot(self.times, self.inverse_sustained(L=.5), 'o-',
                    label="inv sustained" + str(corrs['inverse_sustained']))
-        pylab.legend()
+        pylab.legend(fontsize=10)
 
-    def get_bestfit(self, data):
-        corrs = self._get_correlation(data)
+    def get_bestfit(self):
+        corrs = self._get_correlation(self.values)
         keys,values = (corrs.keys(), corrs.values())
         #M  = max(values)
         return keys[np.argmax(values)]
 
-    def get_bestfit_color(self, data):
-        corrs = self._get_correlation(data)
+    def get_bestfit_color(self):
+        corrs = self._get_correlation(self.values)
         keys,values = (corrs.keys(), corrs.values())
         #M  = max(values)
         res = keys[np.argmax(values)]

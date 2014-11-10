@@ -208,8 +208,8 @@ first column after pipe character (%s)""" % (str(i+1), parameters[0]))
         s = SIF()
         for reac in self.reactions:
             try:
-                s.add_reaction(reac.name)
+                s.add_reaction(reac)
             except CNOError:
-                print("Skipped {} reaction".format(reac.name))
+                print("Skipped {} reaction".format(reac))
                 pass
         s.save(filename)

@@ -222,7 +222,7 @@ class SOP2SIF(Reactions):
         """
         from cno.io.sif import SIF
         s = SIF()
-        for reac in self.reaction_names:
+        for reac in self.reactions:
             s.add_reaction(reac)
         if include_and_gates == False:
             s.remove_and_gates()

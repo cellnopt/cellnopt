@@ -21,33 +21,6 @@ Graph/SIF related
 - test_simple.sif
 
 
-todo
------
-
-caspo_models.csv
-kinetic.csv
-MD-average.csv
-MD-one_exp.csv
-MD-one_inhibitor.csv
-MD-one_stimulus.csv
-MD-test_1cue_noinhibitor.csv
-MD-Test2.csv
-MD-test_4andgates.csv
-MD-test_diamond.csv
-MD-ToyMMB.csv
-MD-unnorm.csv
-MD-unnorm_exp.csv
-MD-unnorm_exp_nozero.csv
-midas.xml
-PKN-test_1cue_noinhibitor.sif
-PKN-test_4andgates.sif
-PKN-TestAND.sif
-PKN-test_diamond.sif
-PKN-Test.sif
-PKN-ToyMMB.sif
-README.txt
-test_sbml.xml
-
 
 ======================= ======================================
 filename                used by 
@@ -64,7 +37,7 @@ MD-one_inhiibitor       MIDAS special case
 MD-unnorm.csv           MIDAS to test normalisation(time)
 MD-unnorm_exp.csv       MIDAS to test normalisation(exp)
 MD-Test.csv             Same as MD-ToyPB with NA
-MD-Test2.csv            same as aboe with 2 cell lines
+MD-Test2.csv            same as above with 2 cell lines
 PKN-Test.sif            same as PKN-ToyPB but with nonc
 MD-average.csv          test average over time
 ======================= ======================================
