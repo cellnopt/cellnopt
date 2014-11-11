@@ -20,7 +20,7 @@ references
     - add :CellLine after TR:HepG2 
     - EGFRi-Gefin --> EGFRi
     
-    In the PKN:
+    In the PKN::
 
         erk12 to ERK
         MEK12 to MEK
@@ -28,7 +28,7 @@ references
         IRS1S to IRS-1S
 
     * Same modifications for the PKN. In addition, the following reactions are
-    * removed from the PKN provided on the journal website::
+      removed from the PKN provided on the journal website::
 
         STAT6   1   dummy
         CASP37  1   dummy
