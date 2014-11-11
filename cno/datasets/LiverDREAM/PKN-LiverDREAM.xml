@@ -1,0 +1,1420 @@
+<html>
+ <body>
+  <sbml level="3" qual:required="true" xmlns="http://www.sbml.org/sbml/level3/version1/core" xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">
+   <model id="None">
+    <listofcompartments>
+     <compartment constant="true" id="main">
+     </compartment>
+    </listofcompartments>
+    <qual:listofqualitativespecies xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="rac">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="egfr">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="pdk1">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="sos">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="ras">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="igf1">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="tnfr">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="tnfa">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="sitpec">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="erk12">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="prak">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="pak">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="nik">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="traf2">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="traf6">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="irs1">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="ikb">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="p38">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="grb2">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="jnk12">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="ikk">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="cot">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="igfr">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="tgfa">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="ask1">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="pip3">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="pi3k">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="il1r">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="map3k1">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="map3k7">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="akt">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="hsp27">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="shc">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="mek12">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="il1a">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="mkk3">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="raf1">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="mkk4">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="mkk7">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="mkk6">
+     </qual:qualitativespecies>
+     <qual:listoftransitions xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">
+      <qual:transition qual:id="t1">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t1_pdk1" qual:qualitativespecies="pdk1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="akt" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            pdk1
+           </ci>
+           <ci>
+            theta_t1_pdk1
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t2">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t2_traf2" qual:qualitativespecies="traf2" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="ask1" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            traf2
+           </ci>
+           <ci>
+            theta_t2_traf2
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t3">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t3_akt" qual:qualitativespecies="akt" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="cot" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            akt
+           </ci>
+           <ci>
+            theta_t3_akt
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t4">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t4_tgfa" qual:qualitativespecies="tgfa" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="egfr" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            tgfa
+           </ci>
+           <ci>
+            theta_t4_tgfa
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t5">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t5_mek12" qual:qualitativespecies="mek12" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="erk12" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            mek12
+           </ci>
+           <ci>
+            theta_t5_mek12
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t6">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t6_shc" qual:qualitativespecies="shc" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t6_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="grb2" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             shc
+            </ci>
+            <ci>
+             theta_t6_shc
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             egfr
+            </ci>
+            <ci>
+             theta_t6_egfr
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t7">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t7_prak" qual:qualitativespecies="prak" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="hsp27" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            prak
+           </ci>
+           <ci>
+            theta_t7_prak
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t8">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t8_igf1" qual:qualitativespecies="igf1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="igfr" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            igf1
+           </ci>
+           <ci>
+            theta_t8_igf1
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t9">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t9_ikk" qual:qualitativespecies="ikk" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="ikb" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            ikk
+           </ci>
+           <ci>
+            theta_t9_ikk
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t10">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t10_nik" qual:qualitativespecies="nik" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t10_map3k1" qual:qualitativespecies="map3k1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t10_cot" qual:qualitativespecies="cot" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="ikk" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             nik
+            </ci>
+            <ci>
+             theta_t10_nik
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             map3k1
+            </ci>
+            <ci>
+             theta_t10_map3k1
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             cot
+            </ci>
+            <ci>
+             theta_t10_cot
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t11">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t11_il1a" qual:qualitativespecies="il1a" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="il1r" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            il1a
+           </ci>
+           <ci>
+            theta_t11_il1a
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t12">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t12_igfr" qual:qualitativespecies="igfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="irs1" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            igfr
+           </ci>
+           <ci>
+            theta_t12_igfr
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t13">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t13_mkk4" qual:qualitativespecies="mkk4" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t13_mkk7" qual:qualitativespecies="mkk7" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="jnk12" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             mkk4
+            </ci>
+            <ci>
+             theta_t13_mkk4
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             mkk7
+            </ci>
+            <ci>
+             theta_t13_mkk7
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t14">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t14_rac" qual:qualitativespecies="rac" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t14_sitpec" qual:qualitativespecies="sitpec" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t14_ras" qual:qualitativespecies="ras" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="map3k1" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             rac
+            </ci>
+            <ci>
+             theta_t14_rac
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             sitpec
+            </ci>
+            <ci>
+             theta_t14_sitpec
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             ras
+            </ci>
+            <ci>
+             theta_t14_ras
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t15">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t15_traf2" qual:qualitativespecies="traf2" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t15_traf6" qual:qualitativespecies="traf6" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="map3k7" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             traf2
+            </ci>
+            <ci>
+             theta_t15_traf2
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             traf6
+            </ci>
+            <ci>
+             theta_t15_traf6
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t16">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t16_raf1" qual:qualitativespecies="raf1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="mek12" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            raf1
+           </ci>
+           <ci>
+            theta_t16_raf1
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t17">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t17_map3k7" qual:qualitativespecies="map3k7" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="mkk3" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            map3k7
+           </ci>
+           <ci>
+            theta_t17_map3k7
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t18">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t18_map3k1" qual:qualitativespecies="map3k1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t18_ask1" qual:qualitativespecies="ask1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t18_map3k7" qual:qualitativespecies="map3k7" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="mkk4" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             map3k1
+            </ci>
+            <ci>
+             theta_t18_map3k1
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             ask1
+            </ci>
+            <ci>
+             theta_t18_ask1
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             map3k7
+            </ci>
+            <ci>
+             theta_t18_map3k7
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t19">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t19_map3k7" qual:qualitativespecies="map3k7" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="mkk6" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            map3k7
+           </ci>
+           <ci>
+            theta_t19_map3k7
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t20">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t20_map3k1" qual:qualitativespecies="map3k1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t20_ask1" qual:qualitativespecies="ask1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t20_map3k7" qual:qualitativespecies="map3k7" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="mkk7" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             map3k1
+            </ci>
+            <ci>
+             theta_t20_map3k1
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             ask1
+            </ci>
+            <ci>
+             theta_t20_ask1
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             map3k7
+            </ci>
+            <ci>
+             theta_t20_map3k7
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t21">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t21_map3k7" qual:qualitativespecies="map3k7" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="nik" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            map3k7
+           </ci>
+           <ci>
+            theta_t21_map3k7
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t22">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t22_mkk3" qual:qualitativespecies="mkk3" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t22_mkk4" qual:qualitativespecies="mkk4" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t22_mkk6" qual:qualitativespecies="mkk6" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="p38" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             mkk3
+            </ci>
+            <ci>
+             theta_t22_mkk3
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             mkk4
+            </ci>
+            <ci>
+             theta_t22_mkk4
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             mkk6
+            </ci>
+            <ci>
+             theta_t22_mkk6
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t23">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t23_rac" qual:qualitativespecies="rac" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t23_akt" qual:qualitativespecies="akt" qual:sign="negative" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="pak" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             rac
+            </ci>
+            <ci>
+             theta_t23_rac
+            </ci>
+           </apply>
+           <apply>
+            <lt>
+            </lt>
+            <ci>
+             akt
+            </ci>
+            <ci>
+             theta_t23_akt
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t24">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t24_pip3" qual:qualitativespecies="pip3" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="pdk1" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            pip3
+           </ci>
+           <ci>
+            theta_t24_pip3
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t25">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t25_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t25_ras" qual:qualitativespecies="ras" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t25_tnfr" qual:qualitativespecies="tnfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t25_irs1" qual:qualitativespecies="irs1" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="pi3k" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             egfr
+            </ci>
+            <ci>
+             theta_t25_egfr
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             ras
+            </ci>
+            <ci>
+             theta_t25_ras
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             tnfr
+            </ci>
+            <ci>
+             theta_t25_tnfr
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             irs1
+            </ci>
+            <ci>
+             theta_t25_irs1
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t26">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t26_pi3k" qual:qualitativespecies="pi3k" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="pip3" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            pi3k
+           </ci>
+           <ci>
+            theta_t26_pi3k
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t27">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t27_erk12" qual:qualitativespecies="erk12" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t27_p38" qual:qualitativespecies="p38" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t27_mkk3" qual:qualitativespecies="mkk3" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="prak" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             erk12
+            </ci>
+            <ci>
+             theta_t27_erk12
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             p38
+            </ci>
+            <ci>
+             theta_t27_p38
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             mkk3
+            </ci>
+            <ci>
+             theta_t27_mkk3
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t28">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t28_pi3k" qual:qualitativespecies="pi3k" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="rac" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            pi3k
+           </ci>
+           <ci>
+            theta_t28_pi3k
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t29">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t29_pak" qual:qualitativespecies="pak" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t29_ras" qual:qualitativespecies="ras" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t29_akt" qual:qualitativespecies="akt" qual:sign="negative" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="raf1" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             pak
+            </ci>
+            <ci>
+             theta_t29_pak
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             ras
+            </ci>
+            <ci>
+             theta_t29_ras
+            </ci>
+           </apply>
+           <apply>
+            <lt>
+            </lt>
+            <ci>
+             akt
+            </ci>
+            <ci>
+             theta_t29_akt
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t30">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t30_sos" qual:qualitativespecies="sos" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="ras" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            sos
+           </ci>
+           <ci>
+            theta_t30_sos
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t31">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t31_igfr" qual:qualitativespecies="igfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t31_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="shc" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             igfr
+            </ci>
+            <ci>
+             theta_t31_igfr
+            </ci>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             egfr
+            </ci>
+            <ci>
+             theta_t31_egfr
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t32">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t32_traf6" qual:qualitativespecies="traf6" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="sitpec" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            traf6
+           </ci>
+           <ci>
+            theta_t32_traf6
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t33">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t33_grb2" qual:qualitativespecies="grb2" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="sos" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            grb2
+           </ci>
+           <ci>
+            theta_t33_grb2
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t34">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t34_tnfa" qual:qualitativespecies="tnfa" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="tnfr" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            tnfa
+           </ci>
+           <ci>
+            theta_t34_tnfa
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t35">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t35_tnfr" qual:qualitativespecies="tnfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="traf2" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            tnfr
+           </ci>
+           <ci>
+            theta_t35_tnfr
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t36">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t36_il1r" qual:qualitativespecies="il1r" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="traf6" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            il1r
+           </ci>
+           <ci>
+            theta_t36_il1r
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+     </qual:listoftransitions>
+    </qual:listofqualitativespecies>
+   </model>
+  </sbml>
+ </body>
+</html>
