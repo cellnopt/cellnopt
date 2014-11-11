@@ -193,7 +193,7 @@ class CNOGraph(nx.DiGraph):
         c1 = CNOGraph()
         c1.add_edge("A","B", link="+")
         c1.add_edge("A","C", link="-")
-        c1.plotdot()
+        c1.plot()
 
 
     .. plot::
@@ -204,11 +204,11 @@ class CNOGraph(nx.DiGraph):
         c2 = CNOGraph()
         c2.add_edge("A","E", link="+")
         c2.add_edge("C","E", link="+")
-        c2.plotdot()
+        c2.plot()
 
     ::
 
-        (c1+c2).plotdot()
+        (c1+c2).plot()
 
 
     .. plot::
@@ -218,12 +218,12 @@ class CNOGraph(nx.DiGraph):
         c1 = CNOGraph()
         c1.add_edge("A","B", link="+")
         c1.add_edge("A","C", link="-")
-        c1.plotdot()
+        c1.plot()
         c2 = CNOGraph()
         c2.add_edge("A","E", link="+")
         c2.add_edge("C","E", link="+")
-        c2.plotdot()
-        (c1+c2).plotdot()
+        c2.plot()
+        (c1+c2).plot()
 
     You can also substract a graph from another one::
 
@@ -237,7 +237,7 @@ class CNOGraph(nx.DiGraph):
     .. rubric:: PLOTTING
 
     There are plotting functionalities to look at the graph, which are based on graphviz
-    library. For instance, the :meth:`plotdot` is quite flexible but has a
+    library. For instance, the :meth:`plot` is quite flexible but has a
     default behaviour following CellNOptR convention,  where stimuli are colored in green,
     inhibitors in red and measurements in blue:
 
@@ -249,15 +249,15 @@ class CNOGraph(nx.DiGraph):
         pknmodel = cnodata("PKN-ToyPB.sif")
         data = cnodata("MD-ToyPB.csv")
         c = CNOGraph(pknmodel, data)
-        c.plotdot()
+        c.plot()
 
     If you did not use any MIDAS file as input parameter, you can still populate the hidden fields
     :attr:`_stimuli`, :attr:`_inhibitors`, :attr:`_signals`.
 
     You can also overwrite this behaviour by using the node_attribute parameter when
-    calling :meth:`plotdot`. For instance, if you call :meth:`centrality_degree`, which
+    calling :meth:`plot`. For instance, if you call :meth:`centrality_degree`, which
     computes and populate the node attribute
-    **degree**. You can then call plotdot as follows to replace the default
+    **degree**. You can then call plot as follows to replace the default
     color:
 
     .. plot::
@@ -269,9 +269,9 @@ class CNOGraph(nx.DiGraph):
         data = cnodata("MD-ToyPB.csv")
         c = CNOGraph(pknmodel, data)
         c.centrality_degree()
-        c.plotdot(node_attribute="degree")
+        c.plot(node_attribute="degree")
 
-    Similarly, you can tune the color of the edge attribute. See the :meth:`plotdot` for more details.
+    Similarly, you can tune the color of the edge attribute. See the :meth:`plot` for more details.
 
     .. seealso::  tutorial, user guide
 
@@ -367,22 +367,18 @@ class CNOGraph(nx.DiGraph):
         # the data
         self.midas = data
 
-
-
         self._set_dot_attributes()
 
         self._colormap = Colormap()
 
 
-
     def _set_dot_attributes(self):
         # other attributes
-
         self._dot_mode = "end_signals_bottom"
 
         self.dotattrs = {}
         self.dotattrs['graph'] = {
-                "title": "CNOGraph output from cellnopt.core.cnograph.plotdot",
+                "title": "CNOGraph output from cellnopt.core.cnograph.plot",
 #                'fontname': 'helvetica',
                 'fontsize': 22,
                 'size': "25,25",
@@ -486,7 +482,6 @@ class CNOGraph(nx.DiGraph):
             else:
                 self.add_edge(lhs,rhs, link=link)
 
-
     def add_reactions(self, reactions):
         for reac in reactions:
             self.add_reaction(reac)
@@ -511,7 +506,7 @@ class CNOGraph(nx.DiGraph):
             from cno import CNOGraph
             c = CNOGraph()
             c.add_reaction("a+b^c+e+d^h=Z")
-            c.plotdot()
+            c.plot()
 
 
         """
@@ -798,19 +793,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c1.add_edge("C", "E", link="+")
             subplot(1,3,1)
             title(r"graph $C_1$")
-            c1.plotdot(hold=True)
+            c1.plot(hold=True)
 
             c2 = CNOGraph()
             c2.add_edge("A", "B", link="+")
             c2.add_edge("B", "D", link="+")
             c2.add_edge("B", "F", link="+")
             subplot(1,3,2)
-            c2.plotdot(hold=True)
+            c2.plot(hold=True)
             title(r"graph $C_2$")
 
             c3 = c1.union(c2)
             subplot(1,3,3)
-            c3.plotdot(hold=True)
+            c3.plot(hold=True)
             title(r"graph $C_3 = C_1 \cup C_2$")
 
         """
@@ -835,19 +830,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c1.add_edge("C", "E", link="+")
             subplot(1,3,1)
             title("graph C1")
-            c1.plotdot(hold=True)
+            c1.plot(hold=True)
 
             c2 = CNOGraph()
             c2.add_edge("A", "B", link="+")
             c2.add_edge("B", "D", link="+")
             c2.add_edge("B", "F", link="+")
             subplot(1,3,2)
-            c2.plotdot(hold=True)
+            c2.plot(hold=True)
             title("graph C2")
 
             c3 = c1.difference(c2)
             subplot(1,3,3)
-            c3.plotdot(hold=True)
+            c3.plot(hold=True)
             title("graph C3=C1-C2")
 
 
@@ -873,19 +868,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c1.add_edge("C", "E", link="+")
             subplot(1,3,1)
             title(r"graph $C_1$")
-            c1.plotdot(hold=True)
+            c1.plot(hold=True)
 
             c2 = CNOGraph()
             c2.add_edge("A", "B", link="+")
             c2.add_edge("B", "D", link="+")
             c2.add_edge("B", "F", link="+")
             subplot(1,3,2)
-            c2.plotdot(hold=True)
+            c2.plot(hold=True)
             title(r"graph $C_2$")
 
             c3 = c1.intersect(c2)
             subplot(1,3,3)
-            c3.plotdot(hold=True)
+            c3.plot(hold=True)
             title(r"graph $C_3 = C_1 \cap C_2$")
 
         """
@@ -916,9 +911,9 @@ not present in the model. Change your model or MIDAS file. """ % x)
         Uses the fillcolor attribute of the nodes
         Uses the link attribute of the edges
 
-        .. seealso:: :meth:`plotdot` that is dedicated to this kind of plot using graphviz
+        .. seealso:: :meth:`plot` that is dedicated to this kind of plot using graphviz
         """
-        self.logging.warning("Not for production. Use plotdot() instead")
+        self.logging.warning("Not for production. Use plot() instead")
         pos = nx.drawing.graphviz_layout(self, prog=prog)
 
         if hold==False:
@@ -931,7 +926,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         # node attributes
         nodes = sorted(self.nodes())
-        node_colors = [self.node[x][attribute] if attribute in self.node[x].keys() else "gray" for x in nodes]
+        node_colors = [self.node[x][attribute] if attribute in self.node[x].keys() 
+                else "gray" for x in nodes]
 
         # edge attributes
         edges = self.edges(data=True)
@@ -948,7 +944,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
                 pylab.colorbar(shrink=0.7, pad=0.01, fraction=0.10)
 
     def _plot_legend(self):
-        """used by plotdot"""
+        """used by plot"""
         txt = "Color legend:\n--------------------\n green:stimuli\nred:inhibitors\nblue:readouts\nred arrow: inhibits\n: black arrow:direct link"
 
         self._add_textbox(txt, 0.95, 0.95)
@@ -965,8 +961,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             "sccmap", "fdp", "circo", "neato", "acyclic", "nop", "gvpr", "dot",
             "sfdp"])
 
-    def plot(self, *args, **kargs):
-        return self.plotdot(*args, **kargs)
 
     def _get_cmap(self, cmap=None):
         if cmap == "heat":
@@ -975,7 +969,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             cmap = self._colormap.get_cmap_red_green()
         return cmap
 
-    def plotdot(self, prog="dot", viewer="pylab", hold=False, legend=False,
+    def plot(self, prog="dot", viewer="pylab", hold=False, legend=False,
         show=True, filename=None, node_attribute=None, edge_attribute=None,
         cmap=None, colorbar=False, remove_dot=True, cluster_stimuli=False,
         normalise_cmap=True, edge_attribute_labels=True, aspect="equal",
@@ -1127,7 +1121,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             H = nx.to_agraph(this)
 
 
-        cluster = 1
 
         # we want stimuli to be on top
         if (self.midas or self._stimuli) and cluster_stimuli:
@@ -1314,6 +1307,9 @@ not present in the model. Change your model or MIDAS file. """ % x)
                 #H.add_subgraph(ranks[rank], name=name, rank='same')
         return H
 
+
+    
+
     def _get_nonc(self):
         if self._nonc == None:
             nonc = self.findnonc()
@@ -1487,8 +1483,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         .. seealso:: :meth:`adjacency_iter` and :meth:`adjacency_list`
 
         """
-        from networkx import adjacency_matrix
-        return adjacency_matrix(self, nodelist=nodelist).astype(int)
+        return nx.adjacency_matrix(self, nodelist=nodelist).astype(int)
 
     def plotAdjacencyMatrix(self, fontsize=12, **kargs):
         """Plots adjacency matrix
@@ -1501,7 +1496,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             from cno import CNOGraph *
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-            c.plotdot(hold=True)
+            c.plot(hold=True)
 
         .. plot::
             :width: 70%
@@ -1611,7 +1606,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.preprocessing()
-            c.plotdot()
+            c.plot()
 
         """
         if cutnonc:
@@ -1632,7 +1627,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
-            c.plotdot()
+            c.plot()
 
         """
         nonc = self.nonc[:]
@@ -1656,7 +1651,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.compress()
-            c.plotdot()
+            c.plot()
 
 
 
@@ -1899,7 +1894,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
     def get_same_rank(self):
         """Return ranks of the nodes.
 
-        Used by plotdot/graphviz. Depends on attribute :attr:`dot_mode`
+        Used by plot/graphviz. Depends on attribute :attr:`dot_mode`
 
         """
         # some aliases
@@ -1927,15 +1922,14 @@ not present in the model. Change your model or MIDAS file. """ % x)
         for i in range(1, maxrank+1):
             ranks[i] = []
 
-        from pylab import inf, nanmin, nanmax
         if self.dot_mode == 'free':
             """default layout but stimuli on top"""
             for node in self.nodes():
                 if node not in stimuli:
                     distances = [func_path[s][node] for s in stimuli]
-                    distances = [abs(x) for x in distances if x != inf]
+                    distances = [abs(x) for x in distances if x != pylab.inf]
                     if len(distances) != 0:
-                        M = nanmin([x for x in distances if x != inf])
+                        M = pylab.nanmin([x for x in distances if x != pylab.inf])
                         try:
                             ranks[M].append(node)
                         except:
@@ -1948,9 +1942,9 @@ not present in the model. Change your model or MIDAS file. """ % x)
             for node in self.nodes():
                 if node not in stimuli and node not in signals:
                     distances = [func_path[s][node] for s in stimuli]
-                    distances = [x for x in distances if x != inf]
+                    distances = [x for x in distances if x != pylab.inf]
                     if len(distances) != 0:
-                        M = nanmax([abs(x) for x in distances if x != inf])
+                        M = pylab.nanmax([abs(x) for x in distances if x != pylab.inf])
                         try:
                             ranks[M].append(node)
                         except:
@@ -1969,10 +1963,10 @@ not present in the model. Change your model or MIDAS file. """ % x)
                     continue
                 elif node not in stimuli:
                     distances = [func_path[s][node] for s in stimuli]
-                    distances = [x for x in distances if x != inf]
+                    distances = [x for x in distances if x != pylab.inf]
                     #print(distances)
                     if len(distances) != 0:
-                        M = nanmax([abs(x) for x in distances if x != inf])
+                        M = nanmax([abs(x) for x in distances if x != pylab.inf])
                         try:
                             ranks[M].append(node)
                         except:
@@ -2044,7 +2038,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         assert value in valid, "unknown value. must be in %s" % valid
         self._dot_mode = value
     dot_mode = property(fget=_get_dot_mode, fset=_set_dot_mode,
-        doc="Read/Write attribute to use with plotdot2 method (experimental).")
+        doc="Read/Write attribute to use with plot2 method (experimental).")
 
     def _add_and_gates(self, node, maxInputsPerGate=2):
         """See expand_and_gates docstring"""
@@ -2132,24 +2126,22 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c1.expand_and_gates()
             subplot(1,3,1)
             title("OR and AND gates")
-            c1.plotdot(hold=True)
+            c1.plot(hold=True)
 
             c1.remove_edge("A", "C")
             c1.remove_edge("B", "C")
             subplot(1,3,2)
-            c1.plotdot(hold=True)
+            c1.plot(hold=True)
             title("AND gates only")
 
             c1.expand_or_gates()
             subplot(1,3,3)
-            c1.plotdot(hold=True)
+            c1.plot(hold=True)
             title("after call to \\n expand_or_gates function")
 
         .. seealso:: :meth:`~cellnopt.core.cnograph.CNOGraph.expand_and_gates`
 
         """
-
-
         for this in self._find_and_nodes():
             p = self.predecessors(this)
             s = self.successors(this)
@@ -2157,7 +2149,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             for node in p:
                 link = self.edge[node][this]['link']
                 self.add_edge(node, s[0], link=link)
-
 
     def expand_and_gates(self, maxInputsPerGate=2):
         """Expands the network to incorporate AND gates
@@ -2203,11 +2194,11 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c.add_edge("B", "C", link="+")
             subplot(1,2,1)
             title("Original network")
-            c.plotdot(hold=True)
+            c.plot(hold=True)
 
             c.expand_and_gates()
             subplot(1,2,2)
-            c.plotdot(hold=True)
+            c.plot(hold=True)
             title("Expanded network")
 
         .. seealso:: :meth:`remove_and_gates`, :meth:`clean_orphan_ands`,
@@ -2240,7 +2231,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c.add_edge("A", "C", link="+")
             c.add_edge("B", "C", link="+")
             c.add_cycle(["B", "C", "D"], link="-")
-            c.plotdot()
+            c.plot()
 
         .. warning:: added cycle overwrite previous edges
 
@@ -2385,12 +2376,12 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c._signals = ["d", "g", "o1", "o2"]
 
             subplot(1,2,1)
-            c.plotdot(hold=True)
+            c.plot(hold=True)
             title("Initial graph")
 
             c.compress()
             subplot(1,2,2)
-            c.plotdot(hold=True)
+            c.plot(hold=True)
             title("compressed graph")
 
             show()
@@ -2549,7 +2540,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         # need to copt with the and reactions if any
 
     def centrality_eigenvector(self,max_iter=1000, tol=0.1):
-
         res = nx.eigenvector_centrality(self,max_iter,tol=tol)
         nx.set_node_attributes(self, 'eigenvector', res)
         nx.set_node_attributes(self, 'centrality_eigenvector', res)
@@ -2558,8 +2548,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         #for k,v in degcent_sorted:
         #    self.logging.info("Highest degree centrality %s %s", v,k)
         return res
-
-
 
     def centrality_degree(self):
         """Compute the degree centrality for nodes.
@@ -2577,7 +2565,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_degree()
-            c.plotdot(node_attribute="centrality_degree")
+            c.plot(node_attribute="centrality_degree")
 
 
         """
@@ -2635,7 +2623,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_closeness()
-            c.plotdot(node_attribute="centrality_closeness")
+            c.plot(node_attribute="centrality_closeness")
 
         """
         res = nx.centrality.closeness_centrality(self, **kargs)
@@ -2683,7 +2671,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             from cno import CNOGraph *
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_betweeness()
-            c.plotdot(node_attribute="centrality_betweeness")
+            c.plot(node_attribute="centrality_betweeness")
 
         .. seealso:: networkx.centrality.centrality_betweeness
 
@@ -2747,7 +2735,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             sif.add_reaction(edge)
 
         if filename:
-            sif.to_sif(filename)
+            sif.save(filename)
         else:
             return sif
 
@@ -2788,11 +2776,11 @@ not present in the model. Change your model or MIDAS file. """ % x)
         return s.to_sbmlqual(filename=filename)
 
     def read_json(self, filename):
-        """Load a network in JSON format as exported from :meth:`export2json`
+        """Load a network in JSON format as exported from :meth:`to_json`
 
         :param str filename:
 
-        .. seealso:: :meth:`export2json`
+        .. seealso:: :meth:`to_json`
         """
         from networkx.readwrite import json_graph
         graph = json_graph.load(open(filename))
@@ -2805,7 +2793,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             self.add_edge(edge[0], edge[1], link=edge[2]['link'])
 
         return graph
-
 
     def lookfor(self, specyName):
         """Prints information about a species
@@ -2837,10 +2824,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
 
         """
-        #import matplotlib
-        from pylab import flatten
         data = nx.simple_cycles(self)
-        data = list(flatten(data))
+        data = list(pylab.flatten(data))
         if len(data) == 0:
             print("no loops found")
             return
@@ -2861,7 +2846,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             self.node[count[0]]['loops'] = ratio_count
             self.node[count[0]]['style'] =  'filled,bold'
 
-        self.plotdot(node_attribute="loops", cmap=cmap)
+        self.plot(node_attribute="loops", cmap=cmap)
         return counting
 
     def plotFeedbackLoopsHistogram(self):
@@ -2869,14 +2854,12 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         :return: list of lists containing all found cycles
         """
-        import networkx as nx
-        from pylab import hist, title
         data = list(nx.simple_cycles(self))
-        hist([len(x) for x in data])
-        title("Length of the feedback loops")
+        pylab.hist([len(x) for x in data])
+        pylab.title("Length of the feedback loops")
         return data
 
-    def plot_in_out_degrees(self, show=True,ax=None):
+    def plot_in_out_degrees(self, show=True,ax=None, kind='kde'):
         """
          .. plot::
             :include-source:
@@ -2894,13 +2877,14 @@ not present in the model. Change your model or MIDAS file. """ % x)
         df = pd.DataFrame([ts1, ts2]).transpose()
         df.columns = ["in","out"]
         if show:
-            df.plot(kind="kde",ax=ax)  # kernerl density estimation (estimiation of histogram)
+            df.plot(kind=kind, ax=ax)  # kernerl density estimation (estimiation of histogram)
         #df = ...
         #df.transpose().hist()
         return df
 
-    def plot_degree_rank(self):
-        """Plot degree of all nodes.
+    def plot_degree_rank(self, loc='upper right', alpha=0.8, markersize=10,
+            node_size=25, layout='spring', marker='o', color='b'):
+        """Plot degree of all nodes
 
         .. plot::
             :include-source:
@@ -2912,32 +2896,46 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         """
         degree_sequence=sorted(nx.degree(self).values(),reverse=True) # degree sequence
-        #print "Degree sequence", degree_sequence
-        #dmax=max(degree_sequence)
 
         pylab.clf()
-        pylab.loglog(degree_sequence,'b-',marker='o')
-        pylab.title("Degree rank plot")
+        pylab.loglog(degree_sequence, color+'-', marker=marker, 
+                markersize=markersize)
+        pylab.title("Degree/rank and undirected graph layout")
         pylab.ylabel("Degree")
         pylab.xlabel("Rank")
 
         # draw graph in inset
-        pylab.axes([0.45,0.45,0.45,0.45])
+        if loc == 'upper right':
+            pylab.axes([0.45, 0.45, 0.45, 0.45])
+        else:
+            pylab.axes([0.1, 0.1, 0.45, 0.45])
+
         UG = self.to_undirected()
         Gcc = nx.connected_component_subgraphs(UG)[0]
-        pos = nx.spring_layout(Gcc)
+        if layout == 'spring':
+            pos = nx.spring_layout(Gcc)
+        else:
+            pos = nx.circular_layout(Gcc)
         pylab.axis('off')
-        nx.draw_networkx_nodes(Gcc,pos,node_size=20)
-        nx.draw_networkx_edges(Gcc,pos,alpha=0.4)
+        nx.draw_networkx_nodes(Gcc, pos, node_size=node_size)
+        nx.draw_networkx_edges(Gcc, pos, alpha=alpha)
         pylab.grid()
         pylab.show()
 
 
+    def get_stats(self):
+        stats = {}
+        flow = nx.flow_hierarchy(self)
+        stats['flow'] = flow
+        stats['mean_degree'] = sum(self.degree().values())/float(len(self.nodes()))
+
+        return stats
+
+
     def summary(self):
         """Plot information about the graph"""
-        import networkx as nx
-        flow = nx.flow_hierarchy(self)
-        print("Flow hierarchy = %s (fraction of edges not participating in cycles)" % flow)
+        stats = self.get_stats()
+        print("Flow hierarchy = %s (fraction of edges not participating in cycles)" % stats['flow'])
         print("Average degree = " + str(sum(self.degree().values())/float(len(self.nodes()))))
 
 
@@ -2960,10 +2958,10 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c.add_edge("A", "AKT1", link="+")
             c.add_edge("C", "AKT1", link="+")
             subplot(1,2,1)
-            c.plotdot(hold=True)
+            c.plot(hold=True)
             c.merge_nodes(["AKT1", "AKT2"], "AKT")
             subplot(1,2,2)
-            c.plotdot(hold=True)
+            c.plot(hold=True)
 
 
         """
@@ -3024,11 +3022,11 @@ not present in the model. Change your model or MIDAS file. """ % x)
             c.expand_and_gates()
 
             subplot(1,2,1)
-            c.plotdot(hold=True)
+            c.plot(hold=True)
 
             c.split_node("B", ["B1", "B2", "B3"])
             subplot(1,2,2)
-            c.plotdot(hold=True)
+            c.plot(hold=True)
 
        """
         for n in nodes:
@@ -3219,7 +3217,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         pylab.xticks(pylab.xticks()[0], nodes)
 
-CNOGraph.plot.__func__.__doc__ = CNOGraph.plotdot.__doc__
 
 
 
