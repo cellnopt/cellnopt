@@ -2,12 +2,10 @@ cellnopt
 ========
 
 
-Coming soon. 
 
-Meanwhile, have a look at 
+Have a look at 
 
 - www.cellnopt.org for the context
-- https://pypi.python.org/pypi/cellnopt.core for the main code
 
 and those notebooks
 
