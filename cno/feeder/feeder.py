@@ -112,7 +112,7 @@ class Feeder(object):
         :param cmap: colormap
         :param penwidth: link width
         """
-        from cellnopt.core import CNOGraph
+        from cno.io import CNOGraph
         c = CNOGraph(self.model, self.data)
 
         for e in c.edges():

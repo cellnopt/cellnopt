@@ -1,30 +1,42 @@
-from cno.io.sif import SIF
-from cno import cnodata
+from cno import cnodata, CNOGraph, SIF
+from cno.io.sbmlqual import SBMLQual
 from easydev import TempFile
 
 from cno.io.cnograph import CNOGraph
 
-def test_sbmlqual():
+
+def test_sbmlqual_class():
+    s = SBMLQual()
+    try:
+        s.to_sbmlqual(1)
+        assert False
+    except:
+        assert True
+    c = CNOGraph()
+    c.add_reaction("A=B")
+    s.to_sbmlqual(c)
+
+
+def test_sif_vs_sbml_datasets():
+    for identifier in ['ToyPCB', 'ToyPB', 'ToyPB_True', 'ToyMMB', 
+            'LiverDREAM', 'ExtLiverPCB']:
+        # should be enough for now
+        yield sbmlqual_from_datasets, identifier
+
+
+def sbmlqual_from_datasets(identifier):
 
     # a simple model
     s1 = SIF()
-    s2 = SIF(cnodata("PKN-ToyMMB.sif"))
+    s2 = SIF(cnodata("PKN-" + identifier + ".sif"))
     fh = TempFile()
     s2.to_sbmlqual(fh.name)
     s1.read_sbmlqual(fh.name)
     fh.delete()
     assert s1 == s2
+    s3 = SIF(cnodata("PKN-" + identifier + ".xml"))
+    assert s1 == s3 and s2 == s3
 
-
-
-    # a simple model with AND gates
-    s1 = SIF()
-    s2 = SIF(cnodata("PKN-ToyPB.sif"))
-    fh = TempFile()
-    s2.to_sbmlqual(fh.name)
-    s1.read_sbmlqual(fh.name)
-    fh.delete()
-    assert s1 == s2
 
 
 def test_read_write_from_cnograph():
