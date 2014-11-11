@@ -14,7 +14,8 @@
 #
 ##############################################################################
 from __future__ import print_function
-import xml.etree.ElementTree as ET
+
+from cno import CNOError
 
 from cno.io.sbml import SBML
 from cno.io.sif import SIF
@@ -27,7 +28,31 @@ __all__ = ["SBMLQual"]
 
 
 class SBMLQual(object):
-    """
+    """Class to read and write SBML-qual file (logical models only)
+
+    This is not an interface to SBML or SBML-qual. See libsbml library for
+    that purpose. With this class you can read and write logical models
+    stored in SBML-qual format.
+
+    We do not guarantee that it covers all functionalities of SBML-qual but
+    files saved with this class can be read back to be used within CellNOpt.
+
+    You can convert CNOGraph of SIF instances to SBML-qual as follows::
+
+    .. plot::
+        :include-source:
+        :width: 80%
+
+        from cno import CNOGraph
+        c1 = CNOGraph()
+        c1.add_reaction("A+B=C")
+        c1.expand_and_gates()
+        c1.to_sbmlqual('test.xml')
+        c1.plot()
+
+        c2 = CNOGraph("test.xml')
+        assert c1 == c2
+        c2.plot()
 
 
     """
@@ -39,7 +64,7 @@ class SBMLQual(object):
 
         :return: the SBML text
 
-        This is a level3, version1 exporter.
+        This is a level3, version 1 exporter.
 
         ::
 
@@ -48,7 +73,6 @@ class SBMLQual(object):
             >>> res = s.to_SBMLQual("test.xml")
 
         """
-
         s = SBML(self, version="1.0", model_name='cellnopt_model')
 
         if isinstance(graph, SIF):
@@ -65,13 +89,12 @@ class SBMLQual(object):
         # add the qualitativeSpecies list
         qualitativeSpecies = QualitativeSpecies(data)
         sbml += qualitativeSpecies.create()
-       
+
         # Starting list of transitions
-        list_of_transition = ListOfTransitions() 
+        list_of_transition = ListOfTransitions()
         sbml += list_of_transition.open()
 
         # Loop over all transitions
-
         tid = 0
         for node in sorted(data.nodes()):
             predecessors = data.predecessors(node)
@@ -95,7 +118,7 @@ class SBMLQual(object):
             # the list of inputs
             # - inputs could be an AND gate (e.g., A^!B=C), in which case, we want the
             #   species A and B to be extracted
-            # - inputs could be made of positive and neg from same species (e.g., A=A 
+            # - inputs could be made of positive and neg from same species (e.g., A=A
             #   and !A=A ), which means two entries in the list of inputs.
             species = {'-':[], '+':[]}
             for pred in predecessors:
@@ -129,7 +152,7 @@ class SBMLQual(object):
 
             sbml += list_of_function_terms.open()
             sbml += list_of_function_terms.create_default_term()
-            
+
             # there will be only one function term
             # if there is only one AND, starts with \and
             # else with \ors
@@ -152,10 +175,10 @@ class SBMLQual(object):
                     lhs = lhs.replace("!", "")
                 mathml = MathApply(lhs, identifier, sign=sign)
                 sbml += mathml.create()
-            else: # an OR gate 
+            else: # an OR gate
                 # inside the OR tag, you could have other gates
                 # that is MathAND or MathApply
-                # need to build a data structure that contains 
+                # need to build a data structure that contains
                 # the type of links. Needed for ORs only. ANDs
                 # already contain the information in the name
                 mathml = MathOR(reactions, identifier)
@@ -176,10 +199,10 @@ class SBMLQual(object):
 
     def _prettify(self, sbml):
         """Return a pretty-printed XML string for the Element."""
-        # beautifulsoup does a much better job than minidom but all tags are 
+        # beautifulsoup does a much better job than minidom but all tags are
         # transformed into lowercase.
         return bs4.BeautifulSoup(sbml).prettify()
-        
+
         # not always the best layout
         #from xml.dom import minidom
         #reparsed = minidom.parseString(sbml)
@@ -198,8 +221,8 @@ class SBMLQual(object):
         res = bs4.BeautifulSoup(open(filename).read())
 
         # First, let us get the node names
-        model = res.findAll("model")[0]
-        allspecies = model.findAll("qual:listofqualitativespecies")[0]
+        #model = res.findAll("model")[0]
+        #allspecies = model.findAll("qual:listofqualitativespecies")[0]
         nodes  = [ x.get('qual:id') for x in res.findChildren("qual:qualitativespecies")]
 
         # Then, we go through all function terms
@@ -214,12 +237,8 @@ class SBMLQual(object):
             # there may be different functions so we will need to loop over them
             functions = transition.findChildren("qual:functionterm")
             if len(functions)>1:
-                print("Warning. unexpected number of functions. skipping extra functions")
+                CNOError("SBMLQual from cellnopt does not handle multiple functions")
 
-            # functions may start with ORs, or ANDS or nothing (explicit OR)
-
-
-            # get rid of mathml tag
             contents = functions[0].findChild('apply')
             if contents.find('and') and not contents.find('or'):
                 lhs = self._get_lhs_from_apply(contents)
@@ -234,17 +253,15 @@ class SBMLQual(object):
                 reaction = lhs + "=" + outputs[0]
                 sif.add_reaction(str(reaction))
             else: #mulitple ORs
-
                 for content in  contents.findChildren('apply', recursive=False):
                     lhs = self._get_lhs_from_apply(content)
                     reaction = lhs + "=" + outputs[0]
                     sif.add_reaction(str(reaction))
 
-
         # sanity check
         for node in nodes:
             if node not in sif.species:
-                raise NotImplementedError("A species without transition is not included in the network")
+                raise CNOError("A species without transition is not included in the network")
 
         return sif
 
@@ -255,11 +272,9 @@ class SBMLQual(object):
         lhs = []
         for entry in entries:
             if entry.find('geq') is not None:
-                sign = '+'
                 name = entry.find('ci').text.strip()
                 lhs.append(name)
             else:
-                sign = '-'
                 name = entry.find('ci').text.strip()
                 lhs.append("!" + name)
         if xml.find('and') is not None:
@@ -269,8 +284,9 @@ class SBMLQual(object):
         return lhs
 
 
-# SBML-qual classes for logical modelling 
+# NO NEED TO EXPORT ALL FOLLOWING CLASSES
 
+# SBML-qual classes for logical modelling
 class Qual(object):
     version = "http://www.sbml.org/sbml/level3/version1/qual/version1"
 
@@ -305,7 +321,7 @@ class QualitativeSpecies(Qual):
         self.species = species
         self.compartment = 'main'
         self.constant = 'false'
-        
+
     def add_species(self, name):
         sbml = """<qual:qualitativeSpecies """
         sbml += """qual:constant="{0}" """.format(self.constant)
@@ -340,12 +356,12 @@ class Transition(Qual):
 
     In logical models a Transition is used to specify the logical rule associated with a
     QualitativeSpecies (that appears as an Output of this Transition). For example, the rule
-    if A > 1: B = 2 would be encapsulated as a Transition with 2 QualitativeSpecies **A** as 
-    an input and **B**  as an Output; if A > 1 rule being encode by the math element of a 
+    if A > 1: B = 2 would be encapsulated as a Transition with 2 QualitativeSpecies **A** as
+    an input and **B**  as an Output; if A > 1 rule being encode by the math element of a
     3 FunctionTerm with the resultLevel attribute having a value 2.
 
-    In Petri net models a Transition is interpreted, using the common Petri net 
-    semantics, as events that might occur within the system causing tokens to be moved. 
+    In Petri net models a Transition is interpreted, using the common Petri net
+    semantics, as events that might occur within the system causing tokens to be moved.
 
     """
     def __init__(self, identifier):
@@ -353,9 +369,9 @@ class Transition(Qual):
         self.identifier = identifier
         self.open_attribute = {'id':self.identifier}
 
-        
+
 class ListOfInputs(Qual):
-    """The ListOfInputs contains at least one element of type Input. 
+    """The ListOfInputs contains at least one element of type Input.
 
     The input parameter **species** is a dictionay with keys + and - containing list
     of species in each category. A species could be in both categories.
@@ -390,13 +406,13 @@ class ListOfInputs(Qual):
         txt += self.close()
         return txt
 
-    
+
 class ListOfOutputs(Qual):
     """In logical model, there is only one output
-    
+
     * thresholdLevel is set to 1
     * transitionEffect is set to assignmentLevel
-    
+
 
     """
     def __init__(self, node):
@@ -425,8 +441,8 @@ class ListOfFunctionTerms(Qual):
         default = DefaultTerm()
         return default.create()
 
-    def add_list_function_term(self):
-        raise NotImplementedError
+    #def add_list_function_term(self):
+    #    raise NotImplementedError
 
 
 class FunctionTerm(Qual):
@@ -457,7 +473,7 @@ class MathApply(object):
         txt += "<ci> theta_{0}_{1} </ci>\n".format(self.identifier, self.name)
         txt += "</apply>\n"
         return txt
-           
+
 
 class MathOR(object):
     def __init__(self, reactions, identifier):
@@ -490,7 +506,7 @@ class MathAND(object):
     """
     def __init__(self, reaction, identifier):
         """
-        identifier is the transition identifier 
+        identifier is the transition identifier
         """
         self.reaction = Reaction(reaction)
         self.identifier = identifier
@@ -509,17 +525,17 @@ class MathAND(object):
         return txt
 
 
-class Math(Qual):
-    def __init__(self):
-        super(Math,self).__init__('math')
-
-    def open(self):
-        return """<math xmlns="http://www.w3.org/1998/Math/MathML">"""
+#class Math(Qual):
+#    def __init__(self):
+#        super(Math,self).__init__('math')##
+#
+#    def open(self):
+#        return """<math xmlns="http://www.w3.org/1998/Math/MathML">"""
 
 
 class DefaultTerm(Qual):
     """resultLevel is set to 0"""
-    def __init__(self): 
+    def __init__(self):
         super(DefaultTerm, self).__init__('defaultTerm')
         self.open_attribute = {'resultLevel': 0}
 

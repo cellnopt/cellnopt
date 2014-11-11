@@ -125,7 +125,10 @@ class SIF(Reactions):
             self.filename = filename
             if os.path.isfile(filename) is False:
                 raise IOError("File %s not found." % filename)
-            self.read_sif(filename)
+            if filename.endswith('xml'):
+                self.read_sbmlqual(filename)
+            else:
+                self.read_sif(filename)
         elif filename is None:
             self.clear()
         # could be another instance of a SIF file (or cnograph, or reactions)
@@ -147,7 +150,7 @@ class SIF(Reactions):
         return False
 
     def _get_and_nodes(self):
-        _and_nodes = [x for x in set(self.nodes1 + self.nodes2) 
+        _and_nodes = [x for x in set(self.nodes1 + self.nodes2)
                 if self.is_and(x)]
         return _and_nodes
     and_nodes = property(_get_and_nodes, doc="Returns list of AND nodes")
@@ -185,9 +188,9 @@ class SIF(Reactions):
                 continue
 
             # otherwise, this is the original cno format that needs some mangling
-            lhs_nodes = [(x,e) for x, e, y in zip(self.nodes1, self.edges, self.nodes2) 
+            lhs_nodes = [(x,e) for x, e, y in zip(self.nodes1, self.edges, self.nodes2)
                     if y == and_node]
-            rhs_node = [ y for x,e,y in zip(self.nodes1, self.edges,self.nodes2) 
+            rhs_node = [ y for x,e,y in zip(self.nodes1, self.edges,self.nodes2)
                     if x == and_node]
 
             try:
@@ -346,7 +349,7 @@ class SIF(Reactions):
             return ""
 
     def to_json(self):
-        """Not a standard, do we want to keep this format ? 
+        """Not a standard, do we want to keep this format ?
 
         """
         json = """{"links":[\n"""
@@ -419,7 +422,7 @@ class SIF(Reactions):
         """Plot the network
 
 
-        .. note:: this method uses :class:`~cno.io.cnograph.CNOGraph` so 
+        .. note:: this method uses :class:`~cno.io.cnograph.CNOGraph` so
             AND gates appear as small circles.
 
         """

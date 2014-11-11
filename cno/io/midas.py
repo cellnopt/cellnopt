@@ -262,8 +262,12 @@ class MIDASReader(MIDAS):
         # replace empty strings with 0
         # note that ,,, is interpreted as ,NaN,NaN,NaN
         # but , , , is interpreted as ," "," "," ",
-        self._experiments = self._experiments.applymap(lambda x: 0 if isinstance(x, basestring) and x.isspace() else x)
-        self._experiments = self._experiments.convert_objects(convert_numeric=True, copy=True)
+        self._experiments = self._experiments.applymap(lambda x: 0
+            if isinstance(x, basestring) and x.isspace() else x)
+
+        # must convert read data into numeric value.
+        self._experiments = self._experiments.convert_objects(convert_numeric=True,
+                                                              copy=True)
 
         index =  pd.MultiIndex.from_tuples(tuples, names=self._levels)
         #keep = [this for this in self.df.columns if this not in ["experiments", "times"]]
@@ -274,16 +278,7 @@ class MIDASReader(MIDAS):
         self.df = self.df.sortlevel(["experiment"])
         self.df = self.df.sort_index(axis=1) # sort the species
 
-        if self._missing_time_zero == True:
-            self._duplicate_time_zero_using_inhibitors_only()
 
-        if self.df.shape[0] > len(self.times) * self.experiments.shape[0]:
-            self.logging.warning("you may have duplicated experiments" +
-            "please average the replicates using self.average_replicates(inplace=True)")
-
-        if self.df.max(skipna=True).max(skipna=True) > 1:
-            self.logging.warning("values larger than 1. " +
-            "You may want to normalise/scale the data")
 
         # Get rid of TR in experiments
         self._experiments.columns = [this.replace("TR:", "") for this in self._experiments.columns]
@@ -315,6 +310,22 @@ class MIDASReader(MIDAS):
 
         self._experiments.sortlevel(axis=1, inplace=True)
 
+        if self._missing_time_zero == True:
+            try:
+                self._duplicate_time_zero_using_inhibitors_only()
+            except Exception as e:
+                print(e.message)
+                self.logging.warning("Issue with missing time zero ")
+                return
+
+        if self.df.shape[0] > len(self.times) * self.experiments.shape[0]:
+            self.logging.warning("you may have duplicated experiments" +
+            "please average the replicates using self.average_replicates(inplace=True)")
+
+        if self.df.max(skipna=True).max(skipna=True) > 1:
+            self.logging.warning("values larger than 1. " +
+            "You may want to normalise/scale the data")
+
 
     def _duplicate_time_zero_using_inhibitors_only(self):
         """
@@ -337,12 +348,12 @@ class MIDASReader(MIDAS):
                 # need to find the experiment with same inhibitors
                 # and time 0
                 # there should be only one ? maybe not if replicates.
-                these_inhibitors =  self.experiments.ix[this_exp][self.inhibitors]
+                these_inhibitors =  self.experiments.ix[this_exp].Inhibitors
 
                 for this_exp_intern in experiments:
                     times = self.df.ix[self.cellLine].ix[this_exp_intern].index
                     if 0 in times:
-                        if all(self.experiments.ix[this_exp_intern][these_inhibitors.index] ==
+                        if all(self.experiments.ix[this_exp_intern].Inhibitors ==
                             these_inhibitors):
                             break # so that if there are several replicates found,
                             # we pick up the first one only
@@ -1114,7 +1125,7 @@ class XMIDAS(MIDASReader):
 
                 if mode == "data":
                     color = trend.get_bestfit_color()
-                    pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 , 
+                    pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 ,
                             'k-o', markersize=markersize, color=color)
                     pylab.fill_between(trend.normed_times+j, trend.normed_values+self.nExps-1-i ,
                                        self.nExps-1-i, alpha=trend.alpha,
@@ -1160,7 +1171,7 @@ class XMIDAS(MIDASReader):
         :param vmax:
         :param vmin:
         :param mode:
-        
+
         .. plot::
             :width: 80%
             :include-source:
@@ -1190,8 +1201,8 @@ class XMIDAS(MIDASReader):
         fcti = self._params['plot.fontsize.titles']
 
         # The layout
-        gs = pylab.GridSpec(10, 10, 
-                wspace=self._params['plot.layout.space'], 
+        gs = pylab.GridSpec(10, 10,
+                wspace=self._params['plot.layout.space'],
                 hspace=self._params['plot.layout.space'])
         fig = pylab.figure(figsize=(10, 6))
         ax_main = fig.add_subplot(gs[2:, 0:7])
@@ -1240,7 +1251,7 @@ class XMIDAS(MIDASReader):
             try:cmap.set_bad("grey", 1.)
             except: pass
             pylab.pcolormesh(pylab.flipud(diffs*0), cmap=cmap, edgecolors='k');
-    
+
         # Some tuning of the main plot
         pylab.sca(ax_main)
         pylab.axis([0, diffs.shape[1], 0, diffs.shape[0]])
@@ -1250,7 +1261,7 @@ class XMIDAS(MIDASReader):
         ax2.set_xticks([i+.5 for i,x in enumerate(self.names_species)])
         N = len(self.names_species)
         ax2.set_xticks(pylab.linspace(0.5, N-1, N))
-        ax2.set_xticklabels(self.names_species, rotation=90, 
+        ax2.set_xticklabels(self.names_species, rotation=90,
                 fontsize=fcs)
 
         # the stimuli
@@ -1261,7 +1272,7 @@ class XMIDAS(MIDASReader):
                      vmin=0,vmax=1);
             #ax_stim.set_yticks([], [])
             ax_stim.set_xticks([i+.5 for i,x in enumerate(self.names_stimuli)])
-            ax_stim.set_xticklabels(self.names_stimuli, rotation=rotation, 
+            ax_stim.set_xticklabels(self.names_stimuli, rotation=rotation,
                     fontsize=fcp)
             pylab.axis([0,self.stimuli.shape[1], 0, self.stimuli.shape[0]])
 
@@ -1275,7 +1286,7 @@ class XMIDAS(MIDASReader):
                          vmin=0,vmax=1);
             #ax_inh.set_yticks([],[])
             ax_inh.set_xticks([i+.5 for i,x in enumerate(self.names_inhibitors)])
-            ax_inh.set_xticklabels(self.names_inhibitors, rotation=rotation, 
+            ax_inh.set_xticklabels(self.names_inhibitors, rotation=rotation,
                     fontsize=fcp)
             pylab.axis([0,self.inhibitors.shape[1], 0, self.inhibitors.shape[0]])
 
@@ -1289,7 +1300,7 @@ class XMIDAS(MIDASReader):
         if len(self.names_inhibitors) > 0:
             pylab.sca(ax_inh_top)
             pylab.text(0.5,0.5, "Inhibitors", color="blue",
-                       horizontalalignment="center", verticalalignment="center", 
+                       horizontalalignment="center", verticalalignment="center",
                        fontsize=int(fcti/1.5))
 
         #colorbar
@@ -1839,8 +1850,8 @@ class XMIDAS(MIDASReader):
         #. `all`: through times, experiments and species. No structure kept
         #. `signal` (or `species` or `column`): within a column, timeseries
            are shuffled. So, sum over signals is constant.
-        #. `experiment` (or `index`): with a row (experiment), 
-           timeseries are shuffled. 
+        #. `experiment` (or `index`): with a row (experiment),
+           timeseries are shuffled.
 
         Original data:
 
@@ -1971,7 +1982,7 @@ class Trend(object):
 
     def set(self, ts):
         """Set the data with the parameter
-        
+
         :param ts: a Pandas TimeSeries
         """
         self.data = ts
