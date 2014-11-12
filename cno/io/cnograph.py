@@ -826,7 +826,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -864,7 +864,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -1413,7 +1413,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 80%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.dependencyMatrix()
 
@@ -1498,7 +1498,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         .. plot::
             :width: 70%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plotdot(hold=True)
@@ -1507,7 +1507,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :width: 70%
             :include-source:
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plotAdjacencyMatrix()
@@ -1608,7 +1608,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :width: 80%
             :include-source:
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.preprocessing()
             c.plotdot()
@@ -1629,7 +1629,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.plotdot()
@@ -1652,7 +1652,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.compress()
@@ -2123,7 +2123,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -2195,7 +2195,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import subplot, title
 
             c = CNOGraph()
@@ -2235,7 +2235,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph()
             c.add_edge("A", "C", link="+")
             c.add_edge("B", "C", link="+")
@@ -2363,7 +2363,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import subplot,show, title
             c = cnograph.CNOGraph()
             c.add_edge("a", "c", link="-")
@@ -2574,7 +2574,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_degree()
             c.plotdot(node_attribute="centrality_degree")
@@ -2597,7 +2597,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.degree_histogram()
 
@@ -2632,7 +2632,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_closeness()
             c.plotdot(node_attribute="centrality_closeness")
@@ -2680,7 +2680,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_betweeness()
             c.plotdot(node_attribute="centrality_betweeness")
@@ -2882,7 +2882,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.plot_in_out_degrees()
 
@@ -2906,7 +2906,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"))
             c.plot_degree_rank()
 
@@ -2951,7 +2951,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import subplot
             c = CNOGraph()
             c.add_edge("AKT2", "B", link="+")
@@ -3014,7 +3014,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             from pylab import subplot
             c = CNOGraph()
             c.add_reaction("!A=C")
@@ -3197,7 +3197,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph *
+            from cno import CNOGraph 
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.hcluster()
 
