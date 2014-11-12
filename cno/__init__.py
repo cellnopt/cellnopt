@@ -26,8 +26,8 @@ except:
 # DATASETS package
 from .datasets import cnodata
 
-# IO package
-
+# IO package. No need to expose everything.
+from .io import midas, cnograph, sif # 3 most common modules.  
 from .io.reactions import Reactions, Reaction
 from .io.sif import SIF
 from .io.cna import CNA

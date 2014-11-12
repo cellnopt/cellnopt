@@ -24,7 +24,7 @@ import pandas as pd
 from easydev.logging_tools import Logging
 import colormap
 
-from .measurements import Measurement
+from measurements import Measurement
 import midas_normalisation as normalisation
 
 from cno.core import DevTools
@@ -1090,7 +1090,6 @@ class XMIDAS(MIDASReader):
         .. seealso:: :meth:`plot`, :meth:`plot_layout`, :meth:`plot_sim_data`
         """
         mode = kargs.get("mode", "data")
-        normalise = kargs.get("normalise", True)
         times = np.array(self.times)
         max_time = float(max(self.times))
 
@@ -1107,11 +1106,6 @@ class XMIDAS(MIDASReader):
             xtlabels = self._get_xtlabels()
             times = pylab.log10(1+times)/max(pylab.log10(1+times))
 
-        # vMax over all data
-        if normalise:
-            vMax = float(self.df.max(skipna=True).max(skipna=True))
-        else:
-            vMax = 1.
 
         trend = Trend()
 
@@ -1128,7 +1122,7 @@ class XMIDAS(MIDASReader):
                     pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 ,
                             'k-o', markersize=markersize, color=color)
                     pylab.fill_between(trend.normed_times+j, trend.normed_values+self.nExps-1-i ,
-                                       self.nExps-1-i, alpha=trend.alpha,
+                                       self.nExps-1-i, alpha=trend.alpha/1.2,
                                        color=color)
                 else:
                     pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 , 'k-o',
@@ -1204,7 +1198,7 @@ class XMIDAS(MIDASReader):
         gs = pylab.GridSpec(10, 10,
                 wspace=self._params['plot.layout.space'],
                 hspace=self._params['plot.layout.space'])
-        fig = pylab.figure(figsize=(10, 6))
+        fig = pylab.figure(num=1, figsize=(10, 6))
         ax_main = fig.add_subplot(gs[2:, 0:7])
         ax_main.set_yticks([], [])
         ax_main.set_xticks([], [])
@@ -1230,7 +1224,6 @@ class XMIDAS(MIDASReader):
             ax_cb = fig.add_subplot(gs[2:, 9:10])
             #ax_cb.set_yticks([], [])
             ax_cb.set_xticks([], [])
-
 
         # MAIN subplot with signals
         M = np.nanmax(diffs) # figure out the maximum individual MSE
@@ -2104,13 +2097,13 @@ class Trend(object):
         pylab.legend(fontsize=10)
 
     def get_bestfit(self):
-        corrs = self._get_correlation(self.values)
+        corrs = self._get_correlation(self.normed_values)
         keys,values = (corrs.keys(), corrs.values())
         #M  = max(values)
         return keys[np.argmax(values)]
 
     def get_bestfit_color(self):
-        corrs = self._get_correlation(self.values)
+        corrs = self._get_correlation(self.normed_values)
         keys,values = (corrs.keys(), corrs.values())
         #M  = max(values)
         res = keys[np.argmax(values)]

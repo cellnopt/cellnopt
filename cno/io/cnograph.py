@@ -131,7 +131,7 @@ class CNOGraph(nx.DiGraph):
     populate the graph. However, it is also possible to read a network
     stored in a file in :class:`cellnopt.core.sif.SIF` format::
 
-        >>> from cno import CNOGraph 
+        >>> from cno import CNOGraph
         >>> pknmodel = cnodata("PKN-ToyPB.sif")
         >>> c = CNOGraph(pknmodel)
 
@@ -189,7 +189,7 @@ class CNOGraph(nx.DiGraph):
         :include-source:
         :width: 30%
 
-        from cno import CNOGraph 
+        from cno import CNOGraph
         c1 = CNOGraph()
         c1.add_edge("A","B", link="+")
         c1.add_edge("A","C", link="-")
@@ -200,7 +200,7 @@ class CNOGraph(nx.DiGraph):
         :include-source:
         :width: 30%
 
-        from cno import CNOGraph 
+        from cno import CNOGraph
         c2 = CNOGraph()
         c2.add_edge("A","E", link="+")
         c2.add_edge("C","E", link="+")
@@ -214,7 +214,7 @@ class CNOGraph(nx.DiGraph):
     .. plot::
         :width: 50%
 
-        from cno import CNOGraph 
+        from cno import CNOGraph
         c1 = CNOGraph()
         c1.add_edge("A","B", link="+")
         c1.add_edge("A","C", link="-")
@@ -245,7 +245,7 @@ class CNOGraph(nx.DiGraph):
         :include-source:
         :width: 50%
 
-        from cno import CNOGraph 
+        from cno import CNOGraph
         pknmodel = cnodata("PKN-ToyPB.sif")
         data = cnodata("MD-ToyPB.csv")
         c = CNOGraph(pknmodel, data)
@@ -371,23 +371,6 @@ class CNOGraph(nx.DiGraph):
 
         self._colormap = Colormap()
 
-
-    def _set_dot_attributes(self):
-        # other attributes
-        self._dot_mode = "end_signals_bottom"
-
-        self.dotattrs = {}
-        self.dotattrs['graph'] = {
-                "title": "CNOGraph output from cellnopt.core.cnograph.plot",
-#                'fontname': 'helvetica',
-                'fontsize': 22,
-                'size': "25,25",
-                'ordering': "out",
-                'splines':True}
-
-        self.dotattrs['edge'] = {
-            'minlen':1,
-            'color':'black'}
 
     # SOME PROPERTIES
     def _get_midas(self):
@@ -821,7 +804,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -859,7 +842,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -926,7 +909,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         # node attributes
         nodes = sorted(self.nodes())
-        node_colors = [self.node[x][attribute] if attribute in self.node[x].keys() 
+        node_colors = [self.node[x][attribute] if attribute in self.node[x].keys()
                 else "gray" for x in nodes]
 
         # edge attributes
@@ -968,6 +951,28 @@ not present in the model. Change your model or MIDAS file. """ % x)
         elif cmap == "green":
             cmap = self._colormap.get_cmap_red_green()
         return cmap
+
+
+    def _to_dot_R(self, filename):
+        """simple dodigraph G{
+        size="8.5,11";
+        {rank=source;1;2;}  # EGF, TNFA
+        {rank=same;3;6;7;}  # TRAF6, PI3K, Ras
+        {rank=same;4;5;8;9;} Jnk, p38, Raf, Akt
+        {rank=same;10;}     # Mek
+        {rank=same;11;}     # Erk
+        {rank=sink;12;13;14;15;} # cjun, hsp, nfkb, p90rsk
+
+        3 [color="black" shape="ellipse" style="dashed" label="TRAF6" fontname=Helvetica fontsize=22.0 ];
+
+
+
+11 -> 14[ color="grey90" label="" weight="1.000000" penwidth="4" arrowhead="normal" style="solid"];
+
+        }
+        """
+
+
 
     def plot(self, prog="dot", viewer="pylab", hold=False, legend=False,
         show=True, filename=None, node_attribute=None, edge_attribute=None,
@@ -1204,12 +1209,16 @@ not present in the model. Change your model or MIDAS file. """ % x)
                 from biokit.dev.mpl_focus import ZoomPan
                 ax = pylab.gca()
                 zp = ZoomPan()
-                figZoom = zp.zoom_factory(ax, base_scale = 1.2)
-                figPan = zp.pan_factory(ax)
+                _ = zp.zoom_factory(ax, base_scale = 1.2)
+                _ = zp.pan_factory(ax)
             except:
                 pass
 
         return a
+
+
+
+
 
 
     def plot_rmse_fromR(self, filename, F=.3, scale=2, col=None):
@@ -1269,23 +1278,47 @@ not present in the model. Change your model or MIDAS file. """ % x)
         colorHex = matplotlib.colors.rgb2hex(rgb)
         return colorHex
 
+
+
+    def _set_dot_attributes(self):
+        # When calling agraph, it uses this information
+        # other attributes
+        self._dot_mode = "end_signals_bottom"
+
+        self.dotattrs = {}
+        self.dotattrs['graph'] = {
+                "title": "CNOGraph output generated by cno",
+#                'fontname': 'helvetica',
+                'fontsize': 22,
+                'size': "25,25",
+                'ordering': "out",
+                'splines':True}
+
+        self.dotattrs['edge'] = {
+            'minlen':1,
+            'color':'black'}
+
+        self.dotattrs['node'] = {}
+
     def _get_ranked_agraph(self):
         H = nx.to_agraph(self)
 
         for k, v in self.dotattrs['graph'].iteritems():
-            H.graph_attr[k] = v
-
+                H.graph_attr[k] = v
         for k, v in self.dotattrs['edge'].iteritems():
+            H.edge_attr[k] = v
+        for k, v in self.dotattrs['node'].iteritems():
             H.edge_attr[k] = v
 
         # order the graph for ranks
-        allranks = self.get_same_rank()
+        allranks = self.get_same_rank() # this has been checkd on MMB to
+        # give same results as in R version.
         ranks  = {}
         for k, v in allranks.iteritems():
             ranks[k] = sorted([x for x in v if '=' not in x],
                     cmp=lambda x,y:cmp(x.lower(), y.lower()))
             # add invisible edges so that the nodes that have the same rank are
-            # ordered.
+            # ordered. #FIXME: check that
             if k!=0:
                 for i, node1 in enumerate(ranks[k]):
                     if i!=len(ranks[k])-1:
@@ -1297,18 +1330,25 @@ not present in the model. Change your model or MIDAS file. """ % x)
             name = str(rank)
             if rank == 0:
                 name = "stimuli"
-                #H.add_subgraph(ranks[rank], name="cluster_"+name, rank='min')
-                #        label="Stimuli" , rank='min')
+                H.add_subgraph(ranks[rank], name="cluster_"+name,
+                        label="Stimuli" , rank='min')
             elif rank==M:
                 name = "end_signals"
                 H.add_subgraph(ranks[rank], name=name, rank='sink')
             else:
-                pass
-                #H.add_subgraph(ranks[rank], name=name, rank='same')
+                #pass
+                H.add_subgraph(ranks[rank], name=name, rank='same')
+
+        # save the file in a temporary directory
+        #infile  = tempfile.NamedTemporaryFile(suffix=".dot", delete=False)
+        #H.write(infile.name)
+        #H.clear()
+        #self.agraph = H
+        #return infile
         return H
 
 
-    
+
 
     def _get_nonc(self):
         if self._nonc == None:
@@ -1409,7 +1449,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 80%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.dependencyMatrix()
 
@@ -1493,7 +1533,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         .. plot::
             :width: 70%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plot(hold=True)
@@ -1502,7 +1542,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :width: 70%
             :include-source:
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plotAdjacencyMatrix()
@@ -1603,7 +1643,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :width: 80%
             :include-source:
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.preprocessing()
             c.plot()
@@ -1624,7 +1664,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.plot()
@@ -1647,7 +1687,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.compress()
@@ -1966,7 +2006,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
                     distances = [x for x in distances if x != pylab.inf]
                     #print(distances)
                     if len(distances) != 0:
-                        M = nanmax([abs(x) for x in distances if x != pylab.inf])
+                        M = np.nanmax([abs(x) for x in distances if x != pylab.inf])
                         try:
                             ranks[M].append(node)
                         except:
@@ -2117,7 +2157,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import subplot, title
 
             c1 = CNOGraph()
@@ -2186,7 +2226,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import subplot, title
 
             c = CNOGraph()
@@ -2226,7 +2266,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph()
             c.add_edge("A", "C", link="+")
             c.add_edge("B", "C", link="+")
@@ -2354,7 +2394,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import subplot,show, title
             c = cnograph.CNOGraph()
             c.add_edge("a", "c", link="-")
@@ -2562,7 +2602,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_degree()
             c.plot(node_attribute="centrality_degree")
@@ -2585,7 +2625,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.degree_histogram()
 
@@ -2620,7 +2660,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_closeness()
             c.plot(node_attribute="centrality_closeness")
@@ -2668,7 +2708,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_betweeness()
             c.plot(node_attribute="centrality_betweeness")
@@ -2865,7 +2905,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.plot_in_out_degrees()
 
@@ -2890,7 +2930,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"))
             c.plot_degree_rank()
 
@@ -2898,7 +2938,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         degree_sequence=sorted(nx.degree(self).values(),reverse=True) # degree sequence
 
         pylab.clf()
-        pylab.loglog(degree_sequence, color+'-', marker=marker, 
+        pylab.loglog(degree_sequence, color+'-', marker=marker,
                 markersize=markersize)
         pylab.title("Degree/rank and undirected graph layout")
         pylab.ylabel("Degree")
@@ -2949,7 +2989,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import subplot
             c = CNOGraph()
             c.add_edge("AKT2", "B", link="+")
@@ -3012,7 +3052,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             from pylab import subplot
             c = CNOGraph()
             c.add_reaction("!A=C")
@@ -3195,7 +3235,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph 
+            from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.hcluster()
 
