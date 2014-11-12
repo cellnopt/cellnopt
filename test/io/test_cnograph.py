@@ -3,8 +3,8 @@ from cno import cnodata, getdata
 import tempfile
 
 
-sif = getdata("PKN-Test.sif")
-midas = getdata("MD-Test.csv")
+sif = getdata("PKN-test_cnograph.sif")
+midas = getdata("MD-test.csv")
 
 
 def test_class_constructor():
@@ -15,8 +15,6 @@ def test_class_constructor():
     c.compress()
     assert len(c) == 12
     c._decompress()
-    # assert len(c) == N
-    c.plotdot2()
   
 
 def test_plotting():
@@ -135,22 +133,31 @@ def test_preprocessing():
     assert len(c) == 12
 
 
+
+def test_to_sif():
+    for filename in ['ToyPB', 'LiverDREAM', 'ToyMMB']:
+        yield to_sif, filename
+def to_sif(filename):
+    c = CNOGraph(cnodata("PKN-"+filename+'.sif'))
+    assert c == CNOGraph(c.to_sif())
+
+
 def test_export():
     fh = tempfile.NamedTemporaryFile()
     c = CNOGraph(sif, midas)
-    c.export2sif(fh.name)
-    c.export2SBMLQual(fh.name)
+    c.to_sif(fh.name)
+    c.to_sbmlqual(fh.name)
     c.export2gexf(fh.name)
 
 def test_others():
     import os
     c = CNOGraph(sif, midas)
     c.adjacencyMatrix()
-    c.export2json("test.json")
-    c.loadjson("test.json")
+    c.to_json("test.json")
+    c.read_json("test.json")
     os.remove("test.json")
     print(c)
-    c.reacID
+    c.reactions
     c.namesSpecies
     c.dependencyMatrix()
     c.plotAdjacencyMatrix()
@@ -214,7 +221,7 @@ def test_merge_split():
 
 def test_sif():
     c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-    c2 = CNOGraph(c.sif())
+    c2 = CNOGraph(c.to_sif())
     assert c == c2
 
 def test_import_sif_with_and_gates():
@@ -222,21 +229,21 @@ def test_import_sif_with_and_gates():
     s = SIF()
     s.add_reaction("A^B=C")
     c = CNOGraph(s)
-    c.export2sif(fh.name)
+    c.to_sif(fh.name)
     c2 = CNOGraph(fh.name)
     assert (c == c2) == True
     fh.delete = True
     fh.close()
 
 def test_1cue_noinh():
-    s = get_share_file("PKN-test_1cue_noinhibitor.sif")
-    m = get_share_file("MD-test_1cue_noinhibitor.csv")
+    s = getdata("PKN-test_1cue_noinhibitor.sif")
+    m = getdata("MD-test_1cue_noinhibitor.csv")
     c = CNOGraph(s, m)
 
 
 def test_expand_4_and_gates():
-    s = get_share_file("PKN-test_4andgates.sif")
-    m = get_share_file("MD-test_4andgates.csv")
+    s = getdata("PKN-test_4andgates.sif")
+    m = getdata("MD-test_4andgates.csv")
 
     c2 = CNOGraph(s,m)
     c1 = CNOGraph(s,m)
@@ -246,8 +253,8 @@ def test_expand_4_and_gates():
     assert c1 == c2
 
 def test_diamond():
-    s = get_share_file("PKN-test_diamond.sif")
-    m = get_share_file("MD-test_diamond.csv")
+    s = getdata("PKN-test_diamond.sif")
+    m = getdata("MD-test_diamond.csv")
     c = CNOGraph(s,m)
     assert len(c.nodes()) == 4
 
