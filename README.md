@@ -27,16 +27,16 @@ To be provided:
 - [ ] move cellnopt.core as cellnopt.io in here ?
   - [x] midas
   - [x] sif/reactions
-  - [] cnograph
+  - [x] cnograph
   - [ ] normalisation
-  - [ ] compression
+  - [x] compression
   - [ ] mapback
   - [ ] models
   - [x] cna
 - [ ] R packages available
   - [x] boolean T1
   - [x] boolean T2
-  - [ ] fuzzy
-  - [ ] discrete time
-  - [ ] ode
+  - [x] fuzzy
+  - [x] discrete time
+  - [x] ode
 
