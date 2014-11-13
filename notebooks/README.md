@@ -6,7 +6,7 @@ Notebooks can be seen within [nbviewer](http://nbviewer.ipython.org/github/celln
 
 ##Overview:
 
-#### model and data
+#### model and data visualisation and manipulation
 
 - Using BioServices to retrieve a network in SBML-qual format from BioModels. Visualisation with CNOGRaph class 
  [cnograph and sbmlqual](http://nbviewer.ipython.org/github/cellnopt/cellnopt/blob/master/notebooks/io/SBMLqual%20examples.ipynb)
@@ -16,3 +16,6 @@ Notebooks can be seen within [nbviewer](http://nbviewer.ipython.org/github/celln
 - Playing with reactions using the [Reaction class](http://nbviewer.ipython.org/github/cellnopt/cellnopt/blob/master/notebooks/io/cno.io.reactions.ipynb)
 
 
+#### Analysis
+
+- Feeder analysis [example](http://nbviewer.ipython.org/github/cellnopt/cellnopt/tree/master/notebooks/feeder/)
