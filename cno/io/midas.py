@@ -99,14 +99,14 @@ class MIDASReader(MIDAS):
         self._preprocess_cellines()
 
         # remove columns that are invalid and check MIDAS validity
-        #self._midas_validity()
+        self._midas_validity()
 
         # some cleanup to remove columns that have to be ignored
         labels = ["TR:"+x for x in self._ignore_codes if "TR:"+x in self._data.columns]
         self._data = self._data.drop(labels, axis=1)
 
         # from the data, build up the experiment and data dataframes
-        #self._init()
+        self._init()
 
     def _preprocess_cellines(self):
         #CellLine are tricky to handle with the MIDAS format because they use the
