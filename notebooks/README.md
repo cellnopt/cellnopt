@@ -18,4 +18,4 @@ Notebooks can be seen within [nbviewer](http://nbviewer.ipython.org/github/celln
 
 #### Analysis
 
-- Feeder analysis [example](http://nbviewer.ipython.org/github/cellnopt/cellnopt/tree/master/notebooks/feeder/)
+- Feeder analysis [example](http://nbviewer.ipython.org/github/cellnopt/cellnopt/blob/master/notebooks/feeder/Feeder%20example.ipynb)
