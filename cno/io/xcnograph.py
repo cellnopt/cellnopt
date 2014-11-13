@@ -34,6 +34,7 @@ from cno.io.midas import XMIDAS
 from cno.io.reactions import Reaction
 from cno.misc import CNOError
 from colormap import Colormap
+from cno.io.cnograph import CNOGraph
 
 __all__ = ["XCNOGraph"]
 

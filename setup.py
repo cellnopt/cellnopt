@@ -8,7 +8,7 @@ import glob
 
 _MAJOR               = 0
 _MINOR               = 0
-_MICRO               = 3
+_MICRO               = 4
 version              = '%d.%d.%d' % (_MAJOR, _MINOR, _MICRO)
 release              = '%d.%d' % (_MAJOR, _MINOR)
 
@@ -20,9 +20,10 @@ metainfo = {
     'license' : 'BSD',
     'download_url' : ['http://pypi.python.org/pypi/cno'],
     'url' : ['http://pypi.python.org/pypi/cno'],
-    'description':'Access to Biological Web Services from Python' ,
+    'description': "CNO (Cell Net Optimiser): Manipulate, Visualise and Optimise Biological Networks to Perturbation Data." ,
     'platforms' : ['Linux', 'Unix', 'MacOsX', 'Windows'],
-    'keywords' : [],
+    'keywords' : ['CellNOpt', 'CellNOptR', 'CNO', 'Logical model', 'SBML', 'SIF', 
+        'Boolean', 'ODE', 'Fuzzy', 'Optimisation', 'Protein Network'],
     'classifiers' : [
           'Development Status :: 1 - Planning',
           'Intended Audience :: Developers',

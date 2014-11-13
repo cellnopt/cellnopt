@@ -17,5 +17,6 @@ from .measurements import Measurement, Measurements, MIDASBuilder
 from .metabolites import Metabolites
 
 # CNOGraph
-from .cnograph import CNOGraph, XCNOGraph
+from .cnograph import CNOGraph
+from .xcnograph import XCNOGraph
 

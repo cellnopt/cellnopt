@@ -35,7 +35,7 @@ from cno.io.reactions import Reaction
 from cno.misc import CNOError
 from colormap import Colormap
 
-__all__ = ["CNOGraph", "CNOGraphAttributes", "XCNOGraph"]
+__all__ = ["CNOGraph", "CNOGraphAttributes"]
 
 
 class Attributes(dict):
