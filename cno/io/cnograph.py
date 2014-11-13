@@ -505,14 +505,10 @@ class CNOGraph(nx.DiGraph):
         reac = Reaction(reac)
         lhs, rhs = reac.lhs, reac.rhs
 
-        # TODO: we can probably simplify all that by just splitting with +
-        # and hnadle aND gates in another loop
-
         # if there is an OR gate, easy, just need to add simple reactions
         # A+!B=C is splitted into A=C and !B=C
 
         for this_lhs in lhs.split("+"):
-            print(this_lhs)
             # + has priority upon ^ unlike in maths so we can split with +
             # A+B^C^D+E=C means 3 reactions: A=C, E=C and B^C^D=C
             if "^" not in this_lhs:
@@ -811,8 +807,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         G.remove_nodes_from([n for n in G if n in other.nodes()])
         return G
 
-
-
     def intersect(self, other):
         """Return a graph with only nodes found in "other" graph.
 
@@ -848,15 +842,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         G = self.copy()
         G.remove_nodes_from([n for n in G if n not in other])
         return G
-
-
-    #def _get_link(self):
-    #    return [self.edge[x[0]][x[1]]['link'] for x in self.edges_iter()]
-    #links = property(fget=_get_link,  doc="Read only attribute.")
-    #def _get_weight(self):
-    #    return [self.edge[x[0]][x[1]]['weight'] for x in self.edges_iter()]
-    #weights = property(fget=_get_weight,  doc="Read only attribute.")
-
 
     def draw(self, prog="dot", hold=False, attribute="fillcolor", colorbar=True,
          **kargs):
@@ -920,15 +905,12 @@ not present in the model. Change your model or MIDAS file. """ % x)
             "sccmap", "fdp", "circo", "neato", "acyclic", "nop", "gvpr", "dot",
             "sfdp"])
 
-
     def _get_cmap(self, cmap=None):
         if cmap == "heat":
             cmap = self._colormap.get_cmap_heat_r()
         elif cmap == "green":
             cmap = self._colormap.get_cmap_red_green()
         return cmap
-
-
 
     def plot(self, prog="dot", viewer="pylab", hold=False, legend=False,
         show=True, filename=None, node_attribute=None, edge_attribute=None,
@@ -1167,11 +1149,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         return a
 
-
-
-
-
-
     def plot_rmse_fromR(self, filename, F=.3, scale=2, col=None):
         """
         filename should be a CSV with first column being node names and second
@@ -1219,7 +1196,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             colorHex = matplotlib.colors.rgb2hex(rgb)
             self.edge[edge[0]][edge[1]]['color'] = colorHex
         return M
-
 
     def _set_dot_attributes(self):
         # When calling agraph, it uses this information
@@ -1482,7 +1458,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         #if "+" not in n:
         self.clean_orphan_ands()
 
-
     def remove_node(self, n):
         """Remove a node n
 
@@ -1562,7 +1537,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             self.compress()
         if expansion:
             self.expand_and_gates(maxInputsPerGate=maxInputsPerGate)
-
 
     def cutnonc(self):
         """Finds non-observable and non-controllable nodes and removes them.
@@ -1822,7 +1796,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             else:
                 reactions.append("!" + pred + "=" +node)
         return reactions
-
 
     def set_default_node_attributes(self):
         """Set all node attributes to default attributes
@@ -2179,7 +2152,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         """networkx method not to be used"""
         raise NotImplementedError
 
-
     def add_star(self):
         """networkx method not to be used"""
         raise NotImplementedError
@@ -2315,7 +2287,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             title("compressed graph")
 
             show()
-
 
 
         """
@@ -2508,7 +2479,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         #    self.logging.info("Highest degree centrality %s %s", v,k)
         return res
 
-
     def centrality_closeness(self, **kargs):
         """Compute closeness centrality for nodes.
 
@@ -2539,7 +2509,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         #for k,v in degcent_sorted:
         #    self.logging.info("Highest closeness centrality %s %s", v,k)
         return res
-
 
     def centrality_betweeness(self, k=None, normalized=True,
         weight=None, endpoints=False, seed=None):
@@ -2718,24 +2687,18 @@ not present in the model. Change your model or MIDAS file. """ % x)
             print("successors")
             print(self.successors(specyName))
 
-
-
-
     def get_stats(self):
         stats = {}
         flow = nx.flow_hierarchy(self)
         stats['flow'] = flow
         stats['mean_degree'] = sum(self.degree().values())/float(len(self.nodes()))
-
         return stats
-
 
     def summary(self):
         """Plot information about the graph"""
         stats = self.get_stats()
         print("Flow hierarchy = %s (fraction of edges not participating in cycles)" % stats['flow'])
         print("Average degree = " + str(sum(self.degree().values())/float(len(self.nodes()))))
-
 
     def merge_nodes(self, nodes, node):
         """Merge several nodes into a single one
@@ -2769,7 +2732,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
                 raise ValueError("%s not found in the graph !" % n)
 
         self.add_node(node)
-
         for n in nodes:
             for pred in self.predecessors(n):
                 attrs = self.edge[pred][n]
@@ -2897,8 +2859,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         new_reaction = "=".join([lhs,rhs])
         return new_reaction
 
-
-
     # Repeats the compression until no further compression
     # can be performed (or the max number of compression cycles has been reached)
     def recursive_compress(self, max_num_iter = 25):
@@ -2985,23 +2945,17 @@ not present in the model. Change your model or MIDAS file. """ % x)
                 self.remove_edge(e[0], e[1], key=key)
 
 
-
-
-
 class ANDGate(object):
-    def __init__(self, name, verbose=False):
+    def __init__(self, name):
         self._name = None
         self.name = name[:]
-        self.verbose = verbose
 
     def _get_name(self):
         return self._name
     def _set_name(self, name):
         if "=" not in name:
             raise ValueError("An AND reaction must contain the = character")
-
         lhs, rhs = name.split("=")
-
         if "^" not in lhs or "^" in rhs:
             raise ValueError("An AND reaction must contain the ^ character in the LHS e.g.: A^B=C")
 
@@ -3013,8 +2967,6 @@ class ANDGate(object):
 
     def rename_species(self, oldname, newname):
         if oldname not in self.name:
-            if self.verbose:
-                print("WARNING, %s not found" % oldname)
             return
 
         # first, let us check the RHS. easy to rename
@@ -3027,222 +2979,3 @@ class ANDGate(object):
                 lhs_species]
         new_lhs = "^".join(new_lhs)
         self.name = "=".join([new_lhs, rhs])
-
-
-
-
-class XCNOGraph(CNOGraph):
-    """extra plotting and statistical tools"""
-    def __init__(self, model=None, midas=None, verbose=True):
-        super(XCNOGraph, self).__init__(model, midas, verbose=verbose)
-
-    def hcluster(self):
-        """
-
-        .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.hcluster()
-
-        .. warning:: experimental
-        """
-        from scipy.cluster import hierarchy
-        from scipy.spatial import distance
-        path_length=nx.all_pairs_shortest_path_length(self.to_undirected())
-        n = len(self.nodes())
-        distances=np.zeros((n,n))
-        nodes = self.nodes()
-        for u,p in path_length.iteritems():
-            for v,d in p.iteritems():
-                distances[nodes.index(u)-1][nodes.index(v)-1] = d
-        sd = distance.squareform(distances)
-        hier = hierarchy.average(sd)
-        pylab.clf();
-        hierarchy.dendrogram(hier)
-
-        pylab.xticks(pylab.xticks()[0], nodes)
-
-
-
-    def plot_degree_rank(self, loc='upper right', alpha=0.8, markersize=10,
-            node_size=25, layout='spring', marker='o', color='b'):
-        """Plot degree of all nodes
-
-        .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"))
-            c.plot_degree_rank()
-
-        """
-        degree_sequence=sorted(nx.degree(self).values(),reverse=True) # degree sequence
-
-        pylab.clf()
-        pylab.loglog(degree_sequence, color+'-', marker=marker,
-                markersize=markersize)
-        pylab.title("Degree/rank and undirected graph layout")
-        pylab.ylabel("Degree")
-        pylab.xlabel("Rank")
-
-        # draw graph in inset
-        if loc == 'upper right':
-            pylab.axes([0.45, 0.45, 0.45, 0.45])
-        else:
-            pylab.axes([0.1, 0.1, 0.45, 0.45])
-
-        UG = self.to_undirected()
-        Gcc = nx.connected_component_subgraphs(UG)[0]
-        if layout == 'spring':
-            pos = nx.spring_layout(Gcc)
-        else:
-            pos = nx.circular_layout(Gcc)
-        pylab.axis('off')
-        nx.draw_networkx_nodes(Gcc, pos, node_size=node_size)
-        nx.draw_networkx_edges(Gcc, pos, alpha=alpha)
-        pylab.grid()
-        pylab.show()
-
-    def plot_feedback_loops_histogram(self):
-        """Plots histogram of the cycle lengths found in the graph
-
-        :return: list of lists containing all found cycles
-        """
-        data = list(nx.simple_cycles(self))
-        pylab.hist([len(x) for x in data])
-        pylab.title("Length of the feedback loops")
-        return data
-
-    def plot_in_out_degrees(self, show=True,ax=None, kind='kde'):
-        """
-         .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.plot_in_out_degrees()
-
-
-        """
-        import pandas as pd
-        ts1 = pd.TimeSeries(self.in_degree())
-        ts2 = pd.TimeSeries(self.out_degree())
-        df = pd.DataFrame([ts1, ts2]).transpose()
-        df.columns = ["in","out"]
-        if show:
-            df.plot(kind=kind, ax=ax)  # kernerl density estimation (estimiation of histogram)
-        #df = ...
-        #df.transpose().hist()
-        return df
-
-
-
-
-    def plot_feedback_loops_species(self, cmap="Reds"):
-        """Returns and plots species part of feedback loops
-
-
-        :param str cmap: a color map
-        :return: dictionary with key (species) and values (number of feedback loop
-            containing the species) pairs.
-
-
-        """
-        cmap = self._get_cmap(cmap)
-
-        data = nx.simple_cycles(self)
-        data = list(pylab.flatten(data))
-        if len(data) == 0:
-            print("no loops found")
-            return
-        counting = [(x, data.count(x)) for x in self.nodes() if data.count(x)!=0 and "and" not in x and "^" not in x]
-
-        M = float(max([count[1] for count in counting]))
-        # set a default
-        #for node in self.nodes():
-        #    self.node[node]['loops'] = "#FFFFFF"
-        for node in self.nodes():
-            self.node[node]['loops'] = 0
-
-        for count in counting:
-            #ratio_count = sm.to_rgba(count[1]/M)
-            ratio_count = count[1]/M
-            colorHex = ratio_count
-            #self.node[count[0]]['loops'] = colorHex
-            self.node[count[0]]['loops'] = ratio_count
-            self.node[count[0]]['style'] =  'filled,bold'
-
-        self.plot(node_attribute="loops", cmap=cmap)
-        return counting
-
-
-
-    def degree_histogram(self, show=True, normed=False):
-        """Compute histogram of the node degree (and plots the histogram)
-
-        .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.degree_histogram()
-
-
-        """
-        degree = self.degree().values()
-        Mdegree = max(degree)
-
-        if show == True:
-            pylab.clf()
-            res = pylab.hist(degree, bins=range(0,Mdegree+1), align='left',
-                             rwidth=0.8, normed=normed)
-            xlims = pylab.xlim()
-            ylims = pylab.ylim()
-            pylab.axis([0, xlims[1], ylims[0], ylims[1]*1.1])
-            pylab.grid()
-            pylab.title("Degree distribution")
-        return res
-    def plot_adjacency_matrix(self, fontsize=12, **kargs):
-        """Plots adjacency matrix
-
-        :param kargs : optional arguments accepted by pylab.pcolor
-
-        .. plot::
-            :width: 70%
-
-            from cno import CNOGraph
-            from pylab import *
-            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-            c.plot(hold=True)
-
-        .. plot::
-            :width: 70%
-            :include-source:
-
-            from cno import CNOGraph
-            from pylab import *
-            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-            c.plot_adjacency_matrix()
-
-        """
-        nodeNames = sorted(self.nodes())
-        nodeNamesY = sorted(self.nodes())
-
-        nodeNamesY.reverse()
-        N = len(nodeNames)
-
-        data = self.adjacency_matrix(nodelist=nodeNames)
-
-        pylab.pcolor(pylab.flipud(pylab.array(data)), edgecolors="k", **kargs)
-        pylab.axis([0, N, 0, N])
-        pylab.xticks([0.5+x for x in pylab.arange(N)], nodeNames, rotation=90,
-                      fontsize=fontsize)
-        pylab.yticks([0.5+x for x in pylab.arange(N)], nodeNamesY, rotation=0,
-                      fontsize=fontsize)
-        pylab.tight_layout()
