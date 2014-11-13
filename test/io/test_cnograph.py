@@ -1,6 +1,8 @@
 from cno.io import CNOGraph, XMIDAS, SIF
-from cno import cnodata, getdata
+from cno import cnodata, getdata, CNOError
 import tempfile
+import random
+from cno.io import XCNOGraph
 
 
 sif = getdata("PKN-test_cnograph.sif")
@@ -15,19 +17,49 @@ def test_class_constructor():
     c.compress()
     assert len(c) == 12
     c._decompress()
-  
+ 
+    # check constructor with another cnograph
+    c2 = CNOGraph(c)
+    assert c == c2
+    # check that this is a copy not a reference
+    c.remove_node('egf')
+    assert c2 != c
+
+    # check sbmlqual constructor
+    c = CNOGraph(getdata("PKN-test_sbmlqual.xml"))
+    assert "A^B=C" in c.reactions
+    assert len(c.nodes()) == 5
+
 
 def test_plotting():
     c = CNOGraph(sif, midas)
-    c.plotdot(legend=True, show=False)
+    c.midas.df +=.5
+    c.plot(legend=True, show=True, cmap='heat', colorbar=True)
     c.centrality_closeness()
-    c.plotdot(node_attribute="centrality_closeness", show=False) 
- 
+    c.plot(node_attribute="centrality_closeness", show=False) 
+    c.preprocessing()
+    c.plot()
 
-def test_plotFeedback():
+    c = CNOGraph()
+    c.plot()
+
+
+def test_swap_edges():
     c = CNOGraph(sif, midas)
-    c.plotFeedbackLoopsSpecies()
-    c.plotFeedbackLoopsHistogram()
+    c.swap_edges(nswap=10)
+
+
+
+def test_edge_attribute():
+    c = CNOGraph(sif, midas)
+    for e in c.edges():
+        c.edge[e[0]][e[1]]['penwidth'] = random.random()*10
+    for e in c.edges():
+        c.edge[e[0]][e[1]]['edge'] = random.random()*10
+    c.plot(edge_attribute='edge')
+
+
+
 
 def test_summary():
     c = CNOGraph(sif, midas)
@@ -57,7 +89,7 @@ def test_operators():
     c2 = CNOGraph()
     c2.add_edge("A","E", link="+")
     c2.add_edge("C","E", link="+")
-    c2.plotdot(show=False)
+    c2.plot(show=False)
     assert c1 != c2
 
     c_add = c1+c2
@@ -107,16 +139,10 @@ def test_centrality():
     c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
     c.centrality_betweeness()
     c.centrality_degree()
-    c.degree_histogram(show=True)
     c.draw()
 
 def test_preprocessing():
     # functional test of the preprocessing steps
-    c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-    c.cutnonc()
-    c.compress()
-    c.expand_and_gates()
-
     c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
     c.preprocessing()
 
@@ -152,30 +178,48 @@ def test_export():
 def test_others():
     import os
     c = CNOGraph(sif, midas)
-    c.adjacencyMatrix()
+    c.adjacency_matrix()
     c.to_json("test.json")
     c.read_json("test.json")
     os.remove("test.json")
     print(c)
-    c.reactions
-    c.namesSpecies
-    c.dependencyMatrix()
-    c.plotAdjacencyMatrix()
+    #c.reactions
+    #c.namesSpecies
+    c.dependency_matrix()
     c.get_same_rank()
     c.dot_mode = "signals_bottom"
     c.get_same_rank()
     c.lookfor("akt")
     c.lookfor("EGFR")
 
+    c = CNOGraph()
+    c.add_node("a=")
+    c.add_node("=b")
+
+    # cannot assign anything else than a MIDAS or filemame
+    try:
+        c.midas = 1
+        assert False
+    except:
+        False
+
+    c = CNOGraph()
+    c.add_reaction("A=B")
+    c.add_reaction("A=B")
+    c.add_reaction("A+C=B")
+    c.add_reaction("A^C=B")
+    c.add_reaction("a^b^c+a=d")
+    c.add_reactions(["A=B", "A=C"])
+
 
 def test_set_operators():
 
     c1 = CNOGraph()
     c1.add_edge("A","C",link="+")
-    c1.add_edge("A","B",link="+")
+    c1.add_edge("A","B",link="-")
     c2 = CNOGraph()
     c2.add_edge("A", "C", link="+")
-    c1.intersect(c2).plotdot(show=False)
+    c1.intersect(c2).plot(show=False)
     c3 = c1.intersect(c2)
     assert sorted(c3.nodes()) == ['A', 'C']
 
@@ -261,4 +305,23 @@ def test_diamond():
     c.preprocessing()
     #TODO: check that there is one node not compressed due to the 2 links 1 stimuli one inhibitor
 
-    
+   
+
+def test_check_compatible_midas():
+    try:
+        c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyMMB.csv"))
+        assert False
+    except CNOError:
+        assert True
+
+
+
+def test_xcnograph():
+
+
+    c = XCNOGraph(sif, midas)
+    c.plot_adjacency_matrix()
+    c.plot_feedback_loops_species()
+    c.plot_feedback_loops_histogram()
+    c.degree_histogram(show=True)
+    c.hcluster()

@@ -14,6 +14,7 @@
 #
 ##############################################################################
 from __future__ import print_function
+import os
 import copy
 import tempfile
 import itertools
@@ -30,10 +31,11 @@ from easydev import Logging
 # cellnopt modules
 from cno.io.sif import SIF
 from cno.io.midas import XMIDAS
-
+from cno.io.reactions import Reaction
+from cno.misc import CNOError
 from colormap import Colormap
 
-__all__ = ["CNOGraph", "CNOGraphAttributes"]
+__all__ = ["CNOGraph", "CNOGraphAttributes", "XCNOGraph"]
 
 
 class Attributes(dict):
@@ -275,14 +277,9 @@ class CNOGraph(nx.DiGraph):
 
     .. seealso::  tutorial, user guide
 
-    .. todo:: graph attribute seems to be reset somewhere
-
-
     .. todo:: penwidth should be a class attribute, overwritten if provided.
 
-    .. todo:: call findnonc only once or when nodes are changed.
 
-    .. todo:: reacID when a model is expanded, returns only original reactions
     """
     def __init__(self, model=None, data=None, verbose=False, **kargs):
         """.. rubric:: Constructor
@@ -295,7 +292,6 @@ class CNOGraph(nx.DiGraph):
         :param str celltype: if a MIDAS file contains more that 1 celltype, you
             must provide a celltype name
 
-        .. todo:: check that the celltype option works
 
         """
         super(CNOGraph, self).__init__(**kargs)
@@ -309,17 +305,20 @@ class CNOGraph(nx.DiGraph):
                 'graph': {
                     "dpi":200,
                     'rankdir':'TB',
-#                    'nodesep': None,
-                    'ranksep':1
+                    #'nodesep': None,
+                    #'nodesep': .5,
+                    'ranksep':.6,
+                    'ratio':1
                     },
-                'node':{'fontname':'bold'}
+                'node':{
+                    #'width':1,
+                    #'fontsize':40,
+                    #'height':1,
+                    #'width':2,
+                    'fontname':'bold'
+                    }
+                #{'fontname':'bold'}
                 } #TB, LR, RL
-
-
-        #self.graph_options['node']['fontsize'] = 26
-        #self.graph_options['node']['height']
-        #self.graph_options['node']['width']
-
 
 
         #: the attributes for nodes and edges are stored within this attribute. See :class:`CNOGraphAttributes`
@@ -327,7 +326,6 @@ class CNOGraph(nx.DiGraph):
         self._midas = None
         self.verbose = verbose
         self.logging = Logging("INFO")
-
 
         self._compress_ands = False
         #: stimuli
@@ -340,7 +338,8 @@ class CNOGraph(nx.DiGraph):
         self._nonc = None
 
         # the model
-        if hasattr(model, "nodes") and hasattr(model, "edges"):
+        if hasattr(model, '__class__') and \
+            model.__class__.__name__ in ['CNOGraph', 'XCNOGraph']:
             for node in model.nodes():
                 self.add_node(str(node))
             for edge in model.edges(data=True):
@@ -350,6 +349,8 @@ class CNOGraph(nx.DiGraph):
                     self.add_edge(str(edge[0]), str(edge[1]), link="+")
             self.set_default_node_attributes() # must be call if sif or midas modified.
             self.filename = None
+            if model.midas is not None:
+                self.midas = model.midas.copy()
         elif model is None:
             self.filename = None
 
@@ -365,7 +366,8 @@ class CNOGraph(nx.DiGraph):
             self.filename = 'undefined'
 
         # the data
-        self.midas = data
+        if self.midas is None:
+            self.midas = data
 
         self._set_dot_attributes()
 
@@ -384,8 +386,7 @@ class CNOGraph(nx.DiGraph):
             self._midas = data
         else:
             raise ValueError("Incorrect data, Must a valid MIDAS file or instance of XMIDAS class {}".format(data))
-        #if self._midas != None:
-        #self._dataModelCompatibility()
+        self.check_data_compatibility()
         self.set_default_node_attributes()
     midas = property(fget=_get_midas, fset=_set_midas,
                      doc="MIDAS Read/Write attribute.")
@@ -433,8 +434,7 @@ class CNOGraph(nx.DiGraph):
             raise ValueError("The sif input must be a filename to a SIF file or an instance of the SIF class")
 
         # add all reactions
-        for reac in sif.reactions:
-            self.add_reaction(reac)
+        self.add_reactions(sif.reactions)
 
         # now, we need to set the attributes, only if we have a cnolist,
         # otherwise color is the default (white)
@@ -442,7 +442,7 @@ class CNOGraph(nx.DiGraph):
 
 
     def _add_simple_reaction(self, reac):
-        """A=B or !!A=B"""
+        """A=B or !A=B"""
         # not the second argument: we split only once so you can add a reaction
         # where the RHS is a AND gate coded with a "=" character in it (e.g.,
         # A=A+B=C which means reaction from A to AND gate called A+B=C)
@@ -493,12 +493,11 @@ class CNOGraph(nx.DiGraph):
 
 
         """
-        # TODO: check if this is a valid reaction
-        # ro rhs if there is an AND in LHS is wrong
-        # mixing ^ and & and + is not implemented for now
-        reac = reac.strip()
-        reac = reac.replace("&", "^")
-        lhs, rhs = reac.split("=")
+        reac = Reaction(reac)
+        lhs, rhs = reac.lhs, reac.rhs
+
+        # TODO: we can probably simplify all that by just splitting with +
+        # and hnadle aND gates in another loop
 
         # if there is an OR gate, easy, just need to add simple reactions
         # A+!B=C is splitted into A=C and !B=C
@@ -513,7 +512,8 @@ class CNOGraph(nx.DiGraph):
             return
 
         if "^" and "+" in lhs:
-            # let us suppose that there is no mix such as a+b^c+d^h
+            # + has priority upon ^ unlike in maths so we can split with +
+            # A+B^C^D+E=C means 3 reactions: A=C, E=C and B^C^D=C
             for this in lhs.split("+"):
                 if "+" in this:
                     self._add_simple_reaction(this +"=" + rhs)
@@ -524,11 +524,11 @@ class CNOGraph(nx.DiGraph):
         # finally case with AND gates only
         if "^" in lhs and "+" not in rhs:
             # and gates need a little bit more work
-            self.add_edge(reac, rhs, link="+") # the AND gate and its the unique output
+            self.add_edge(reac.name, rhs, link="+") # the AND gate and its the unique output
             # now the inputs
             species = lhs.split("^")
             for this in species:
-                self._add_simple_reaction(this + "=" + reac)
+                self._add_simple_reaction(this + "=" + reac.name)
             return
 
     def set_default_edge_attributes(self,  **attr):
@@ -671,16 +671,17 @@ class CNOGraph(nx.DiGraph):
                 self.remove_node(node)
                 continue
 
-    def _dataModelCompatibility(self):
+    def check_data_compatibility(self):
         """When setting a MIDAS file, need to check that it is compatible with
         the graph, i.e. species are found in the model."""
-        for x in self.midas.names_cues:
-            if x not in self.nodes():
-                raise ValueError("""The cue %s was found in the MIDAS file but is
+        if self.midas:
+            for x in self.midas.names_cues:
+                if x not in self.nodes():
+                    raise CNOError("""The cue %s was found in the MIDAS file but is
 not present in the model. Change your model or MIDAS file. """ % x)
-        for x in self.midas.names_signals:
-            if x not in self.nodes():
-                raise ValueError("""The signal %s was found in the MIDAS file but is
+            for x in self.midas.names_signals:
+                if x not in self.nodes():
+                    raise CNOError("""The signal %s was found in the MIDAS file but is
 not present in the model. Change your model or MIDAS file. """ % x)
 
     def remove_and_gates(self):
@@ -691,52 +692,32 @@ not present in the model. Change your model or MIDAS file. """ % x)
     def __eq__(self, other):
         # we must look at the data to figure out the link + or - but should ignore
         # all other keys
-
-        try:
-            edges1 = sorted(self.edges(data=True))
-            edges2 = sorted(other.edges(data=True))
-            edges1  = [(e[0], e[1], {'link':e[2]['link']}) for e in edges1]
-            edges2  = [(e[0], e[1], {'link':e[2]['link']}) for e in edges2]
-            res = edges1 == edges2
-            return res
-        except Exception:
-            print("found exception")
-            return False
+        edges1 = sorted(self.edges(data=True))
+        edges2 = sorted(other.edges(data=True))
+        edges1  = [(e[0], e[1], {'link':e[2]['link']}) for e in edges1]
+        edges2  = [(e[0], e[1], {'link':e[2]['link']}) for e in edges2]
+        res = edges1 == edges2
+        return res
 
     def __add__(self, other):
         """allows a+b operation
 
         combines the _inhibitors, _signals, _stimuli but keep only the first
-        midas file.
+        midas file !
 
         """
-        print("calling __add__")
         G = self.copy()
         G.add_nodes_from(other.nodes(data=True))
         edges = other.edges(data=True)
         for e1,e2,d in edges:
             G.add_edge(e1,e2,None, **d)
-            G._inhibitors += other._inhibitors
-            G._signals += other._signals
-            G._stimuli += other._stimuli
-            # TODO: merge the MIDAS files. ?
-
+        G._inhibitors += other._inhibitors
+        G._signals += other._signals
+        G._stimuli += other._stimuli
+       
+        # TODO: merge the MIDAS files. ?
         return G
 
-    def __radd__(self, other):
-        print("calling __radd__")
-        self.add_nodes_from(other.nodes(data=True))
-        edges = other.edges(data=True)
-        for e1,e2,d in edges:
-            self.add_edge(e1,e2,None, **d)
-
-    #def __iadd__(self, other):
-    #    print("calling iadd")
-    #    self.add_nodes_from(other.nodes(data=True))
-    #    edges = other.edges(data=True)
-    #    for e1,e2,d in edges:
-    #        self.add_edge(e1,e2,None, **d)
-    #    return self
 
     def __sub__(self, other):
         print("calling __sub__")
@@ -835,6 +816,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
         G.remove_nodes_from([n for n in G if n in other.nodes()])
         return G
 
+
+
     def intersect(self, other):
         """Return a graph with only nodes found in "other" graph.
 
@@ -895,6 +878,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
         Uses the link attribute of the edges
 
         .. seealso:: :meth:`plot` that is dedicated to this kind of plot using graphviz
+
+        
         """
         self.logging.warning("Not for production. Use plot() instead")
         pos = nx.drawing.graphviz_layout(self, prog=prog)
@@ -917,14 +902,10 @@ not present in the model. Change your model or MIDAS file. """ % x)
         colors = {'-':'red', '+':'black'}
         edge_colors = [colors[x[2]['link']] for x in edges]
 
-
         nx.draw(self, prog=prog, hold=hold, nodelist=nodes,
             edge_color=edge_colors, node_color=node_colors,
             pos=pos, **kargs)
 
-        if attribute in ["degree_cent", "betweeness_cent", "closeness_cent"]:
-            if colorbar:
-                pylab.colorbar(shrink=0.7, pad=0.01, fraction=0.10)
 
     def _plot_legend(self):
         """used by plot"""
@@ -953,32 +934,12 @@ not present in the model. Change your model or MIDAS file. """ % x)
         return cmap
 
 
-    def _to_dot_R(self, filename):
-        """simple dodigraph G{
-        size="8.5,11";
-        {rank=source;1;2;}  # EGF, TNFA
-        {rank=same;3;6;7;}  # TRAF6, PI3K, Ras
-        {rank=same;4;5;8;9;} Jnk, p38, Raf, Akt
-        {rank=same;10;}     # Mek
-        {rank=same;11;}     # Erk
-        {rank=sink;12;13;14;15;} # cjun, hsp, nfkb, p90rsk
-
-        3 [color="black" shape="ellipse" style="dashed" label="TRAF6" fontname=Helvetica fontsize=22.0 ];
-
-
-
-11 -> 14[ color="grey90" label="" weight="1.000000" penwidth="4" arrowhead="normal" style="solid"];
-
-        }
-        """
-
-
 
     def plot(self, prog="dot", viewer="pylab", hold=False, legend=False,
         show=True, filename=None, node_attribute=None, edge_attribute=None,
         cmap=None, colorbar=False, remove_dot=True, cluster_stimuli=False,
         normalise_cmap=True, edge_attribute_labels=True, aspect="equal",
-        rank=False
+        rank=True
         ):
         """plotting graph using dot program (graphviz) and networkx
 
@@ -1041,6 +1002,10 @@ not present in the model. Change your model or MIDAS file. """ % x)
         # graph is a DiGraph attribute
         # that is sometimes replaced by {} inside networkx so we need to overwrite it here
         # each time we want to plot the graph.
+        if len(self)==0:
+            self.logging.error("empty graph, nothing to plot")
+            return
+
         self.graph = self.graph_options.copy()
 
         if cmap == "heat":
@@ -1071,8 +1036,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
                     M = max(M)
                 else:
                     M = 1
-            else:
-                self.logging.error("attribute %s not found in any nodes" % node_attribute)
 
             for node in self.nodes():
                 try:
@@ -1120,39 +1083,31 @@ not present in the model. Change your model or MIDAS file. """ % x)
             self._set_edge_attribute_label(this, edge_attribute)
 
 
-        if rank is True:
-            H = self._get_ranked_agraph()
-        else:
-            H = nx.to_agraph(this)
+        count = 0
+        ret = -1
+        while count <5:
+            if rank is True:
+                H = self._get_ranked_agraph()
+            else:
+                H = nx.to_agraph(this)
 
 
-
-        # we want stimuli to be on top
-        if (self.midas or self._stimuli) and cluster_stimuli:
-            stimuli = []
-            if self.midas:
-                stimuli = self.midas.names_stimuli[:]
-            stimuli += self._stimuli[:]
-            H.add_subgraph(stimuli, name="cluster_stimuli", rank="source", style="filled", fillcolor="white")
-
-        H.write(infile.name)
-
-        #nx.write_doit(self, infile.name)
-        if filename.endswith(".png"):
-            cmd = "%s -Tpng %s -o %s" % (prog, infile.name, filename)
-        elif filename.endswith(".svg"):
-            cmd = "%s -Tsvg %s -o %s" % (prog, infile.name, filename)
-        else:
-            self.logging.info("extension should be svg or png. File not saved")
-            cmd = "" # nothing to be done
-
-        # Below is the code to actually show the image, not to build it
-        self.logging.info(cmd)
-        ret = subprocess.call(cmd, shell=True)
-
+            H.write(infile.name)
+            frmt = os.path.splitext(filename)[1][1:]
+            try:
+                H.draw(path=filename, prog=prog, format=frmt)
+                count = 5
+                ret = 0
+            except Exception as err:
+                print(err.message)
+                self.logging.warning("%s program failed. Trying again" % prog)
+                count += 1
+        if ret !=0:
+            self.logging.warning("%s program failed to create image" % prog)
+            return
+        
         if viewer=="pylab" and show==True:
             if hold == False:
-
                 pylab.clf()
                 f = pylab.gcf()
                 f.set_facecolor("white")
@@ -1269,16 +1224,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             self.edge[edge[0]][edge[1]]['color'] = colorHex
         return M
 
-    def _get_hex_color_from_value(self, value, cmap):
-        import matplotlib
-        cmap = matplotlib.cm.get_cmap(cmap)
-        sm = matplotlib.cm.ScalarMappable(
-            norm=matplotlib.colors.Normalize(vmin=0,vmax=1), cmap=cmap)
-        rgb = sm.to_rgba(value)
-        colorHex = matplotlib.colors.rgb2hex(rgb)
-        return colorHex
-
-
 
     def _set_dot_attributes(self):
         # When calling agraph, it uses this information
@@ -1301,6 +1246,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         self.dotattrs['node'] = {}
 
     def _get_ranked_agraph(self):
+        """and gates should have intermediate ranks"""
         H = nx.to_agraph(self)
 
         for k, v in self.dotattrs['graph'].iteritems():
@@ -1312,16 +1258,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         # order the graph for ranks
         allranks = self.get_same_rank() # this has been checkd on MMB to
+        allranks2 = {}
+        for k,v in allranks.iteritems():
+            allranks2[k*2] = v
         # give same results as in R version.
         ranks  = {}
         for k, v in allranks.iteritems():
             ranks[k] = sorted([x for x in v if '=' not in x],
                     cmp=lambda x,y:cmp(x.lower(), y.lower()))
             # add invisible edges so that the nodes that have the same rank are
-            # ordered. #FIXME: check that
-            if k!=0:
+            # ordered.
+            if k != 0:
                 for i, node1 in enumerate(ranks[k]):
-                    if i!=len(ranks[k])-1:
+                    if i != len(ranks[k])-1:
                         node2 = ranks[k][i+1]
                         H.add_edge(node1, node2, style="invis")
 
@@ -1330,33 +1279,26 @@ not present in the model. Change your model or MIDAS file. """ % x)
             name = str(rank)
             if rank == 0:
                 name = "stimuli"
-                H.add_subgraph(ranks[rank], name="cluster_"+name,
-                        label="Stimuli" , rank='min')
-            elif rank==M:
-                name = "end_signals"
+                # if name is set to "cluster"+name, black box is put around
+                # the stimuli.
+                #H.add_subgraph(ranks[rank], name="cluster_"+name, rank='source')
+                #H.add_subgraph(ranks[rank],  rank='source', label='stimuli')
+                H.add_subgraph(ranks[rank],  rank='source')
+                #        label="Stimuli" , rank='source')
+            elif rank == M:
+                #name = "end_signals"
                 H.add_subgraph(ranks[rank], name=name, rank='sink')
             else:
                 #pass
                 H.add_subgraph(ranks[rank], name=name, rank='same')
 
-        # save the file in a temporary directory
-        #infile  = tempfile.NamedTemporaryFile(suffix=".dot", delete=False)
-        #H.write(infile.name)
-        #H.clear()
-        #self.agraph = H
-        #return infile
         return H
 
-
-
-
     def _get_nonc(self):
-        if self._nonc == None:
+        if self._nonc is None:
             nonc = self.findnonc()
             self._nonc = nonc
-        else:
-            nonc = self._nonc
-        return nonc
+        return self._nonc
     nonc = property(fget=_get_nonc,
         doc="Returns list of Non observable and non controlable nodes (Read-only).")
 
@@ -1372,7 +1314,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
     species = property(fget=_get_namesSpecies,
         doc="Return sorted list of species (ignoring and gates) Read-only attribute.")
 
-    def swap_edges(self, nswap=1):
+    def swap_edges(self, nswap=1, inplace=True):
         """Swap two edges in the graph while keeping the node degrees fixed.
 
         A double-edge swap removes two randomly chosen edges u-v and x-y
@@ -1390,7 +1332,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         .. warning:: the graph is modified in place.
 
-        .. todo:: need to take into account the AND gates !!
+        .. warning:: and gates are currently unchanged
 
         a proposal swap is ignored in 3 cases:
         #. if the summation of in_degree is changed
@@ -1403,11 +1345,14 @@ not present in the model. Change your model or MIDAS file. """ % x)
         O = sum(self.out_degree().values())
 
         # find 2 nodes that have at least one successor
+        count = 0
         for i in range(0, nswap):
             #print(i)
             edges = self.edges()
             np.random.shuffle(edges)
             e1, e2 = edges[0:2]
+            if "^" in e1[0] or "^" in e1[1] or "^" in e2[0] or "^" in e2[1]:
+                continue
             d1 = self.edge[e1[0]][e1[1]].copy()
             d2 = self.edge[e2[0]][e2[1]].copy()
 
@@ -1436,8 +1381,10 @@ not present in the model. Change your model or MIDAS file. """ % x)
             assert Ninh2 == Ninh
 
             assert nx.is_connected(self.to_undirected()) == True
+            count +=1
+        print("swap %d edges" % count)
 
-    def dependencyMatrix(self, fontsize=12):
+    def dependency_matrix(self, fontsize=12):
         r"""Return dependency matrix
 
         * :math:`D_{i,j}` = green ; species i is an activator of species j (only positive path)
@@ -1451,7 +1398,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
             from cno import CNOGraph
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.dependencyMatrix()
+            c.dependency_Matrix()
 
 
         """
@@ -1506,7 +1453,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         return data
 
-    def adjacencyMatrix(self, nodelist=None, weight=None):
+    def adjacency_matrix(self, nodelist=None, weight=None):
         """Return adjacency matrix.
 
         :param list nodelist: The rows and columns are ordered according to the nodes in nodelist.
@@ -1525,43 +1472,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         """
         return nx.adjacency_matrix(self, nodelist=nodelist).astype(int)
 
-    def plotAdjacencyMatrix(self, fontsize=12, **kargs):
-        """Plots adjacency matrix
-
-        :param kargs : optional arguments accepted by pylab.pcolor
-
-        .. plot::
-            :width: 70%
-
-            from cno import CNOGraph
-            from pylab import *
-            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-            c.plot(hold=True)
-
-        .. plot::
-            :width: 70%
-            :include-source:
-
-            from cno import CNOGraph
-            from pylab import *
-            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-            c.plotAdjacencyMatrix()
-
-        """
-        nodeNames = sorted(self.nodes())
-        nodeNamesY = sorted(self.nodes())
-
-        nodeNamesY.reverse()
-        N = len(nodeNames)
-
-        data = self.adjacencyMatrix(nodelist=nodeNames)
-
-        pylab.pcolor(pylab.flipud(pylab.array(data)), edgecolors="k", **kargs)
-        pylab.axis([0, N, 0, N])
-        pylab.xticks([0.5+x for x in pylab.arange(N)], nodeNames, rotation=90,
-                      fontsize=fontsize)
-        pylab.yticks([0.5+x for x in pylab.arange(N)], nodeNamesY, rotation=0,
-                      fontsize=fontsize)
 
 
     def remove_edge(self, u, v):
@@ -1575,6 +1485,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         super(CNOGraph, self).remove_edge(u,v)
         #if "+" not in n:
         self.clean_orphan_ands()
+        
 
     def remove_node(self, n):
         """Remove a node n
@@ -1712,23 +1623,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
         for node in sorted(self.nodes()):
             if self.degree(node) == 0 and node not in self.stimuli and \
                 node not in self.signals and node not in self.inhibitors:
-                """Luca: TODO? Shouldn't one check that an eventual orphan is not an observed node?
-                Removing a node that is observed generates an incompatibility between the compressed network
-                and the MIDAS file.
-
-                The incompatibility arises when saving the compressed network and trying to use it with the same MIDAS
-                file used to compress.
-
-                In cellnopt.asp.netrec I have a workaround for this. It consists in finding the list of nodes that belong
-                to the network but are in no edges (if a node A is removed during compression, it appears in no edges,
-                but you can still find it in CNOGraph.nodes()). For this set of nodes that do not belong to the network,
+                """ 
+                FIXME It consists in finding the list of nodes that belong
+                to the network but are in no edges (if a node A is 
+                removed during compression, it appears in no edges,
+                but you can still find it in CNOGraph.nodes()). For 
+                this set of nodes that do not belong to the network,
                 I add fake edges like A + mock1 and so on.
 
-                Doing like this I am able to save the compressed (or the repaired) network, while using the same MIDAS file.
+                Doing like this I am able to save the compressed (or 
+                the repaired) network, while using the same MIDAS file.
 
-                I was afraid to touch the code because I am not sure whether this is the intended behaviour."""
-
-
+                I was afraid to touch the code because I am not sure 
+                whether this is the intended behaviour."""
 
                 self.logging.info("Found an orphan, which has been removed (%s)" % node)
                 self.remove_node(node)
@@ -1977,26 +1884,13 @@ not present in the model. Change your model or MIDAS file. """ % x)
                     else:
                         self.logging.debug('warning, rank %s is empyt'% node)
 
-        elif self.dot_mode == 'signals_bottom':
-            # no need for max rank here
-            for node in self.nodes():
-                if node not in stimuli and node not in signals:
-                    distances = [func_path[s][node] for s in stimuli]
-                    distances = [x for x in distances if x != pylab.inf]
-                    if len(distances) != 0:
-                        M = pylab.nanmax([abs(x) for x in distances if x != pylab.inf])
-                        try:
-                            ranks[M].append(node)
-                        except:
-                            ranks[M] = [node]
-                    else:
-                        self.logging.debug('warning, rank %s is empyt'% node)
-            M = max(ranks.keys())
-            ranks[M+2] = signals
-
         elif self.dot_mode == 'end_signals_bottom':
             maxrank = max(ranks.keys())
+            ranks[maxrank+1] = []
+
             for node in sorted(self.nodes(),cmp=lambda x,y: cmp(x.lower(), y.lower())):
+                if "^" in node:
+                    continue
                 # end signals
                 #print(node,)
                 if node in signals and len(self.successors(node))==0:
@@ -2018,7 +1912,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
                 if node in signals and len(self.successors(node))==0:
                     try:
-                        ranks[maxrank].append(node)
+                        # +1 so that signals are alone on their row without nonc
+                        ranks[maxrank+1].append(node)
                     except:
                         print("isssu")
                         ranks[maxrank] = [node]
@@ -2333,7 +2228,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         """
         super(CNOGraph, self).add_nodes_from(nbunch, attr_dict=None, **attr)
-
         #for n in nbunch:
         #    self.add_node(n, attr_dict=attr_dict, **attr)
 
@@ -2618,32 +2512,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         #    self.logging.info("Highest degree centrality %s %s", v,k)
         return res
 
-    def degree_histogram(self, show=True, normed=False):
-        """Compute histogram of the node degree (and plots the histogram)
-
-        .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.degree_histogram()
-
-
-        """
-        degree = self.degree().values()
-        Mdegree = max(degree)
-
-        if show == True:
-            pylab.clf()
-            res = pylab.hist(degree, bins=range(0,Mdegree+1), align='left',
-                             rwidth=0.8, normed=normed)
-            xlims = pylab.xlim()
-            ylims = pylab.ylim()
-            pylab.axis([0, xlims[1], ylims[0], ylims[1]*1.1])
-            pylab.grid()
-            pylab.title("Degree distribution")
-        return res
 
     def centrality_closeness(self, **kargs):
         """Compute closeness centrality for nodes.
@@ -2854,113 +2722,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
             print("successors")
             print(self.successors(specyName))
 
-    def plotFeedbackLoopsSpecies(self, cmap="Reds"):
-        """Returns and plots species part of feedback loops
 
-
-        :param str cmap: a color map
-        :return: dictionary with key (species) and values (number of feedback loop
-            containing the species) pairs.
-
-
-        """
-        data = nx.simple_cycles(self)
-        data = list(pylab.flatten(data))
-        if len(data) == 0:
-            print("no loops found")
-            return
-        counting = [(x, data.count(x)) for x in self.nodes() if data.count(x)!=0 and "and" not in x and "^" not in x]
-
-        M = float(max([count[1] for count in counting]))
-        # set a default
-        #for node in self.nodes():
-        #    self.node[node]['loops'] = "#FFFFFF"
-        for node in self.nodes():
-            self.node[node]['loops'] = 0
-
-        for count in counting:
-            #ratio_count = sm.to_rgba(count[1]/M)
-            ratio_count = count[1]/M
-            colorHex = ratio_count
-            #self.node[count[0]]['loops'] = colorHex
-            self.node[count[0]]['loops'] = ratio_count
-            self.node[count[0]]['style'] =  'filled,bold'
-
-        self.plot(node_attribute="loops", cmap=cmap)
-        return counting
-
-    def plotFeedbackLoopsHistogram(self):
-        """Plots histogram of the cycle lengths found in the graph
-
-        :return: list of lists containing all found cycles
-        """
-        data = list(nx.simple_cycles(self))
-        pylab.hist([len(x) for x in data])
-        pylab.title("Length of the feedback loops")
-        return data
-
-    def plot_in_out_degrees(self, show=True,ax=None, kind='kde'):
-        """
-         .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.plot_in_out_degrees()
-
-
-        """
-        import pandas as pd
-        ts1 = pd.TimeSeries(self.in_degree())
-        ts2 = pd.TimeSeries(self.out_degree())
-        df = pd.DataFrame([ts1, ts2]).transpose()
-        df.columns = ["in","out"]
-        if show:
-            df.plot(kind=kind, ax=ax)  # kernerl density estimation (estimiation of histogram)
-        #df = ...
-        #df.transpose().hist()
-        return df
-
-    def plot_degree_rank(self, loc='upper right', alpha=0.8, markersize=10,
-            node_size=25, layout='spring', marker='o', color='b'):
-        """Plot degree of all nodes
-
-        .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"))
-            c.plot_degree_rank()
-
-        """
-        degree_sequence=sorted(nx.degree(self).values(),reverse=True) # degree sequence
-
-        pylab.clf()
-        pylab.loglog(degree_sequence, color+'-', marker=marker,
-                markersize=markersize)
-        pylab.title("Degree/rank and undirected graph layout")
-        pylab.ylabel("Degree")
-        pylab.xlabel("Rank")
-
-        # draw graph in inset
-        if loc == 'upper right':
-            pylab.axes([0.45, 0.45, 0.45, 0.45])
-        else:
-            pylab.axes([0.1, 0.1, 0.45, 0.45])
-
-        UG = self.to_undirected()
-        Gcc = nx.connected_component_subgraphs(UG)[0]
-        if layout == 'spring':
-            pos = nx.spring_layout(Gcc)
-        else:
-            pos = nx.circular_layout(Gcc)
-        pylab.axis('off')
-        nx.draw_networkx_nodes(Gcc, pos, node_size=node_size)
-        nx.draw_networkx_edges(Gcc, pos, alpha=alpha)
-        pylab.grid()
-        pylab.show()
 
 
     def get_stats(self):
@@ -3194,7 +2956,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
           which are kept whatever is the outcome of the FW algorithm.
         """
         # some aliases
-        from numpy import inf
         assert (self.stimuli!=None and self.signals!=None)
 
         dist = nx.algorithms.floyd_warshall(self)
@@ -3202,16 +2963,15 @@ not present in the model. Change your model or MIDAS file. """ % x)
         namesNONC = []
         for node in self.nodes():
             # search for paths from the species to the signals
-            spe2sig = [(node, dist[node][s]) for s in self.signals if dist[node][s]!=inf]
+            spe2sig = [(node, dist[node][s]) for s in self.signals if dist[node][s]!=np.inf]
             # and from the nstimuli to the species
-            sti2spe = [(node, dist[s][node]) for s in self.stimuli if dist[s][node]!=inf]
+            sti2spe = [(node, dist[s][node]) for s in self.stimuli if dist[s][node]!=np.inf]
 
             if len(spe2sig)==0 or len(sti2spe)==0:
                 if node not in self.signals and node not in self.stimuli:
                     namesNONC.append(node)
 
         namesNONC  = list(set(namesNONC)) # required ?
-
         return namesNONC
 
     def random_poisson_graph(self, n=10, mu=3, remove_unconnected=False):
@@ -3227,35 +2987,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         for e in self.edges():
             if e[0]==e[1]:
                 self.remove_edge(e[0], e[1], key=key)
-
-    def hcluster(self):
-        """
-
-        .. plot::
-            :include-source:
-            :width: 50%
-
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.hcluster()
-
-        .. warning:: experimental
-        """
-        from scipy.cluster import hierarchy
-        from scipy.spatial import distance
-        path_length=nx.all_pairs_shortest_path_length(self.to_undirected())
-        n = len(self.nodes())
-        distances=np.zeros((n,n))
-        nodes = self.nodes()
-        for u,p in path_length.iteritems():
-            for v,d in p.iteritems():
-                distances[nodes.index(u)-1][nodes.index(v)-1] = d
-        sd = distance.squareform(distances)
-        hier = hierarchy.average(sd)
-        pylab.clf();
-        hierarchy.dendrogram(hier)
-
-        pylab.xticks(pylab.xticks()[0], nodes)
 
 
 
@@ -3304,4 +3035,218 @@ class ANDGate(object):
 
 
 
+class XCNOGraph(CNOGraph):
+    """extra plotting and statistical tools"""
+    def __init__(self, model=None, midas=None, verbose=True):
+        super(XCNOGraph, self).__init__(model, midas, verbose=verbose)
 
+    def hcluster(self):
+        """
+
+        .. plot::
+            :include-source:
+            :width: 50%
+
+            from cno import CNOGraph
+            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            c.hcluster()
+
+        .. warning:: experimental
+        """
+        from scipy.cluster import hierarchy
+        from scipy.spatial import distance
+        path_length=nx.all_pairs_shortest_path_length(self.to_undirected())
+        n = len(self.nodes())
+        distances=np.zeros((n,n))
+        nodes = self.nodes()
+        for u,p in path_length.iteritems():
+            for v,d in p.iteritems():
+                distances[nodes.index(u)-1][nodes.index(v)-1] = d
+        sd = distance.squareform(distances)
+        hier = hierarchy.average(sd)
+        pylab.clf();
+        hierarchy.dendrogram(hier)
+
+        pylab.xticks(pylab.xticks()[0], nodes)
+
+
+
+    def plot_degree_rank(self, loc='upper right', alpha=0.8, markersize=10,
+            node_size=25, layout='spring', marker='o', color='b'):
+        """Plot degree of all nodes
+
+        .. plot::
+            :include-source:
+            :width: 50%
+
+            from cno import CNOGraph
+            c = CNOGraph(cnodata("PKN-ToyPB.sif"))
+            c.plot_degree_rank()
+
+        """
+        degree_sequence=sorted(nx.degree(self).values(),reverse=True) # degree sequence
+
+        pylab.clf()
+        pylab.loglog(degree_sequence, color+'-', marker=marker,
+                markersize=markersize)
+        pylab.title("Degree/rank and undirected graph layout")
+        pylab.ylabel("Degree")
+        pylab.xlabel("Rank")
+
+        # draw graph in inset
+        if loc == 'upper right':
+            pylab.axes([0.45, 0.45, 0.45, 0.45])
+        else:
+            pylab.axes([0.1, 0.1, 0.45, 0.45])
+
+        UG = self.to_undirected()
+        Gcc = nx.connected_component_subgraphs(UG)[0]
+        if layout == 'spring':
+            pos = nx.spring_layout(Gcc)
+        else:
+            pos = nx.circular_layout(Gcc)
+        pylab.axis('off')
+        nx.draw_networkx_nodes(Gcc, pos, node_size=node_size)
+        nx.draw_networkx_edges(Gcc, pos, alpha=alpha)
+        pylab.grid()
+        pylab.show()
+
+    def plot_feedback_loops_histogram(self):
+        """Plots histogram of the cycle lengths found in the graph
+
+        :return: list of lists containing all found cycles
+        """
+        data = list(nx.simple_cycles(self))
+        pylab.hist([len(x) for x in data])
+        pylab.title("Length of the feedback loops")
+        return data
+
+    def plot_in_out_degrees(self, show=True,ax=None, kind='kde'):
+        """
+         .. plot::
+            :include-source:
+            :width: 50%
+
+            from cno import CNOGraph
+            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            c.plot_in_out_degrees()
+
+
+        """
+        import pandas as pd
+        ts1 = pd.TimeSeries(self.in_degree())
+        ts2 = pd.TimeSeries(self.out_degree())
+        df = pd.DataFrame([ts1, ts2]).transpose()
+        df.columns = ["in","out"]
+        if show:
+            df.plot(kind=kind, ax=ax)  # kernerl density estimation (estimiation of histogram)
+        #df = ...
+        #df.transpose().hist()
+        return df
+
+
+
+
+    def plot_feedback_loops_species(self, cmap="Reds"):
+        """Returns and plots species part of feedback loops
+
+
+        :param str cmap: a color map
+        :return: dictionary with key (species) and values (number of feedback loop
+            containing the species) pairs.
+
+
+        """
+        cmap = self._get_cmap(cmap)
+
+        data = nx.simple_cycles(self)
+        data = list(pylab.flatten(data))
+        if len(data) == 0:
+            print("no loops found")
+            return
+        counting = [(x, data.count(x)) for x in self.nodes() if data.count(x)!=0 and "and" not in x and "^" not in x]
+
+        M = float(max([count[1] for count in counting]))
+        # set a default
+        #for node in self.nodes():
+        #    self.node[node]['loops'] = "#FFFFFF"
+        for node in self.nodes():
+            self.node[node]['loops'] = 0
+
+        for count in counting:
+            #ratio_count = sm.to_rgba(count[1]/M)
+            ratio_count = count[1]/M
+            colorHex = ratio_count
+            #self.node[count[0]]['loops'] = colorHex
+            self.node[count[0]]['loops'] = ratio_count
+            self.node[count[0]]['style'] =  'filled,bold'
+
+        self.plot(node_attribute="loops", cmap=cmap)
+        return counting
+
+
+
+    def degree_histogram(self, show=True, normed=False):
+        """Compute histogram of the node degree (and plots the histogram)
+
+        .. plot::
+            :include-source:
+            :width: 50%
+
+            from cno import CNOGraph
+            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            c.degree_histogram()
+
+
+        """
+        degree = self.degree().values()
+        Mdegree = max(degree)
+
+        if show == True:
+            pylab.clf()
+            res = pylab.hist(degree, bins=range(0,Mdegree+1), align='left',
+                             rwidth=0.8, normed=normed)
+            xlims = pylab.xlim()
+            ylims = pylab.ylim()
+            pylab.axis([0, xlims[1], ylims[0], ylims[1]*1.1])
+            pylab.grid()
+            pylab.title("Degree distribution")
+        return res
+    def plot_adjacency_matrix(self, fontsize=12, **kargs):
+        """Plots adjacency matrix
+
+        :param kargs : optional arguments accepted by pylab.pcolor
+
+        .. plot::
+            :width: 70%
+
+            from cno import CNOGraph
+            from pylab import *
+            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+            c.plot(hold=True)
+
+        .. plot::
+            :width: 70%
+            :include-source:
+
+            from cno import CNOGraph
+            from pylab import *
+            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+            c.plot_adjacency_matrix()
+
+        """
+        nodeNames = sorted(self.nodes())
+        nodeNamesY = sorted(self.nodes())
+
+        nodeNamesY.reverse()
+        N = len(nodeNames)
+
+        data = self.adjacency_matrix(nodelist=nodeNames)
+
+        pylab.pcolor(pylab.flipud(pylab.array(data)), edgecolors="k", **kargs)
+        pylab.axis([0, N, 0, N])
+        pylab.xticks([0.5+x for x in pylab.arange(N)], nodeNames, rotation=90,
+                      fontsize=fontsize)
+        pylab.yticks([0.5+x for x in pylab.arange(N)], nodeNamesY, rotation=0,
+                      fontsize=fontsize)
+        pylab.tight_layout()

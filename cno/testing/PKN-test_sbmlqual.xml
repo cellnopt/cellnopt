@@ -1,0 +1,120 @@
+<html>
+ <body>
+  <sbml level="3" qual:required="true" xmlns="http://www.sbml.org/sbml/level3/version1/core" xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">
+   <model id="None">
+    <listofcompartments>
+     <compartment constant="true" id="main">
+     </compartment>
+    </listofcompartments>
+    <qual:listofqualitativespecies xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="A">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="C">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="B">
+     </qual:qualitativespecies>
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="D">
+     </qual:qualitativespecies>
+     <qual:listoftransitions xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">
+      <qual:transition qual:id="t1">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t1_A" qual:qualitativespecies="A" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+        <qual:input qual:id="theta_t1_B" qual:qualitativespecies="B" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="C" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <or>
+           </or>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             A
+            </ci>
+            <ci>
+             theta_t1_A
+            </ci>
+           </apply>
+           <apply>
+            <and>
+            </and>
+            <apply>
+             <geq>
+             </geq>
+             <ci>
+              A
+             </ci>
+             <ci>
+              theta_t1_A
+             </ci>
+            </apply>
+            <apply>
+             <geq>
+             </geq>
+             <ci>
+              B
+             </ci>
+             <ci>
+              theta_t1_B
+             </ci>
+            </apply>
+           </apply>
+           <apply>
+            <geq>
+            </geq>
+            <ci>
+             B
+            </ci>
+            <ci>
+             theta_t1_B
+            </ci>
+           </apply>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+      <qual:transition qual:id="t2">
+       <qual:listofinputs>
+        <qual:input qual:id="theta_t2_C" qual:qualitativespecies="C" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        </qual:input>
+       </qual:listofinputs>
+       <qual:listofoutputs>
+        <qual:output qual:qualitativespecies="D" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        </qual:output>
+       </qual:listofoutputs>
+       <qual:listoffunctionterms>
+        <qual:defaultterm qual:resultlevel="0">
+        </qual:defaultterm>
+        <qual:functionterm qual:resultlevel="1">
+         <math xmlns="http://www.w3.org/1998/Math/MathML">
+          <apply>
+           <geq>
+           </geq>
+           <ci>
+            C
+           </ci>
+           <ci>
+            theta_t2_C
+           </ci>
+          </apply>
+         </math>
+        </qual:functionterm>
+       </qual:listoffunctionterms>
+      </qual:transition>
+     </qual:listoftransitions>
+    </qual:listofqualitativespecies>
+   </model>
+  </sbml>
+ </body>
+</html>
