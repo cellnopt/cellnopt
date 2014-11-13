@@ -99,14 +99,14 @@ class MIDASReader(MIDAS):
         self._preprocess_cellines()
 
         # remove columns that are invalid and check MIDAS validity
-        self._midas_validity()
+        #self._midas_validity()
 
         # some cleanup to remove columns that have to be ignored
         labels = ["TR:"+x for x in self._ignore_codes if "TR:"+x in self._data.columns]
         self._data = self._data.drop(labels, axis=1)
 
         # from the data, build up the experiment and data dataframes
-        self._init()
+        #self._init()
 
     def _preprocess_cellines(self):
         #CellLine are tricky to handle with the MIDAS format because they use the
@@ -119,8 +119,9 @@ class MIDASReader(MIDAS):
         # choices.
         cellLines = [col for col in self._data.columns if "CellLine" in col]
         if len(cellLines) == 0:
-            raise CNOError("Could not find any column with the required keyword 'CellLine'"
-            + "capitalisation matters !")
+            self.logging.warning("Could not find any column with the required keyword 'CellLine'"
+            + "capitalisation matters !. Adding a column named TR:undefined:CellLine")
+            self._data['TR:undefined:CellLine'] = [1] * self._data.shape[0]
 
         for name in cellLines:
             if name.count(":") != 2:
@@ -382,7 +383,6 @@ class MIDASReader(MIDAS):
 
 class XMIDAS(MIDASReader):
     """The extended MIDAS data structure.
-
 
     .. plot::
         :include-source:
