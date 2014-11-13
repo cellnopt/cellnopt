@@ -10,6 +10,7 @@ from easydev.easytest import assert_list_almost_equal, TempFile
 from cno.testing import getdata
 from cno.misc import CNOError
 
+import numpy as np
 
 filenames = getdata(pattern="MD*")
 
@@ -295,6 +296,30 @@ def test_trend():
     trend.set(ts)
     trend.plot()
     trend.get_bestfit_color()
+
+
+
+def test_constructor_time():
+    m = XMIDAS(getdata("MD-test_time0_to_duplicate.csv"))
+    assert m.times == [0,30,180]
+    assert m.df.shape == (12,1)
+    assert np.all(m.experiments.values == np.array([[ 0.,  0.,  0.,  0.],
+       [ 1.,  0.,  0.,  0.],
+       [ 0.,  0.,  1.,  0.],
+       [ 1.,  0.,  1.,  0.]]))
+
+    assert np.all(m.df.values == np.array([[350],
+       [409],
+       [290],
+       [318],
+       [377],
+       [258],
+       [350],
+       [560],
+       [344],
+       [318],
+       [485],
+       [269]]))
 
 
 

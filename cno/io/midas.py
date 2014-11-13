@@ -35,7 +35,15 @@ __all__ = ["XMIDAS", "Trend", 'MIDASReader']
 
 
 class MIDAS(object):
-    """This is s a description of the MIDAS format (let us call it 1.0)"""
+    """This is s a description of the MIDAS format (let us call it 1.0)
+
+
+
+    column with those name are ignored:
+
+    ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
+
+    """
     _valid_codes = {
                    'ID':'identifier',
                    'TR':'stimuli/inhibitors',
@@ -59,7 +67,7 @@ class MIDAS(object):
 
         self.cmap_scale = 0.5
         self.fontsize = 16
-        self.logging = Logging("INFO")
+        self.logging = Logging(verbose)
         self._colormap = colormap.Colormap()
 
         self._dev = DevTools()
@@ -91,23 +99,25 @@ class MIDASReader(MIDAS):
         # If the provided filename is not defined, nothing to do
         if self.filename == None:
             return
-
+        self.logging.debug("reading the data")
         # skip spaces after delimiter
         self._data = pd.read_csv(self.filename, skipinitialspace=True, sep=",")
-
+        self.logging.debug("  processing cell lines")
         # figure out the cell line names
         self._preprocess_cellines()
 
         # remove columns that are invalid and check MIDAS validity
         self._midas_validity()
+        self.logging.debug("  checking format")
 
         # some cleanup to remove columns that have to be ignored
         labels = ["TR:"+x for x in self._ignore_codes if "TR:"+x in self._data.columns]
         self._data = self._data.drop(labels, axis=1)
 
         # from the data, build up the experiment and data dataframes
+        self.logging.debug("  initialising")
         self._init()
-
+        self.logging.debug("  data loaded")
     def _preprocess_cellines(self):
         #CellLine are tricky to handle with the MIDAS format because they use the
         #same prefix TR: as the treatments. You must be sure that (1) there are
@@ -183,7 +193,7 @@ class MIDASReader(MIDAS):
         unique_times = list(set(df.as_matrix().flatten()))
         unique_times.sort()
         if len(unique_times) <2:
-            raise CNOError("Must contains at least 2 time points including time zero")
+            raise CNOError("Must contains at least 2 time points including time zero.")
         if 0 not in unique_times or len(unique_times)<=1:
             raise CNOError("You must have zero times in the MIDAS file, that was not found.")
         times = list(df.as_matrix().flatten())
@@ -279,8 +289,6 @@ class MIDASReader(MIDAS):
         self.df = self.df.sortlevel(["experiment"])
         self.df = self.df.sort_index(axis=1) # sort the species
 
-
-
         # Get rid of TR in experiments
         self._experiments.columns = [this.replace("TR:", "") for this in self._experiments.columns]
 
@@ -331,7 +339,11 @@ class MIDASReader(MIDAS):
     def _duplicate_time_zero_using_inhibitors_only(self):
         """
         Sometimes the time zero data sets are not explicitly written in MIDAS
-        files. One example is MD-ExtLiverHepG2-MCP2010-mod4.csv from the
+        files. One example is MD-ExtLiverHepG2-MCP2010-mod4.csv
+
+        A set of perturbations with same inhibitors but different stimuli
+        have the same control, which is the perturbation with same inhibitor
+        and no stimuli. That control can therefore be duplicated.
 
         """
         self.logging.warning("duplicating time zeros data to fit experiment at other times")
@@ -362,7 +374,7 @@ class MIDASReader(MIDAS):
                 # get the times for this experimenti. it must contain the time zero
                 newdata = self.df.xs((self.cellLine, this_exp_intern))
                 # we only need the time 0
-                newrow = newdata[newdata.index == 0]
+                newrow = newdata[newdata.index == 0].copy()
                 # let us add some index information that is now missing
 
                 newrow[self._levels[0]] = self.cellLine
@@ -420,7 +432,7 @@ class XMIDAS(MIDASReader):
             cell lines are present)
 
         """
-        super(XMIDAS, self).__init__(filename)
+        super(XMIDAS, self).__init__(filename, verbose=verbose)
 
         self._cellLine = cellLine
 
@@ -1117,15 +1129,19 @@ class XMIDAS(MIDASReader):
                 y = self.df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
                 trend.set(y)
 
+                ratio = 0.95
                 if mode == "data":
                     color = trend.get_bestfit_color()
-                    pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 ,
-                            'k-o', markersize=markersize, color=color)
-                    pylab.fill_between(trend.normed_times+j, trend.normed_values+self.nExps-1-i ,
+                    pylab.plot(trend.normed_times+j,
+                               ratio*trend.normed_values+self.nExps-i-1 ,
+                               'k-o', markersize=markersize, color=color)
+                    pylab.fill_between(trend.normed_times+j,
+                                       ratio*trend.normed_values+self.nExps-1-i ,
                                        self.nExps-1-i, alpha=trend.alpha/1.2,
                                        color=color)
                 else:
-                    pylab.plot(trend.normed_times+j, 0.95*trend.normed_values+self.nExps-i-1 , 'k-o',
+                    pylab.plot(trend.normed_times+j,
+                               ratio*trend.normed_values+self.nExps-i-1 , 'k-o',
                                markersize=markersize, color="k")
 
                 #    plot(times+j, sim[i,j]/1.05+(self.nExps-i-1), 'b--o', markersize=markersize)

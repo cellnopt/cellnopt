@@ -324,8 +324,8 @@ class CNOGraph(nx.DiGraph):
         #: the attributes for nodes and edges are stored within this attribute. See :class:`CNOGraphAttributes`
         self.attributes = CNOGraphAttributes()
         self._midas = None
-        self.verbose = verbose
-        self.logging = Logging("INFO")
+        self._verbose = verbose
+        self.logging = Logging(self.verbose)
 
         self._compress_ands = False
         #: stimuli
@@ -373,13 +373,20 @@ class CNOGraph(nx.DiGraph):
 
         self._colormap = Colormap()
 
+    def _set_verbose(self, verbose):
+        self.logging.debugLevel = verbose
+        self.midas.logging.debugLevel = verbose
+    def _get_verbose(self):
+        return self._verbose
+    verbose = property(_get_verbose, _set_verbose)
 
     # SOME PROPERTIES
     def _get_midas(self):
         return self._midas
     def _set_midas(self, data):
         if isinstance(data, str):
-            self._midas = XMIDAS(data, cellLine=self.kargs.get("cellLine", None))
+            self._midas = XMIDAS(data, cellLine=self.kargs.get("cellLine", None),
+                                 verbose=self.verbose)
         elif isinstance(data, XMIDAS):
             self._midas = copy.deepcopy(data)
         elif data == None:
@@ -421,6 +428,7 @@ class CNOGraph(nx.DiGraph):
         # takes the SIF input file and build up the CNOGraph. remove all nodes
         # before
         self.clear()
+        self.logging.debug("reading the model")
 
         if isinstance(model, str):
             sif = SIF(model)
@@ -439,6 +447,7 @@ class CNOGraph(nx.DiGraph):
         # now, we need to set the attributes, only if we have a cnolist,
         # otherwise color is the default (white)
         self.set_default_node_attributes() # must be call if sif or midas modified.
+        self.logging.debug("model loaded")
 
 
     def _add_simple_reaction(self, reac):
@@ -501,35 +510,21 @@ class CNOGraph(nx.DiGraph):
 
         # if there is an OR gate, easy, just need to add simple reactions
         # A+!B=C is splitted into A=C and !B=C
-        if "+" in lhs and "^" not in lhs:
-            for this in lhs.split("+"):
-                self._add_simple_reaction(this+"="+rhs)
-            return
 
-        # if no AND gates, even simpler it can only be reaction A=B or !A=B
-        if "^" not in lhs and "+" not in lhs:
-            self._add_simple_reaction(lhs+"="+rhs)
-            return
-
-        if "^" and "+" in lhs:
+        for this_lhs in lhs.split("+"):
+            print(this_lhs)
             # + has priority upon ^ unlike in maths so we can split with +
             # A+B^C^D+E=C means 3 reactions: A=C, E=C and B^C^D=C
-            for this in lhs.split("+"):
-                if "+" in this:
-                    self._add_simple_reaction(this +"=" + rhs)
-                else:
-                    self.add_reaction(this +"=" + rhs)
-            return
+            if "^" not in this_lhs:
+                self._add_simple_reaction(this_lhs + "=" + rhs)
+            else:
+                and_gate_name = this_lhs + "=" + rhs
+                # and gates need a little bit more work
+                self.add_edge(and_gate_name, rhs, link="+") # the AND gate and its the unique output
+                # now the inputs
+                for this in this_lhs.split("^"):
+                    self._add_simple_reaction(this + "=" + and_gate_name)
 
-        # finally case with AND gates only
-        if "^" in lhs and "+" not in rhs:
-            # and gates need a little bit more work
-            self.add_edge(reac.name, rhs, link="+") # the AND gate and its the unique output
-            # now the inputs
-            species = lhs.split("^")
-            for this in species:
-                self._add_simple_reaction(this + "=" + reac.name)
-            return
 
     def set_default_edge_attributes(self,  **attr):
         if "compressed" not in attr.keys():
@@ -714,7 +709,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         G._inhibitors += other._inhibitors
         G._signals += other._signals
         G._stimuli += other._stimuli
-       
+
         # TODO: merge the MIDAS files. ?
         return G
 
@@ -879,7 +874,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         .. seealso:: :meth:`plot` that is dedicated to this kind of plot using graphviz
 
-        
+
         """
         self.logging.warning("Not for production. Use plot() instead")
         pos = nx.drawing.graphviz_layout(self, prog=prog)
@@ -1085,27 +1080,28 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         count = 0
         ret = -1
-        while count <5:
-            if rank is True:
-                H = self._get_ranked_agraph()
-            else:
-                H = nx.to_agraph(this)
-
+        if rank == False:
+            count = 10000
+        while count <10:
+            H = self._get_ranked_agraph()
 
             H.write(infile.name)
             frmt = os.path.splitext(filename)[1][1:]
             try:
                 H.draw(path=filename, prog=prog, format=frmt)
-                count = 5
+                count = 1000
                 ret = 0
             except Exception as err:
                 print(err.message)
                 self.logging.warning("%s program failed. Trying again" % prog)
                 count += 1
         if ret !=0:
-            self.logging.warning("%s program failed to create image" % prog)
-            return
-        
+            if rank == True:
+                self.logging.warning("%s program failed to create image" % prog)
+            H = nx.to_agraph(this)
+            frmt = os.path.splitext(filename)[1][1:]
+            H.draw(path=filename, prog=prog, format=frmt)
+
         if viewer=="pylab" and show==True:
             if hold == False:
                 pylab.clf()
@@ -1485,7 +1481,7 @@ not present in the model. Change your model or MIDAS file. """ % x)
         super(CNOGraph, self).remove_edge(u,v)
         #if "+" not in n:
         self.clean_orphan_ands()
-        
+
 
     def remove_node(self, n):
         """Remove a node n
@@ -1623,18 +1619,18 @@ not present in the model. Change your model or MIDAS file. """ % x)
         for node in sorted(self.nodes()):
             if self.degree(node) == 0 and node not in self.stimuli and \
                 node not in self.signals and node not in self.inhibitors:
-                """ 
+                """
                 FIXME It consists in finding the list of nodes that belong
-                to the network but are in no edges (if a node A is 
+                to the network but are in no edges (if a node A is
                 removed during compression, it appears in no edges,
-                but you can still find it in CNOGraph.nodes()). For 
+                but you can still find it in CNOGraph.nodes()). For
                 this set of nodes that do not belong to the network,
                 I add fake edges like A + mock1 and so on.
 
-                Doing like this I am able to save the compressed (or 
+                Doing like this I am able to save the compressed (or
                 the repaired) network, while using the same MIDAS file.
 
-                I was afraid to touch the code because I am not sure 
+                I was afraid to touch the code because I am not sure
                 whether this is the intended behaviour."""
 
                 self.logging.info("Found an orphan, which has been removed (%s)" % node)
