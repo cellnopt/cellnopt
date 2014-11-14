@@ -103,10 +103,10 @@ class Reaction(ReactionBase):
         if reaction is not None:
             # could be a Reaction instance
             if hasattr(reaction, "name"):
-                self.name = reaction.name
+                self.name = reaction.name[:]
             # or a string
             elif isinstance(reaction, str):
-                self.name = reaction
+                self.name = reaction[:]
             else:
                 raise CNOError("neither a string nor a Reaction instance")
 
@@ -143,7 +143,6 @@ class Reaction(ReactionBase):
         neg = [x[1:] for x in species if x.startswith("!") is True] 
         return {'-': neg, '+': pos}
 
-
     def _get_lhs(self):
         return self.name.split("=")[0]
     lhs = property(_get_lhs,
@@ -162,6 +161,7 @@ class Reaction(ReactionBase):
             doc="Getter for the right hand side of the = character")
 
     def _get_sign(self):
+        # FIXME used in sif only.
         if "!" in self.name and self.and_symbol not in self.name:
             return "-1"
         else:
@@ -255,7 +255,10 @@ class Reaction(ReactionBase):
         symbols = ['+', '^', '!', '=']
         new_name = ''
         current_species = ''
+
+        # LHS 
         for x in lhs:
+            # each time there is a symbol found, we will read a new species
             if x in symbols:
                 # the current species should now be added to the new_name
                 if current_species == k:
@@ -266,7 +269,7 @@ class Reaction(ReactionBase):
                 new_name += x
             else:
                 current_species += x
-        # in principle current_species should be the RHS
+        # RHS: in principle current_species should be the RHS
         if current_species == k:
             new_name += v
         else:
@@ -275,9 +278,8 @@ class Reaction(ReactionBase):
 
     def rename_species(self, mapping={}):
         for k,v in  mapping.iteritems():
-            newname = self._rename_one_species(self.name, k, v)
-            self.name = newname
-
+            self.name = self._rename_one_species(self.name, k, v)
+            
     def __eq__(self, other):
         # The reaction may not be sorted and user may not want to it to be sorted,
         # so we create a new instance and sort it
@@ -333,11 +335,11 @@ class Reactions(ReactionBase):
     """
     def __init__(self, reactions=[], strict_rules=True, verbose=False):
         super(Reactions, self).__init__()
-        # !! use a copy 
-        self._reactions = [Reaction(x) for x in reactions]
-        self._reaction = Reaction(strict_rules=strict_rules)
-        self.verbose = verbose
         self.strict_rules = strict_rules
+        # !! use a copy 
+        self._reactions = []
+        self.add_reactions(reactions)
+        self.verbose = verbose
 
     def to_list(self):
         """Return list of reaction names"""
@@ -346,7 +348,7 @@ class Reactions(ReactionBase):
     def _get_species(self):
         """Extract the specID out of reacID"""
 
-        # extract species from all reacID and add to a set
+        # extract species from all reactions and add to a set
         species = [this for reaction in self._reactions for this in reaction.species]
         species = set(species)
 
@@ -354,10 +356,6 @@ class Reactions(ReactionBase):
         species = sorted(species)
         return species
     species = property(_get_species, doc="return list of unique species")
-
-    #def _get_reactions(self):
-    #    return self._reactions
-    #reactions2 = property(fget=_get_reactions, doc="return list of reactions (objects)")
 
     def _get_reaction_names(self):
         return [reaction.name for reaction in self._reactions]
