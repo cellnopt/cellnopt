@@ -26,14 +26,14 @@ There is no strict rules on naming the identifier but please use
 
   #. `upper camel case convention <http://en.wikipedia.org/wiki/CamelCase>`_.
   #. A directory that contain some data based on an existing directory should
-     reuse the identifier of the existing directory and add a second identifier
-     separated by an underscore.
+     reuse the identifier of the existing directory. You can either add a second identifier
+     separated by an underscore or no separation.
 
 :Examples: ::
 
        ToyExample
        
-       ToyExample_Feedback
+       ToyExample_Feedback or ToyExampleFeedback
        
        ToyExample_Feedback_bis
 
