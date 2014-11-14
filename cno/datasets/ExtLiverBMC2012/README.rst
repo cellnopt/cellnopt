@@ -8,7 +8,7 @@ also contains **PKN-ExtLiverMSBmodUP.sif**, which has the same topology but name
 .. warning:: Note that they are a few variants of this data/PKN.
 
 
-.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ExtLiverPCB/ExtLiverPCB.png
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ExtLiverBMC2012/ExtLiverBMC2012.png
 
 References
 ----------------
