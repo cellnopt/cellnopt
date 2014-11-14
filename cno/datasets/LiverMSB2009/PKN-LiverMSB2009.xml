@@ -17,7 +17,7 @@
      </qual:qualitativespecies>
      <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="nik">
      </qual:qualitativespecies>
-     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="egfr">
+     <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="EGFR">
      </qual:qualitativespecies>
      <qual:qualitativespecies qual:compartment="main" qual:constant="false" qual:id="AKT">
      </qual:qualitativespecies>
@@ -704,7 +704,7 @@
        <qual:listofinputs>
         <qual:input qual:id="theta_t16_irs1t" qual:qualitativespecies="irs1t" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
-        <qual:input qual:id="theta_t16_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        <qual:input qual:id="theta_t16_EGFR" qual:qualitativespecies="EGFR" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
         <qual:input qual:id="theta_t16_ras" qual:qualitativespecies="ras" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
@@ -737,10 +737,10 @@
             <geq>
             </geq>
             <ci>
-             egfr
+             EGFR
             </ci>
             <ci>
-             theta_t16_egfr
+             theta_t16_EGFR
             </ci>
            </apply>
            <apply>
@@ -1286,7 +1286,7 @@
         </qual:input>
        </qual:listofinputs>
        <qual:listofoutputs>
-        <qual:output qual:qualitativespecies="egfr" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
+        <qual:output qual:qualitativespecies="EGFR" qual:thresholdlevel="1" qual:transitioneffect="assignmentLevel">
         </qual:output>
        </qual:listofoutputs>
        <qual:listoffunctionterms>
@@ -1368,7 +1368,7 @@
        <qual:listofinputs>
         <qual:input qual:id="theta_t33_shc" qual:qualitativespecies="shc" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
-        <qual:input qual:id="theta_t33_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        <qual:input qual:id="theta_t33_EGFR" qual:qualitativespecies="EGFR" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
        </qual:listofinputs>
        <qual:listofoutputs>
@@ -1397,10 +1397,10 @@
             <geq>
             </geq>
             <ci>
-             egfr
+             EGFR
             </ci>
             <ci>
-             theta_t33_egfr
+             theta_t33_EGFR
             </ci>
            </apply>
           </apply>
@@ -1496,7 +1496,7 @@
        <qual:listofinputs>
         <qual:input qual:id="theta_t37_IFNgr" qual:qualitativespecies="IFNgr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
-        <qual:input qual:id="theta_t37_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        <qual:input qual:id="theta_t37_EGFR" qual:qualitativespecies="EGFR" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
        </qual:listofinputs>
        <qual:listofoutputs>
@@ -1525,10 +1525,10 @@
             <geq>
             </geq>
             <ci>
-             egfr
+             EGFR
             </ci>
             <ci>
-             theta_t37_egfr
+             theta_t37_EGFR
             </ci>
            </apply>
           </apply>
@@ -2546,7 +2546,7 @@
       </qual:transition>
       <qual:transition qual:id="t64">
        <qual:listofinputs>
-        <qual:input qual:id="theta_t64_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        <qual:input qual:id="theta_t64_EGFR" qual:qualitativespecies="EGFR" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
        </qual:listofinputs>
        <qual:listofoutputs>
@@ -2562,10 +2562,10 @@
            <geq>
            </geq>
            <ci>
-            egfr
+            EGFR
            </ci>
            <ci>
-            theta_t64_egfr
+            theta_t64_EGFR
            </ci>
           </apply>
          </math>
@@ -2576,7 +2576,7 @@
        <qual:listofinputs>
         <qual:input qual:id="theta_t65_igfr" qual:qualitativespecies="igfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
-        <qual:input qual:id="theta_t65_egfr" qual:qualitativespecies="egfr" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
+        <qual:input qual:id="theta_t65_EGFR" qual:qualitativespecies="EGFR" qual:sign="positive" qual:thresholdlevel="1" qual:transitioneffect="none">
         </qual:input>
        </qual:listofinputs>
        <qual:listofoutputs>
@@ -2605,10 +2605,10 @@
             <geq>
             </geq>
             <ci>
-             egfr
+             EGFR
             </ci>
             <ci>
-             theta_t65_egfr
+             theta_t65_EGFR
             </ci>
            </apply>
           </apply>

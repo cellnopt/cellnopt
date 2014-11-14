@@ -4,7 +4,10 @@
 :Data: data in MIDAS format is in **MD-LiverMSB2009.csv**
 
 
-.. image:: comingsoon
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/LiverMSB2009/LiverMSB2009.png
+   :alt: LiverMSB2009 figure
+   :scale: 30%
+
 
 references
 ----------------
@@ -14,8 +17,10 @@ references
    *Discrete logic modeling as a means to link protein signaling networks with functional analysis of mammalian signal transduction*
    Molecular Systems Biology, 5:331, 2009
 
-:Note: There are differences with the version provided in the journal because PKN and MIDAS were not compatible. Here are the
-    differences. In the MIDAS file:
+Notes
+--------
+
+There are differences with the version provided in the journal because PKN and MIDAS were not compatible. Here are the differences. In the MIDAS file:
     
     - add :CellLine after TR:HepG2 
     - EGFRi-Gefin --> EGFRi
