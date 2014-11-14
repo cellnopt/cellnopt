@@ -1,11 +1,9 @@
 :Description:  **ExtLiverBMC2012** derives from :ref:`ExtLiverPCB`. The data is the same so no
 new data file is provided. The PKN model is slightly different (See below).
-:Model: **PKN-ExtLiverBMC2012.sif**
+:Model: The model to be used **PKN-ExtLiverBMC2012.sif**. Note, However, that the directory 
+also contains **PKN-ExtLiverMSBmodUP.sif**, which has the same topology but names are UniProt identifiers. 
 :Data:
     **MD-ExtLiverBMC2012.csv** is exactly the same file as **MD-ExtLiverPCB.csv**. It is normalised.
-
-
-
 
 .. warning:: Note that they are a few variants of this data/PKN.
 
@@ -41,6 +39,5 @@ Differences between **PKN-ExtLiverBMS2012.sif** with :ref:`ExtLiverPCB` model::
 Other files available
 --------------------------
 
-    * PKN-ExtLiverMSBmodUP.sif
     * MCP_HepG2mod4.csv (UNNORMALISED!!)
     * MCP_PriHumod5.csv (UNNORMALISED!!). Same as in :ref:`ExtLiverPriHu-MCP2010`
