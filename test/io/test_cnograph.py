@@ -269,15 +269,27 @@ def test_sif():
     assert c == c2
 
 def test_import_sif_with_and_gates():
-    fh = tempfile.NamedTemporaryFile(delete=False)
+    fh = tempfile.NamedTemporaryFile(delete=False, suffix=".sif")
     s = SIF()
     s.add_reaction("A^B=C")
     c = CNOGraph(s)
     c.to_sif(fh.name)
+    print(fh.name)
     c2 = CNOGraph(fh.name)
-    assert (c == c2) == True
+    print(c)
+    print(c2)
+    assert c == c2 
     fh.delete = True
     fh.close()
+
+    # test incorrect extension
+    fh = tempfile.NamedTemporaryFile(delete=False)
+    c.to_sif(fh.name)
+    try:
+        CNOGraph(fh.name)
+        assert Fales
+    except:
+        assert True
 
 def test_1cue_noinh():
     s = getdata("PKN-test_1cue_noinhibitor.sif")
@@ -316,12 +328,14 @@ def test_check_compatible_midas():
 
 
 
-def test_xcnograph():
+
+def test_split_node():
+    c = CNOGraph()
+    c.add_reactions(['a=b', 'a=c', 'c=d', 'b=d'])
+    c.expand_and_gates()
+    c.split_node('c',['c1', 'c2'])
+    assert sorted(c.reactions) == ['a=b', 'a=c1', 'a=c2', 'b=d', 
+            'b^c1=d', 'b^c2=d', 'c1=d', 'c2=d']
 
 
-    c = XCNOGraph(sif, midas)
-    c.plot_adjacency_matrix()
-    c.plot_feedback_loops_species()
-    c.plot_feedback_loops_histogram()
-    c.degree_histogram(show=True)
-    c.hcluster()
+

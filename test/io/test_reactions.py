@@ -24,6 +24,13 @@ def test_reaction():
     except:
         assert True
 
+    try:
+        r = Reaction(1)
+        assert False
+    except:
+        assert True
+
+
     # simplification
     r = Reaction("A+A=B")
     r.simplify()
@@ -44,67 +51,98 @@ def test_reaction():
     assert Reaction("A=B") != Reaction("C=B")
 
 
-def test_reactions():
-    c = Reactions(verbose=True)
-    assert c.reactions == []
-    assert c.species == []
-    c.add_reaction("A=B")
-    c.add_reaction("A=B")
-    assert len(c) == 1
-    print(c)
-    c.reactions
-    c.remove_reaction("A=B")
-    assert len(c) == 0
-    c.remove_reaction("A=B")
+    r = Reaction("A+B^!C=D")
+    assert r.name == "A+B^!C=D"
+    r.rename_species({'A':'F', 'C': 'E', 'D':'DD'})
+    assert r.name == 'F+B^!E=DD'
 
-def test_wrong_reactions():
-    c = Reactions()
-    try:
-        c.add_reaction("A")
-        assert False
-    except:
-        assert True
-    for symbol in c.valid_symbols:
+    # test get_signed 
+    r = Reaction("A+B^!C=D")
+    r.get_signed_lhs_species()
+    r = Reaction("A+!B=D")
+    r.get_signed_lhs_species()
+    r = Reaction("A+B=D")
+    r.get_signed_lhs_species()
+
+
+    r1 = Reaction("A+B=C")
+    r2 = Reaction("B+A=C")
+    assert r1 == r2
+
+
+
+class test_Reactions():
+
+    def _get_reactions(self):
+        return [Reaction('A=B'), Reaction('C=B')]
+
+    def test_rename_species(self):
+        rs = Reactions(self._get_reactions())
+        rs.rename_species({'A':'a', 'B':'b'})
+        assert sorted(rs.reactions) == ['C=b', 'a=b']
+
+
+    def test_reactions(self):
+        c = Reactions(verbose=True)
+        assert c.reactions == []
+        assert c.species == []
+        c.add_reaction("A=B")
+        c.add_reaction("A=B")
+        assert len(c) == 1
+        print(c)
+        c.reactions
+        c.remove_reaction("A=B")
+        assert len(c) == 0
+        c.remove_reaction("A=B")
+
+    def test_wrong_reactions(self):
+        c = Reactions()
         try:
-            c.add_reaction("A=%sB" % symbol)
+            c.add_reaction("A")
             assert False
         except:
             assert True
+        for symbol in c.valid_symbols:
+            try:
+                c.add_reaction("A=%sB" % symbol)
+                assert False
+            except:
+                assert True
 
-def test_search():
-    c = Reactions(verbose=True)
-    c.add_reaction("MEK=ERK")
-    c.search("MEK")
-    c.search("ME", strict=True)
-    c.search("MEK", strict=True)
+    def test_search(self):
+        c = Reactions(verbose=True)
+        c.add_reaction("MEK=ERK")
+        c.search("MEK")
+        c.search("ME", strict=True)
+        c.search("MEK", strict=True)
 
 
-def test_remove_species():
-    c = Reactions()
-    c.add_reaction("A+B=C")
-    c.remove_species("A")
-    c.reactions == ['B=C']
+    def test_remove_species(self):
+        c = Reactions()
+        c.add_reaction("A+B=C")
+        c.remove_species("A")
+        c.reactions == ['B=C']
 
 
-    c.add_reaction("A=C")
-    c.remove_reaction("A=C")
-    c.reactions == ['B=C']
+        c.add_reaction("A=C")
+        c.remove_reaction("A=C")
+        c.reactions == ['B=C']
 
-    # no effect
-    c.remove_species("dummy")
+        # no effect
+        c.remove_species("dummy")
 
-    # should be empty after this
-    c.remove_species(["A", "B", "C"])
-    assert len(c.reactions) == 0
+        # should be empty after this
+        c.remove_species(["A", "B", "C"])
+        assert len(c.reactions) == 0
 
-    c.add_reaction("A=B")
-    c.remove_species("A")
+        c.add_reaction("A=B")
+        c.remove_species("A")
 
-    # wrong type
-    try:
-        c.remove_species(1)
-        assert False
-    except:
-        assert True
+        # wrong type
+        try:
+            c.remove_species(1)
+            assert False
+        except:
+            assert True
 
 
