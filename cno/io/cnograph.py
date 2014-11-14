@@ -279,7 +279,6 @@ class CNOGraph(nx.DiGraph):
 
     .. todo:: penwidth should be a class attribute, overwritten if provided.
 
-
     """
     def __init__(self, model=None, data=None, verbose=False, **kargs):
         """.. rubric:: Constructor
@@ -361,6 +360,8 @@ class CNOGraph(nx.DiGraph):
             elif model.endswith(".xml"):
                 self.read_sbmlqual(model)
                 self.filename = model[:]
+            else:
+                raise CNOError("Only filenames with .sif and .xml (SBML-qual) extension are recognised.")
         elif isinstance(model, SIF):
             self.read_sif(model)
             self.filename = 'undefined'
@@ -452,11 +453,11 @@ class CNOGraph(nx.DiGraph):
 
     def _add_simple_reaction(self, reac):
         """A=B or !A=B"""
-        # not the second argument: we split only once so you can add a reaction
-        # where the RHS is a AND gate coded with a "=" character in it (e.g.,
-        # A=A+B=C which means reaction from A to AND gate called A+B=C)
+
+        #reac = Reaction(reac) # validate the reaction
+        #reac = reac.name
         lhs, rhs = reac.split("=", 1)
-        if lhs=="":
+        if reac == "":
             self.add_node(rhs)
         elif rhs == "":
             self.add_node(lhs)
@@ -620,8 +621,6 @@ class CNOGraph(nx.DiGraph):
         .. seealso:: special attributes are automatically set by :meth:`set_default_edge_attributes`.
             the color of the edge is black if link is set to "+" and red otherwie.
 
-
-
         """
         link = attr.get("link", "+")
         attr['link'] = link
@@ -640,12 +639,10 @@ class CNOGraph(nx.DiGraph):
                     attr["link"] = "+"
                     super(CNOGraph, self).add_edge(x, u, attr_dict, **attr)
 
-
     def clear(self):
         """Remove nodes and edges and MIDAS instance"""
         super(CNOGraph, self).clear()
         self.midas = None
-
 
     def clean_orphan_ands(self):
         """Remove AND gates that are not AND gates anymore
@@ -708,7 +705,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         # TODO: merge the MIDAS files. ?
         return G
-
 
     def __sub__(self, other):
         print("calling __sub__")
@@ -998,9 +994,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             else:
                 self.logging.info("Empty graph. Nothing to plot")
                 return
-            #if node_attribute not in self.node[node].keys():
-            #    self.logging.info("attribute %s not found. We may need to call a specific method (e.g., centrality_closeness before")
-            #    return
 
             import matplotlib
             cmap = matplotlib.cm.get_cmap(cmap)
@@ -1444,8 +1437,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         """
         return nx.adjacency_matrix(self, nodelist=nodelist).astype(int)
 
-
-
     def remove_edge(self, u, v):
         """Remove the edge between u and v.
 
@@ -1610,6 +1601,9 @@ not present in the model. Change your model or MIDAS file. """ % x)
                 self.logging.info("Found an orphan, which has been removed (%s)" % node)
                 self.remove_node(node)
 
+        if len(self.compressable_nodes) > 0:
+            self.logging.warning("There are still compressable nodes. Call again")
+
     def _decompress(self):
         """uncompress some nodes if possible.
 
@@ -1683,9 +1677,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         successors = self.successors(node)
         predecessors = self.predecessors(node)
 
-        #newnodes1 = []
-        #newnodes2 = []
-        #newedges = []
         # todo: may be simplified ?
         if len(successors) == 1 and len(predecessors)==1:
             self.logging.debug("Compressing %s 1,1 mode" % node)
@@ -1699,9 +1690,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
             attrs['compressed'].append(compressed)
             if predecessors[0] != successors[0]:
                 self.add_edge(predecessors[0], successors[0], None, **attrs)
-            #newnodes1.append(predecessors[0])
-            #newnodes2.append(successors[0])
-            #newedges.append(attr['link'])
         elif len(successors) == 1:
 
             for predecessor in predecessors:
@@ -1712,14 +1700,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
                     attrs = self._get_collapse_edge(attr, attr2)
                     attrs['compressed'].append(compressed)
                     self.add_edge(predecessor, successors[0], None, **attrs)
-                #newnodes1.append(predecessor)
-                #newnodes2.append(successors[0])
-                #newedges.append(attr['link'])
         elif len(predecessors) == 1:
-            #print(node)
-            #print(predecessors)
             for successor in successors:
-                #print(successor)
                 attr = self.edge[node][successor]
                 if predecessors[0] != successor:
                     attr2 = self.edge[predecessors[0]][node]
@@ -1727,9 +1709,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
                     attrs = self._get_collapse_edge(attr, attr2)
                     attrs['compressed'].append(compressed)
                     self.add_edge(predecessors[0], successor, None,  **attrs)
-                #newnodes1.append(predecessors[0])
-                ##newnodes2.append(successor)
-                #newedges.append(attr['link'])
         else:
             if len(successors) > 1 and len(predecessors) > 1:
                 self.logging.debug(node, successors, predecessors)
@@ -1990,7 +1969,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         reac = "^".join(inputs)
         reac += "=" + output
-        from cno.io.reactions import Reaction
         # FIXME: what aboit sorting while doing the instanciation.
         reac = Reaction(reac)
         reac.sort()
@@ -2409,15 +2387,11 @@ not present in the model. Change your model or MIDAS file. """ % x)
         """
 
         for this in self._find_and_nodes():
-            gate = ANDGate(this)
-            previous = gate.name[:]
-            # rename the and gate if needed looping over the proposed mapping
-            for oldname, newname in mapping.iteritems():
-                #if oldname in gate.get_lhs_species():
-                gate.rename_species(oldname, newname)
+            reac = Reaction(this)
+            reac.rename_species(mapping)
             # add to mapping
-            if previous != gate.name:
-                mapping.update({previous:gate.name})
+            if reac.name != this:
+                mapping.update({this:reac.name})
 
         c = nx.relabel_nodes(self, mapping)
         c._stimuli = self._stimuli[:]
@@ -2426,7 +2400,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
         c._compressed = self._compressed[:]
 
         for old, new in mapping.iteritems():
-            print("reanming {} -> {}".format(old, new))
             if old in c._stimuli:
                 c._stimuli.append(new)
                 c._stimuli.remove(old)
@@ -2641,8 +2614,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
         .. seealso:: :meth:`cno.io.sbmlqual`
         """
-        # TODO could use reactions inside SBMLqual. No need
-        # to know if this is a sif or cnograph as long as it has reactions
         s = SIF()
         for reac in self.reactions:
             s.add_reaction(reac)
@@ -2702,9 +2673,6 @@ not present in the model. Change your model or MIDAS file. """ % x)
 
     def merge_nodes(self, nodes, node):
         """Merge several nodes into a single one
-
-        .. todo:: check that if links of the inputs or outputs are different, there is no ambiguity..
-
 
         .. plot::
             :include-source:
@@ -2809,8 +2777,8 @@ not present in the model. Change your model or MIDAS file. """ % x)
         self.remove_node(node)
         # remove AND gates as well:
         for this in self._find_and_nodes():
-            gate = ANDGate(this)
-            if node in gate.get_lhs_species():
+            gate = Reaction(this)
+            if node in gate.lhs_species:
                 self.remove_node(this)
 
         if node in self._signals:
@@ -2824,51 +2792,19 @@ not present in the model. Change your model or MIDAS file. """ % x)
             self._inhibitors.remove(node)
 
     def _rename_node_in_reaction(self, reaction, old, new):
-        """This function rename a species within a reaction.
-
-        It takes into account that the species may be inhibited or may be part
-        of an AND reaction.
-
-
-        """
-        lhs, rhs = reaction.split("=")
-
-        # rename LHS taking ! and AND into account
-        species = lhs.split("^")
-        new_species = []
-        for name in species:
-            if name.startswith("!"):
-                name = name[1:]
-                if name == old:
-                    name = new
-                new_species.append("!"+name)
-            elif name == old:
-                new_species.append(new)
-            else:
-                new_species.append(name)
-
-        if len(new_species) == 1:
-            lhs = new_species
-        else:
-            lhs = "^".join(new_species)
-
-        #rename RHS if needed
-        if rhs == old:
-            rhs = new
-
-        new_reaction = "=".join([lhs,rhs])
-        return new_reaction
+        """This function rename a species within a reaction."""
+        reac = Reaction(reaction)
+        reac.rename_species({old:new})
+        return reac.name
 
     # Repeats the compression until no further compression
     # can be performed (or the max number of compression cycles has been reached)
     def recursive_compress(self, max_num_iter = 25):
         """Recursive compression.
 
-
         Sometimes, when networks are large and complex, calling the :meth:`compress` only once
         may not be enough to remove all compressable nodes. Calling this function guarantees
         that all compressable nodes are removed.
-
 
         """
         #the nodes are sorted to obtain every time the same results:
@@ -2945,37 +2881,4 @@ not present in the model. Change your model or MIDAS file. """ % x)
                 self.remove_edge(e[0], e[1], key=key)
 
 
-class ANDGate(object):
-    def __init__(self, name):
-        self._name = None
-        self.name = name[:]
 
-    def _get_name(self):
-        return self._name
-    def _set_name(self, name):
-        if "=" not in name:
-            raise ValueError("An AND reaction must contain the = character")
-        lhs, rhs = name.split("=")
-        if "^" not in lhs or "^" in rhs:
-            raise ValueError("An AND reaction must contain the ^ character in the LHS e.g.: A^B=C")
-
-    def get_lhs_species(self):
-        species = self.name.split("=")[0]
-        return species.split("^")
-    def get_rhs_species(self):
-        return self.name.split("=")[1]
-
-    def rename_species(self, oldname, newname):
-        if oldname not in self.name:
-            return
-
-        # first, let us check the RHS. easy to rename
-        rhs = self.get_rhs_species()
-        if rhs == oldname:
-            rhs = newname[:]
-
-        lhs_species = self.get_lhs_species()
-        new_lhs = [species if species!=oldname else newname for species in
-                lhs_species]
-        new_lhs = "^".join(new_lhs)
-        self.name = "=".join([new_lhs, rhs])
