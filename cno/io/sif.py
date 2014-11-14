@@ -145,7 +145,7 @@ class SIF(Reactions):
     def is_and(self, value):
         if self.convert_ands is True and self.and_symbol in value:
             return True
-        if re.search('^[a,A][n,N][D,d]\d$', value) :
+        if re.search('^[a,A][n,N][D,d]\d+$', value) :
             return True
         return False
 
