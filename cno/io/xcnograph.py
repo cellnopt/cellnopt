@@ -114,7 +114,7 @@ class XCNOGraph(CNOGraph):
         nx.draw_networkx_nodes(Gcc, pos, node_size=node_size)
         nx.draw_networkx_edges(Gcc, pos, alpha=alpha)
         pylab.grid()
-        pylab.show()
+        #pylab.show()
 
     def plot_feedback_loops_histogram(self):
         """Plots histogram of the cycle lengths found in the graph
@@ -148,9 +148,6 @@ class XCNOGraph(CNOGraph):
         #df = ...
         #df.transpose().hist()
         return df
-
-
-
 
     def plot_feedback_loops_species(self, cmap="Reds"):
         """Returns and plots species part of feedback loops
