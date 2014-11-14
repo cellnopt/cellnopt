@@ -9,7 +9,7 @@
     were removed.
 
 
-.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPCB/PKN-ToyPCB.png
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPCB/ToyPCB.png
    :alt: ToyPCB figure
 
 

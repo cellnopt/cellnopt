@@ -23,7 +23,7 @@ Node ask1 removed
 
 Here is a representation of the ToyPB model (with the data).
 
-.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/PKN-ToyPB.png
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB/ToyPB.png
    :width: 200pt
    :height: 100pt
    :align: center

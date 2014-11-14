@@ -4,7 +4,7 @@
     is also provided
 :Data: The file **MD-ToyMMB.csv** contains the data generated 
 
-.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyMMB/PKN-ToyMMB.png
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyMMB/ToyMMB.png
    :alt: ToyMMB figure
    :scale: 30%
 

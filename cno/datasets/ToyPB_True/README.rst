@@ -20,7 +20,7 @@ Node ask1 removed
 
 :Note: the MIDAS file MD-ToyPB_True.csv is identical to MD-ToyPB.csv
 
-.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB_True/PKN-ToyPB_True.png
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPB_True/ToyPB_True.png
    :alt: ToyPB_True figure
 
 

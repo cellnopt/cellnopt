@@ -2,8 +2,7 @@
 new data file is provided. The PKN model is slightly different (See below).
 :Model: The model to be used **PKN-ExtLiverBMC2012.sif**. Note, However, that the directory 
 also contains **PKN-ExtLiverMSBmodUP.sif**, which has the same topology but names are UniProt identifiers. 
-:Data:
-    **MD-ExtLiverBMC2012.csv** is exactly the same file as **MD-ExtLiverPCB.csv**. It is normalised.
+:Data: **MD-ExtLiverBMC2012.csv** is exactly the same file as **MD-ExtLiverPCB.csv**. It is normalised.
 
 .. warning:: Note that they are a few variants of this data/PKN.
 
