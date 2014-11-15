@@ -16,7 +16,6 @@ def test_class_constructor():
     N = len(c)
     c.compress()
     assert len(c) == 12
-    c._decompress()
  
     # check constructor with another cnograph
     c2 = CNOGraph(c)
@@ -34,7 +33,7 @@ def test_class_constructor():
 def test_plotting():
     c = CNOGraph(sif, midas)
     c.midas.df +=.5
-    c.plot(legend=True, show=True, cmap='heat', colorbar=True)
+    c.plot(show=True, cmap='heat', colorbar=True)
     c.centrality_closeness()
     c.plot(node_attribute="centrality_closeness", show=False) 
     c.preprocessing()
@@ -139,6 +138,7 @@ def test_centrality():
     c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
     c.centrality_betweeness()
     c.centrality_degree()
+    c.centrality_eigenvector()
     c.draw()
 
 def test_preprocessing():
@@ -185,7 +185,6 @@ def test_others():
     print(c)
     #c.reactions
     #c.namesSpecies
-    c.dependency_matrix()
     c.get_same_rank()
     c.dot_mode = "signals_bottom"
     c.get_same_rank()
@@ -210,6 +209,8 @@ def test_others():
     c.add_reaction("A^C=B")
     c.add_reaction("a^b^c+a=d")
     c.add_reactions(["A=B", "A=C"])
+
+    c.get_stats()
 
 
 def test_set_operators():
@@ -326,6 +327,13 @@ def test_check_compatible_midas():
     except CNOError:
         assert True
 
+def test_random_poisson():
+    c = CNOGraph()
+    c.random_poisson_graph(n=100, mu=2.5, remove_unconnected=False)
+
+    # test also recursive compression
+    c.expand_and_gates()
+    c.compress()
 
 
 
@@ -338,4 +346,16 @@ def test_split_node():
             'b^c1=d', 'b^c2=d', 'c1=d', 'c2=d']
 
 
+def test_remove_self_loops():
+    c = CNOGraph()
+    c.add_reaction("a=b")
+    c.add_reaction("b=b")
+    c.remove_self_loops()
+    c.reactions == ['a=b']
+
+
+def test_rename_node():
+    c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+    c.expand_and_gates()
+    c.rename_node({'Ras':'RAS'}).plot()
 

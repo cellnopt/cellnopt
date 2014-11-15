@@ -23,3 +23,7 @@ def test_xcnograph():
     c.plot_degree_rank(loc='upper right', layout='circular')
     c.plot_degree_rank(loc='other', layout='spring')
     c.plot_in_out_degrees()
+    c.dependency_matrix()
+
+    c = XCNOGraph()
+    c.plot_feedback_loops_species()
