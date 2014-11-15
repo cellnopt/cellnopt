@@ -1,10 +1,11 @@
 # -*- python -*-
 #
-#  This file is part of the cinapps.tcell package
+#  This file is part of the cellnopt package
 #
-#  Copyright (c) 2012-2013 - EMBL-EBI
+#  Copyright (c) 2012-2014 - EMBL-EBI
 #
 #  File author(s): Thomas Cokelaer (cokelaer@ebi.ac.uk)
+#       <cokelaer at gmail dot com>
 #
 #  Distributed under the GLPv3 License.
 #  See accompanying file LICENSE.txt or copy at
@@ -13,18 +14,7 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-"""This module provides tools to convert a SIF file into a format appropriate to
-check sign consistency with ASP tools::
-
-    A 1 B
-    A -1 C
-
-converted to ::
-
-    A -> B +
-    A -> C -
-
-"""
+""".. topic:: **convert SIF format to ASP sign consistency**"""
 from __future__ import print_function
 #from __future__ import unicode_literals
 
@@ -44,8 +34,18 @@ class SIF2ASP(SIF):
         >>> s = SIF2ASP(filename)
         >>> s.to_net("PKN-ToyMMB.net")
 
-    .. todo:: what to do with AND nodes ?
+    This module provides tools to convert a SIF file into a format appropriate to
+    check sign consistency with ASP tools::
 
+        A 1 B
+        A -1 C
+
+    converted to ::
+    
+        A -> B +
+        A -> C -
+
+    .. seealso:: This class inherits from :class:`cno.io.sif.SIF`.
     """
     def __init__(self, filename=None):
         """.. rubric:: Constructor
