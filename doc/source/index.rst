@@ -49,8 +49,9 @@ User guide
     :numbered:
 
     quickstart.rst
-    userguide.rst
-    applications.rst
+
+..    userguide.rst
+..    applications.rst
 
 References
 ##################
@@ -63,15 +64,6 @@ References
     references
 
 
-.. toctree::
-
-    biblio.rst
-
-
-.. toctree::
-
-    todo.rst
+.. .. toctree::
+..    biblio.rst
     ChangeLog.rst
-    authors.rst
-    contribute
-    faqs.rst
