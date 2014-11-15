@@ -33,6 +33,7 @@ from .io.sif import SIF
 from .io.cna import CNA
 from .io.midas import XMIDAS
 from .io.cnograph import CNOGraph
+from .io.xcnograph import XCNOGraph
 
 # MISC package
 from .misc import CNOError
