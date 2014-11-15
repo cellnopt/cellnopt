@@ -53,8 +53,8 @@ class XCNOGraph(CNOGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.hcluster()
 
         .. warning:: experimental
@@ -85,8 +85,8 @@ class XCNOGraph(CNOGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"))
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyPB.sif"))
             c.plot_degree_rank()
 
         """
@@ -117,13 +117,13 @@ class XCNOGraph(CNOGraph):
         pylab.grid()
         #pylab.show()
 
-    def plot_feedback_loops_histogram(self):
+    def plot_feedback_loops_histogram(self, **kargs):
         """Plots histogram of the cycle lengths found in the graph
 
         :return: list of lists containing all found cycles
         """
         data = list(nx.simple_cycles(self))
-        pylab.hist([len(x) for x in data])
+        pylab.hist([len(x) for x in data], **kargs)
         pylab.title("Length of the feedback loops")
         return data
 
@@ -133,8 +133,8 @@ class XCNOGraph(CNOGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.plot_in_out_degrees()
 
 
@@ -150,7 +150,7 @@ class XCNOGraph(CNOGraph):
         #df.transpose().hist()
         return df
 
-    def plot_feedback_loops_species(self, cmap="Reds"):
+    def plot_feedback_loops_species(self, cmap="heat", **kargs):
         """Returns and plots species part of feedback loops
 
 
@@ -158,15 +158,23 @@ class XCNOGraph(CNOGraph):
         :return: dictionary with key (species) and values (number of feedback loop
             containing the species) pairs.
 
+        .. plot::
+            :include-source:
+            :width: 50%
+
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            c.plot_feedback_loops_species(cmap='heat', colorbar=True)
 
         """
+        if len(self) == 0:
+            self.logging.warning("Empty graph")
+            return
 
         data = nx.simple_cycles(self)
         data = list(pylab.flatten(data))
-        if len(data) == 0:
-            print("no loops found")
-            return
-        counting = [(x, data.count(x)) for x in self.nodes() if data.count(x)!=0 and "and" not in x and "^" not in x]
+        counting = [(x, data.count(x)) for x in self.nodes() 
+                if data.count(x)!=0 and "and" not in unicode(x) and self.isand(x) is False]
 
         M = float(max([count[1] for count in counting]))
         # set a default
@@ -183,7 +191,7 @@ class XCNOGraph(CNOGraph):
             self.node[count[0]]['loops'] = ratio_count
             self.node[count[0]]['style'] =  'filled,bold'
 
-        self.plot(node_attribute="loops", cmap=cmap)
+        self.plot(node_attribute="loops", cmap=cmap, **kargs)
         return counting
 
 
@@ -195,8 +203,8 @@ class XCNOGraph(CNOGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.degree_histogram()
 
 
@@ -218,23 +226,25 @@ class XCNOGraph(CNOGraph):
     def plot_adjacency_matrix(self, fontsize=12, **kargs):
         """Plots adjacency matrix
 
-        :param kargs : optional arguments accepted by pylab.pcolor
+        :param kargs: optional arguments accepted by pylab.pcolor
+
+        From the following graph, 
 
         .. plot::
             :width: 70%
 
-            from cno import CNOGraph
-            from pylab import *
-            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plot()
+
+        The adjacency matrix can be created as follows:
 
         .. plot::
             :width: 70%
             :include-source:
 
-            from cno import CNOGraph
-            from pylab import *
-            c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
             c.plot_adjacency_matrix()
 
         """
@@ -266,8 +276,8 @@ class XCNOGraph(CNOGraph):
             :include-source:
             :width: 80%
 
-            from cno import CNOGraph
-            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            from cno import XCNOGraph, cnodata
+            c = XCNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.dependency_Matrix()
 
         """
