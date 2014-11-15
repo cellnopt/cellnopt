@@ -105,7 +105,7 @@ class Reaction(ReactionBase):
             if hasattr(reaction, "name"):
                 self.name = reaction.name[:]
             # or a string
-            elif isinstance(reaction, str):
+            elif isinstance(reaction, (str, unicode)):
                 self.name = reaction[:]
             else:
                 raise CNOError("neither a string nor a Reaction instance")
