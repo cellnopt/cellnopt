@@ -22,6 +22,7 @@ import subprocess
 import shutil
 import json
 
+from matplotlib import colors
 import pylab
 import networkx as nx
 import numpy as np
@@ -159,7 +160,6 @@ class XCNOGraph(CNOGraph):
 
 
         """
-        cmap = self._get_cmap(cmap)
 
         data = nx.simple_cycles(self)
         data = list(pylab.flatten(data))
@@ -214,6 +214,7 @@ class XCNOGraph(CNOGraph):
             pylab.grid()
             pylab.title("Degree distribution")
         return res
+
     def plot_adjacency_matrix(self, fontsize=12, **kargs):
         """Plots adjacency matrix
 
@@ -225,7 +226,7 @@ class XCNOGraph(CNOGraph):
             from cno import CNOGraph
             from pylab import *
             c = CNOGraph(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-            c.plot(hold=True)
+            c.plot()
 
         .. plot::
             :width: 70%
@@ -252,3 +253,62 @@ class XCNOGraph(CNOGraph):
         pylab.yticks([0.5+x for x in pylab.arange(N)], nodeNamesY, rotation=0,
                       fontsize=fontsize)
         pylab.tight_layout()
+
+    def dependency_matrix(self, fontsize=12):
+        r"""Return dependency matrix
+
+        * :math:`D_{i,j}` = green ; species i is an activator of species j (only positive path)
+        * :math:`D_{i,j}` = red   ; species i is an inhibitor of species j (only negative path)
+        * :math:`D_{i,j}` = yellow; ambivalent (positive and negative paths connecting i and j)
+        * :math:`D_{i,j}` = red   ; species i has no influence on j
+
+        .. plot::
+            :include-source:
+            :width: 80%
+
+            from cno import CNOGraph
+            c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
+            c.dependency_Matrix()
+
+        """
+        nodes = sorted(self.nodes())
+        N = len(nodes)
+        data = np.zeros((len(nodes), len(nodes)))
+        for i,node1 in enumerate(nodes):
+            paths = nx.shortest_path(self, node1)
+            for j,node2 in enumerate(nodes):
+                if node1 == node2:
+                    data[i][j] = 0
+                elif node2 not in paths.keys():
+                    data[i][j] = 0
+                else:
+                    path = paths[node2]
+                    links = [self.edge[path[ii]][path[ii+1]]["link"] for ii in range(0,len(path)-1)]
+                    if len(np.unique(links)) == 2:
+                        data[i][j] = 1  # yellow
+                    elif "+" in links:
+                        data[i][j] = 2  #green
+                    elif "-" in links:
+                        if links.count("-") % 2 ==0:
+                            data[i][j] = 2
+                        else:
+                            data[i][j] = 3   #red
+
+        nodeNames = [node.replace("_", "\_") for node in nodes]
+        nodeNamesY = [node.replace("_", "\_") for node in nodes]
+
+        norm = colors.Normalize(vmin=0, vmax=3)
+
+        cmap = colors.ListedColormap([[0., 0, 0], [1,1,0],[.5, 1, 0.], [1., 0, 0.]])
+        indices = [i for i, node in enumerate(nodes) 
+                if "and" not in node or "+" in nodes]
+
+        pylab.clf()
+        pylab.pcolor(pylab.flipud(data[indices][:,indices]), edgecolors="w", 
+                cmap=cmap, norm=norm);
+
+        N = len(indices)
+
+        nodeNames = np.array(nodeNames)[indices]
+        nodeNamesY = np.array(nodeNamesY)[indices[::-1]]
+

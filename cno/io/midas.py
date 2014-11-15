@@ -30,6 +30,7 @@ import midas_normalisation as normalisation
 from cno.core import DevTools
 from cno.misc import CNOError
 
+
 __all__ = ["XMIDAS", "Trend", 'MIDASReader']
 
 
@@ -99,25 +100,31 @@ class MIDASReader(MIDAS):
         # If the provided filename is not defined, nothing to do
         if self.filename == None:
             return
-        self.logging.debug("reading the data")
+        self.logging.debug("Reading the data")
         # skip spaces after delimiter
-        self._data = pd.read_csv(self.filename, skipinitialspace=True, sep=",")
-        self.logging.debug("  processing cell lines")
+        self._data = pd.read_csv(self.filename, skipinitialspace=True, 
+                sep=",")
+        self.logging.debug(" - Processing cell lines")
         # figure out the cell line names
         self._preprocess_cellines()
 
         # remove columns that are invalid and check MIDAS validity
         self._midas_validity()
-        self.logging.debug("  checking format")
+        self.logging.debug(" - Checking format")
 
         # some cleanup to remove columns that have to be ignored
-        labels = ["TR:"+x for x in self._ignore_codes if "TR:"+x in self._data.columns]
+        labels = ["TR:"+x for x in self._ignore_codes 
+                if "TR:"+x in self._data.columns]
+
         self._data = self._data.drop(labels, axis=1)
+        # just clean up the labels (strip)
+        self._data.columns = [x.strip() for x in self._data.columns]
 
         # from the data, build up the experiment and data dataframes
-        self.logging.debug("  initialising")
+        self.logging.debug(" - Initialising")
         self._init()
-        self.logging.debug("  data loaded")
+        self.logging.debug(" - Data loaded")
+
     def _preprocess_cellines(self):
         #CellLine are tricky to handle with the MIDAS format because they use the
         #same prefix TR: as the treatments. You must be sure that (1) there are
