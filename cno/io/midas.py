@@ -1017,7 +1017,7 @@ class XMIDAS(MIDASReader):
             :include-source:
             :width: 80%
 
-            >>> from cno import XMIDAS, cno
+            >>> from cno import XMIDAS, cnodata
             >>> m = XMIDAS(cnodata("MD-ToyPB.csv"))
             >>> m.corr(cmap="green")
 
@@ -1599,6 +1599,7 @@ class XMIDAS(MIDASReader):
         :param bool inplace: False by default
         :param float dynamic_range: a multiplicative value set to the noise
         :param str mode: bounded (between min and max of the current data) or free
+
         """
         # axis=1 means each values is modified
         # axis=0 means the same value is added to the entire column
@@ -1944,10 +1945,13 @@ class XMIDAS(MIDASReader):
         change the dataframe that contains the data.
 
         """
+        N = len(self.experiments)
         list_exps = [('Stimuli', stimulus) for stimulus in self.names_stimuli]
         list_exps += [('Inhibitors', inhibitor) for inhibitor in self.names_inhibitors]
         new_order = self.experiments.groupby(list_exps).groups
-        new_order = [new_order[x][0] for x in sorted(new_order.keys())]
+        new_order = [new_order[x] for x in sorted(new_order.keys())]
+        new_order = list(pylab.flatten(new_order))
+        assert len(new_order )== N
         self._experiments = self.experiments.reindex_axis(new_order, axis=0)
 
     def sort_experiments_by_inhibitors(self):
@@ -1956,10 +1960,13 @@ class XMIDAS(MIDASReader):
         Affects the experiment dataframe for th rendering but do not
         change the dataframe that contains the data.
         """
+        N = len(self.experiments)
         list_exps = [('Inhibitors', inhibitor) for inhibitor in self.names_inhibitors]
         list_exps += [('Stimuli', stimulus) for stimulus in self.names_stimuli]
         new_order = self.experiments.groupby(list_exps).groups
-        new_order = [new_order[x][0] for x in sorted(new_order.keys())]
+        new_order = [new_order[x] for x in sorted(new_order.keys())]
+        new_order = list(pylab.flatten(new_order))
+        assert len(new_order )== N
         self._experiments = self.experiments.reindex_axis(new_order, axis=0)
 
     def __eq__(self, other):
