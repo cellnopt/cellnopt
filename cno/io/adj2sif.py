@@ -2,9 +2,10 @@
 #
 #  This file is part of cellnopt software
 #
-#  Copyright (c) 2012-2013 - EMBL-EBI
+#  Copyright (c) 2012-2014 - EMBL-EBI
 #
-#  File author(s): Thomas Cokelaer <cokelaer@ebi.ac.uk>
+#  File author(s): Thomas Cokelaer <cokelaer@ebi.ac.uk>, 
+#      <cokelaer at gmail dot com>
 #
 #  Distributed under the GPLv3 License.
 #  See accompanying file LICENSE.txt or copy at
@@ -13,6 +14,7 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
+""":Topic: **adjacency matrix**"""
 import networkx as nx
 import numpy
 
@@ -20,16 +22,19 @@ import numpy
 class ADJ2SIF(object):
     """Reads an adjacency matrix (and names) from CSV files
 
+    .. warning:: API likely to change to use pandas to simplify the API.
+
     The instance can then be exported to :class:`~cno.io.sif.SIF` or used
     as input for the :class:`cno.io.cnograph.CNOGraph` structure.
 
     ::
 
-        >>> from cno.io import ADJ2SIF, CNOGraph, getdata
+        >>> from cno.io import ADJ2SIF
+        >>> from cno import getdata
         >>> f1 = getdata("test_adjacency_matrix.csv")
         >>> f2 = getdata("test_adjacency_names.csv")
         >>> s = ADJ2SIF(f1, f2)
-        >>> sif = s.export2sif()
+        >>> sif = s.to_sif()
         >>> c = CNOGraph(s.G)
     
         Where the adjacency matrix looks like::
@@ -53,7 +58,6 @@ class ADJ2SIF(object):
         version may need to add that information using incidence matrix for
         instance
 
-    .. todo:: could use pandas to keep names and data altogether.
 
     """
     def __init__(self, filenamePKN=None, filenameNames=None, delimiter=","):
@@ -97,15 +101,14 @@ class ADJ2SIF(object):
     def _get_names(self):
         return self._names
     names = property(_get_names, 
-        doc="Names of the nodes read from the the provided filename")
+        doc="Names of the nodes read from the the provided filename. Could be empty")
 
     def _get_G(self):
         return self._G
-    G = property(_get_G, doc="The graph created from")
+    G = property(_get_G, doc="The graph created from the input data")
 
     def load_adjacency(self, filename=None):
-        """Reads the adjacency matrix filename
-        
+        """Reads an adjacency matrix filename
         
         if no filename is provided, tries to load from the attribute
         :attr:`filename`.

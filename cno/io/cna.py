@@ -13,7 +13,7 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-"""Module dedicated to the CNA reactions data structure
+""".. topic:: **Module dedicated to the CNA reactions data structure**
 
 
 :Status: for production but not all features implemented.
@@ -76,6 +76,7 @@ class CNA(Reactions):
         >>> a = Reactions(getdata('test_reactions'))
         >>> reacs = a.reactions
 
+    .. seealso:: CNA class inherits from :class:`cno.io.reaction.Reaction`
     """
     def __init__(self, filename=None, type=2, verbose=False):
         """.. rubric:: Constructor
@@ -211,5 +212,4 @@ first column after pipe character (%s)""" % (str(i+1), parameters[0]))
                 s.add_reaction(reac)
             except CNOError:
                 print("Skipped {} reaction".format(reac))
-                pass
         s.save(filename)
