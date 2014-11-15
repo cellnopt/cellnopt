@@ -32,6 +32,13 @@ CNOGraph
     :undoc-members:
     :synopsis: 
 
+XCNOGraph
+~~~~~~~~~~~
+.. automodule:: cno.io.xcnograph
+    :members:
+    :undoc-members:
+    :synopsis: 
+
 MIDAS
 ~~~~~~~
 .. automodule:: cno.io.midas
@@ -81,8 +88,6 @@ CNA
 ~~~~~~~~
 .. automodule:: cno.io.cna
     :members:
-    :undoc-members:
-    :inherited-members:
     :synopsis: 
 
 
@@ -95,11 +100,8 @@ Converters
     :inherited-members:
     :synopsis: 
 
-
 .. automodule:: cno.io.sif2asp
     :members:
-    :undoc-members:
-    :inherited-members:
     :synopsis: 
 
 .. automodule:: cno.io.sop2sif
