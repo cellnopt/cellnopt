@@ -113,16 +113,27 @@ class Feeder(object):
         :param penwidth: link width
         """
         from cno.io import CNOGraph
+        from cno.io import Reactions
+
         c = CNOGraph(self.model, self.data)
+
+        reactions = Reactions(self.newlinks)
 
         for e in c.edges():
             c.edge[e[0]][e[1]]['ecolor'] = 0
 
-        for link in self.newlinks:
-            a,b = link.split("=")
-            c.add_edge(a, b, link='+', ecolor=.5, penwidth=3) # all positive here by chance
-            c.edge[a][b]['penwidth'] = penwidth
+        for reaction in reactions._reactions:
+            lhs, rhs = reaction.lhs, reaction.rhs
+            # Could be a + or ^ combination
+            for this_lhs in lhs.split("+"):
+                if "^" not in this_lhs:
+                    c.add_edge(this_lhs, rhs, link='+', ecolor=.5, 
+                            penwidth=3) # all positive here by chance
+                    c.edge[this_lhs][rhs]['penwidth'] = penwidth
+                else:
+                    # # TODO 
+                    raise NotImplementedError
         c.plot(edge_attribute='ecolor', edge_attribute_labels=False, cmap=cmap)
 
 
-
+        return c
