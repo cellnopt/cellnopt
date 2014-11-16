@@ -444,7 +444,7 @@ class Reactions(ReactionBase):
     def add_reaction(self, reaction):
         """Adds a reaction in the list of reactions
 
-        See documentation of the :class:`Reaction` for details. Here are
+        See documentation of the :class:`Reaction` class for details. Here are
         some valid reactions::
 
             a=b

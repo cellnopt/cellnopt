@@ -13,7 +13,7 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-""".. topic:: **Module dedicated to the CNA reactions data structure**
+""":Topic: **Module dedicated to the CNA reactions data structure**
 
 
 :Status: for production but not all features implemented.

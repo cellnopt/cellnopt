@@ -48,8 +48,8 @@ class CNOGraphMultiEdges(CNOGraph, nx.MultiDiGraph):
         :width: 50%
         :include-source:
 
-         >>> from cellnopt.core import *
-         >>> c = cnograph.CNOGraphMultiEdges(cnodata("PKN-ToyPCB.sif"), cnodata("MD-ToyPCB.csv"))
+         >>> from cno import cnodata, CNOGraphMultiEdges
+         >>> c = CNOGraphMultiEdges(cnodata("PKN-ToyPCB.sif"), cnodata("MD-ToyPCB.csv"))
          >>> c.add_edge("PAK", "Mek", link="-")
          >>> c.plot()
 
@@ -57,7 +57,8 @@ class CNOGraphMultiEdges(CNOGraph, nx.MultiDiGraph):
         :width: 50%
         :include-source:
 
-        >>> from cellnopt.core import *
+        >>> from cno import cnodata
+        >>> from cno import cnograph
         >>> c2 = cnograph.CNOGraphMultiEdges()
         >>> c2.add_edge("A","B", link="+", edgecolor=.1)
         >>> c2.add_edge("A","B", link="+", edgecolor=.2)
@@ -80,7 +81,8 @@ class CNOGraphMultiEdges(CNOGraph, nx.MultiDiGraph):
 
         required to overwrite the cnograph method that do to handle the multigraph structure
 
-        .. seealso:: :meth:`~cellnopt.core.cnograph.CNOGraph.set_default_edge_attributes`
+        .. seealso:: :meth:`~cno.io.cnograph.CNOGraph.set_default_edge_attributes`
+
         """
         for edge in self.edges():
             for key in self.edge[edge[0]][edge[1]].keys():
