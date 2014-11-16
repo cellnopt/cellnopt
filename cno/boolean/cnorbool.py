@@ -217,9 +217,9 @@ class CNORbool(CNOBase):
 
 
         script_template = """
-        #library(CellNOptR)
-        #pknmodel = readSIF("%(pkn)s")
-        #cnolist = CNOlist("%(midas)s")
+        library(CellNOptR)
+        pknmodel = readSIF("%(pkn)s")
+        cnolist = CNOlist("%(midas)s")
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s, 
             expansion=%(expansion)s, maxInputsPerGate=3)
         mse = computeScoreT1(cnolist, model, %(bs)s)
