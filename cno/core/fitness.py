@@ -35,7 +35,7 @@ class Fitness(object):
         If we take it into account (deviationPen)
         """
         # number of NA in the data at time 30
-
+        assert time in self.midas.times
         na_indata = self.midas.df.query("time==@time").isnull().sum().sum()
         print(na_indata)
 
