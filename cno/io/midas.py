@@ -89,7 +89,7 @@ class MIDASReader(MIDAS):
 
         ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
 
-    User should not need to use this class. Use :class:`XMIDAS instead`.
+    User should not need to use this class. Use :class:`XMIDAS` instead.
 
     """
     def __init__(self, filename, verbose='ERROR'):
@@ -432,7 +432,7 @@ class XMIDAS(MIDASReader):
 
     """
     def __init__(self, filename=None, cellLine=None, verbose=False):
-        """.. topic:: **Constructor**
+        """**Constructor**
 
         :param str filename: filename of a MIDAS file or a XMIDAS instance
         :param str cellLine: name of a cell Line (compulsary if several
@@ -1788,7 +1788,7 @@ class XMIDAS(MIDASReader):
             :width: 80%
 
             from cno import XMIDAS, cnodata
-            m = midas.XMIDAS(cnodata("MD-ToyPB.csv"))
+            m = XMIDAS(cnodata("MD-ToyPB.csv"))
             m.hcluster("species")
 
         """

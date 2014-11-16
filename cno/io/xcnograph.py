@@ -278,7 +278,7 @@ class XCNOGraph(CNOGraph):
 
             from cno import XCNOGraph, cnodata
             c = XCNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
-            c.dependency_Matrix()
+            c.dependency_matrix()
 
         """
         nodes = sorted(self.nodes())

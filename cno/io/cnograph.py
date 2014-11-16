@@ -170,7 +170,7 @@ class CNOGraph(nx.DiGraph):
     populate the graph. However, it is also possible to read a network
     stored in a file in :class:`cno.io.sif.SIF` format::
 
-        >>> from cno import CNOGraph
+        >>> from cno import CNOGraph, cnodata
         >>> pknmodel = cnodata("PKN-ToyPB.sif")
         >>> c = CNOGraph(pknmodel)
 
@@ -326,9 +326,9 @@ class CNOGraph(nx.DiGraph):
         """.. rubric:: Constructor
 
         :param str model: optional network in SIF format. Can be the filename
-            or instance of :class:`~cellnopt.core.sif.SIF`
+            or instance of :class:`~cno.io.sif.SIF`
         :param data: optional data file in MIDAS format. Can be a filename or
-            instance of :class:`~cellnopt.core.midas.XMIDAS`
+            instance of :class:`~cno.io.midas.XMIDAS`
         :param bool verbose:
         :param str celltype: if a MIDAS file contains more that 1 celltype, you
             must provide a celltype name
@@ -1000,8 +1000,10 @@ class CNOGraph(nx.DiGraph):
 
         See the graphviz homepage documentation for more options.
 
+        ::
 
-        c.plot(filename='test.svg', viewer='browse',  remove_dot=False, rank_method='cno')
+            c.plot(filename='test.svg', viewer='yout_favorite_viewer',  
+                remove_dot=False, rank_method='cno')
 
 
         .. note:: edge attribute in CNOGraph (Directed Graph) are not coded
@@ -1223,8 +1225,10 @@ class CNOGraph(nx.DiGraph):
         import matplotlib
         cmap = matplotlib.cm.get_cmap(cmap)
         sm = matplotlib.cm.ScalarMappable(
-            norm=matplotlib.colors.Normalize(vmin=0,vmax=1), cmap=cmap)
+            norm=matplotlib.colors.Normalize(vmin=0, vmax=1), cmap=cmap)
+
         M = max([self.edge[edge[0]][edge[1]][edge_attribute] for edge in self.edges()])
+
         for edge in self.edges():
             value = self.edge[edge[0]][edge[1]][edge_attribute]/float(M)
             rgb = sm.to_rgba(value)
@@ -1435,7 +1439,7 @@ class CNOGraph(nx.DiGraph):
         ::
 
             c = CNOGraph()
-            c.add_node("A", data=[1,2,3,]
+            c.add_node("A", data=[1,2,3,])
 
         .. warning:: **attr** replaces any key found in attr_dict. See :meth:`add_edge` for details.
 
@@ -1470,7 +1474,7 @@ class CNOGraph(nx.DiGraph):
             :width: 80%
             :include-source:
 
-            from cno import CNOGraph
+            from cno import CNOGraph, cnodata
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.preprocessing()
             c.plot()
@@ -1490,7 +1494,7 @@ class CNOGraph(nx.DiGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
+            from cno import CNOGraph, cnodata
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.plot()
@@ -1513,7 +1517,7 @@ class CNOGraph(nx.DiGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
+            from cno import CNOGraph, cnodata
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.cutnonc()
             c.compress()
@@ -1915,7 +1919,7 @@ class CNOGraph(nx.DiGraph):
             c1.plot(hold=True)
             title("after call to \\n expand_or_gates function")
 
-        .. seealso:: :meth:`~cellnopt.core.cnograph.CNOGraph.expand_and_gates`
+        .. seealso:: :meth:`~cno.io.cnograph.CNOGraph.expand_and_gates`
 
         """
         for this in self._find_and_nodes():
@@ -2338,7 +2342,7 @@ class CNOGraph(nx.DiGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
+            from cno import CNOGraph, cnodata
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_degree()
             c.plot(node_attribute="centrality_degree")
@@ -2369,7 +2373,7 @@ class CNOGraph(nx.DiGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
+            from cno import CNOGraph, cnodata
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_closeness()
             c.plot(node_attribute="centrality_closeness")
@@ -2416,7 +2420,7 @@ class CNOGraph(nx.DiGraph):
             :include-source:
             :width: 50%
 
-            from cno import CNOGraph
+            from cno import CNOGraph, cnodata
             c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyPB.csv"))
             c.centrality_betweeness()
             c.plot(node_attribute="centrality_betweeness")
@@ -2718,7 +2722,7 @@ class CNOGraph(nx.DiGraph):
 
         .. doctest::
 
-            >>> from cno import CNOGraph
+            >>> from cno import CNOGraph, cnodata
             >>> model = cnodata('PKN-ToyMMB.sif')
             >>> data = cnodata('MD-ToyMMB.csv')
             >>> c = CNOGraph(model, data)
