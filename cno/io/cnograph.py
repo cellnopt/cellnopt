@@ -369,6 +369,11 @@ class CNOGraph(nx.DiGraph):
                 }
             } 
 
+        # cellnoptR has always the same layout:
+        #s.model.graph_options['graph']['nodesep'] = 0.5
+        #s.model.plot(rank_method='same')
+
+
         self.plot_options = {
                 'colorbar.orientation': 'horizontal',
                 'colorbar.shrink': 0.5,
@@ -1271,7 +1276,7 @@ class CNOGraph(nx.DiGraph):
                     if i != len(ranks[k])-1:
                         node2 = ranks[k][i+1]
                         H.add_edge(node1, node2, style="invis")
-
+            
         # Note: if name is set to "cluster"+name, black box is put around the cluster
         for rank in sorted(ranks.keys()):
             name = unicode(rank)
