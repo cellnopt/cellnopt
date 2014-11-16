@@ -66,7 +66,7 @@ class MIDAS(object):
         #: filename of the original data
         self.filename = filename
 
-        self.cmap_scale = 0.5
+        self.cmap_scale = 1 # 1 is same as CellNOptR
         self.fontsize = 16
         self.logging = Logging(verbose)
         self._colormap = colormap.Colormap()
@@ -486,8 +486,10 @@ class XMIDAS(MIDASReader):
                 'plot.fontsize':16,
                 'plot.fontsize.times':16,
                 'plot.fontsize.species':16,
-                'plot.fontsize.perturbations':16,
+                'plot.fontsize.perturbations':14,
                 'plot.fontsize.titles':16,
+                'plot.layout.shift_top': 1,
+                'plot.colorbar.N': 10,
                 }
 
     def _manage_replicates(self):
@@ -1093,7 +1095,7 @@ class XMIDAS(MIDASReader):
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize", 10))
         pylab.gca().set_xticks(xt)
 
-    def plot_data(self, markersize=3, logx=False,color="black", **kargs):
+    def plot_data(self, markersize=4, logx=False,color="black", **kargs):
         """plot experimental curves
 
         .. plot::
@@ -1112,6 +1114,11 @@ class XMIDAS(MIDASReader):
         times = np.array(self.times)
         max_time = float(max(self.times))
 
+        if self.df.max().max() > 1 or self.df.min().min() < 0:
+            raise ValueError('data must be between 0 and 1')
+
+
+
         if logx == False:
             # a tick at x = 0, 0.5 in each box (size of 1) + last x=1 in last box
             xt = pylab.linspace(0, self.nSignals, self.nSignals*2+1)
@@ -1125,7 +1132,6 @@ class XMIDAS(MIDASReader):
             xtlabels = self._get_xtlabels()
             times = pylab.log10(1+times)/max(pylab.log10(1+times))
 
-
         trend = Trend()
 
         # TODO must be using the index instead of a range ince indices may not
@@ -1134,22 +1140,26 @@ class XMIDAS(MIDASReader):
             #vMax = float(self.df.max(skipna=True).max(skipna=True))
             for j in range(0, self.nSignals):
                 y = self.df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
+                
                 trend.set(y)
+                Y = y
 
                 ratio = 0.95
                 if mode == "data":
                     color = trend.get_bestfit_color()
+
                     pylab.plot(trend.normed_times+j,
-                               ratio*trend.normed_values+self.nExps-i-1 ,
-                               'k-o', markersize=markersize, color=color)
+                               ratio*Y + self.nExps-i-1 ,
+                               'k-o', markersize=markersize, color=color, mfc='gray')
+
                     pylab.fill_between(trend.normed_times+j,
-                                       ratio*trend.normed_values+self.nExps-1-i ,
-                                       self.nExps-1-i, alpha=trend.alpha/1.2,
+                                       ratio*Y + self.nExps-1-i ,
+                                       self.nExps-1-i, alpha=trend.alpha/1.1,
                                        color=color)
                 else:
                     pylab.plot(trend.normed_times+j,
-                               ratio*trend.normed_values+self.nExps-i-1 , 'k-o',
-                               markersize=markersize, color="k")
+                               ratio*Y + self.nExps-i-1 , 'k-o',
+                               markersize=markersize, color="k", mfc='gray')
 
                 #    plot(times+j, sim[i,j]/1.05+(self.nExps-i-1), 'b--o', markersize=markersize)
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize",10))
@@ -1175,13 +1185,12 @@ class XMIDAS(MIDASReader):
             pass
         return diffs
 
-    def plot_layout(self, cmap="heat", N=10,
+    def plot_layout(self, cmap="heat",
         rotation=90, margin=0.05, colorbar=True, vmax=None, vmin=0.,
         mode="data", **kargs):
         """plot MSE errors and layout
 
         :param cmap:
-        :param N:
         :param rotation:
         :param margin:
         :param colorbar:
@@ -1222,29 +1231,34 @@ class XMIDAS(MIDASReader):
                 wspace=self._params['plot.layout.space'],
                 hspace=self._params['plot.layout.space'])
         fig = pylab.figure(num=1, figsize=(10, 6))
-        ax_main = fig.add_subplot(gs[2:, 0:7])
+        shift_top = self._params['plot.layout.shift_top']  #2
+        layout_width = 7
+        w1 = layout_width + 1
+        w2 = layout_width + 2
+
+        ax_main = fig.add_subplot(gs[shift_top:, 0:layout_width])
         ax_main.set_yticks([], [])
         ax_main.set_xticks([], [])
 
         # stimuli
-        ax_stim = fig.add_subplot(gs[2:, 7:8])
+        ax_stim = fig.add_subplot(gs[shift_top:, layout_width:w1])
         ax_stim.set_yticks([], [])
         ax_stim.set_xticks([], [])
-        ax_stim_top = fig.add_subplot(gs[0:2, 7:8])
+        ax_stim_top = fig.add_subplot(gs[0:shift_top, layout_width:w1])
         ax_stim_top.set_yticks([], [])
         ax_stim_top.set_xticks([], [])
 
         # inhibitors
-        ax_inh = fig.add_subplot(gs[2:, 8:9])
+        ax_inh = fig.add_subplot(gs[shift_top:, w1:w2])
         ax_inh.set_yticks([], [])
         ax_inh.set_xticks([], [])
-        ax_inh_top = fig.add_subplot(gs[0:2, 8:9])
+        ax_inh_top = fig.add_subplot(gs[0:shift_top, w1:w2])
         ax_inh_top.set_yticks([], [])
         ax_inh_top.set_xticks([], [])
 
         # colorbar
         if colorbar and mode == 'mse':
-            ax_cb = fig.add_subplot(gs[2:, 9:10])
+            ax_cb = fig.add_subplot(gs[shift_top:, w2:10])
             #ax_cb.set_yticks([], [])
             ax_cb.set_xticks([], [])
 
@@ -1323,6 +1337,7 @@ class XMIDAS(MIDASReader):
         # we build our own colorbar to place it on the RHS
         if colorbar and mode == "mse":
             pylab.sca(ax_cb)
+            N = self._params['plot.colorbar.N']
             cbar = pylab.linspace(0, 1, N)
             indices = [int(x) for x in cbar**self.cmap_scale*(N-1)]
 
@@ -2019,11 +2034,15 @@ class Trend(object):
     values = property(_get_values, doc="return the value array")
 
     def _get_normed_times(self):
+        # Here, time 0 is zero so we can divide by Max only
         return self.times / float(self.times.max())
     normed_times = property(_get_normed_times, doc="return normed time array")
 
     def _get_normed_values(self):
+        # FIXME do we want to use the span ?? 
+        #span = float(self.values.max()) - float(self.values.min())
         return self.values / float(self.values.max())
+        #return (self.values -self.values.min())/ span
     normed_values = property(_get_normed_values, doc="return normed value array")
 
     def _get_alpha(self):
