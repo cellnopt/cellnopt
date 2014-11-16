@@ -6,17 +6,19 @@ from easydev import precision
 class Models(object):
     """Class to read and plot models as exported by CASPO
 
+    ::
+
         >>> import models
         >>> m = models.Models()
-        >>> m.plotdot() # average model, whcih can be obtained with  m.get_average_model()
-        >>> m.plotdot(model_number=0)  # indices are m.df.index
-        >>> m.plotdot(model_number=0)  # indices are m.df.index
+        >>> m.plot() # average model, whcih can be obtained with  m.get_average_model()
+        >>> m.plot(model_number=0)  # indices are m.df.index
+        >>> m.plot(model_number=0)  # indices are m.df.index
 
     .. note:: One difficulty is the way ANDs are coded in different software. In CASPO,
         the AND gate is coded as "A+B=C". Note that internally we use ^ especially
         in CNOGraph. Then, an AND edge is splitted in sub edges. so, A+B=C is made
         of 3 edges A -> A+B=C , B -> A+B=C and A+B=C -> C. This explains the wierd
-        code in :meth:`plotdot`.
+        code in :meth:`cno.io.cnograph.plot`.
 
 
     """
@@ -24,7 +26,7 @@ class Models(object):
         """
         if you have a first column, whihc is not a reaction, set index_col to 0
 
-        .. tood:: values are 0/1 since we have bit strings but could be anything in other
+        .. todo:: values are 0/1 since we have bit strings but could be anything in other
         formalisms (e.g., ODE) how to handle those cases ?
         """
         # FIXME interpret the first columns
@@ -98,7 +100,7 @@ class Models(object):
 
         """
         self.compute_average(model_number=model_number, *args, **kargs)
-        self.cnograph.plotdot(edge_attribute="average", **kargs)
+        self.cnograph.plot(edge_attribute="average", **kargs)
 
     def to_sif(self, filename=None):
         """Exports 2 SIF using the "and" convention
