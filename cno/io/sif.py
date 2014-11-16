@@ -86,7 +86,7 @@ class SIF(Reactions):
 
     Aliases to the columns are stored in read-only attributes called :attr:`nodes1`,
     :attr:`edges`, :attr:`nodes2`. You can only add or remove reactions.
-    Reactions are stored in :attr:`reacID`.
+    Reactions are stored in :attr:`reactions`.
 
 
 

@@ -14,7 +14,7 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-""".. topic:: **convert SIF format to ASP sign consistency**"""
+""":Topic: **convert SIF format to ASP sign consistency**"""
 from __future__ import print_function
 #from __future__ import unicode_literals
 
