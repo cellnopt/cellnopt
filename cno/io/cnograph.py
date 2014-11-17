@@ -563,24 +563,23 @@ class CNOGraph(nx.DiGraph):
 
         """
         reac = Reaction(reac)
-        lhs, rhs = reac.lhs, reac.rhs
 
         # if there is an OR gate, easy, just need to add simple reactions
         # A+!B=C is splitted into A=C and !B=C
 
-        for this_lhs in lhs.split("+"):
+        for this_lhs in reac.lhs.split("+"):
             # + has priority upon ^ unlike in maths so we can split with +
             # A+B^C^D+E=C means 3 reactions: A=C, E=C and B^C^D=C
             if self.isand(this_lhs) is False:
-                self._add_simple_reaction(this_lhs + "=" + rhs)
+                self._add_simple_reaction(this_lhs + "=" + reac.rhs)
             else:
                 and_gate_name = this_lhs + "=" + rhs
                 # and gates need a little bit more work
-                self.add_edge(and_gate_name, rhs, link="+") # the AND gate and its the unique output
-                # now the inputs
+                # the and gate to the output
+                self.add_edge(and_gate_name, reac.rhs, link="+") 
+                # now the inputs to the and gate
                 for this in this_lhs.split(self.and_symbol):
                     self._add_simple_reaction(this + "=" + and_gate_name)
-
 
     def set_default_edge_attributes(self,  **attr):
         if "compressed" not in attr.keys():
@@ -1108,6 +1107,7 @@ class CNOGraph(nx.DiGraph):
         count = 0
         ret = -1
         while count < 10:
+            # this is a hack for graphviz 2.30
             H = self._get_ranked_agraph(rank_method)            
             H.write(infile.name)
             frmt = os.path.splitext(filename)[1][1:]
@@ -1258,27 +1258,37 @@ class CNOGraph(nx.DiGraph):
             return H
 
         # order the graph for ranks
-        allranks = self.get_same_rank() # this has been checkd on MMB to
+        allranks = self.get_same_rank() # this has been checkd on MMB to and seems correct
+
         ranks  = {}
         M = max(allranks.keys())
+        print(M)
         for k, v in allranks.iteritems():
-            ranks[k] = sorted([x for x in v if '=' not in x],
+            if rank_method in ['cno', 'same']:
+                ranks[k] = sorted([x for x in v if '=' not in x],
                     cmp=lambda x,y:cmp(x.lower(), y.lower()))
-            # add invisible edges so that the nodes that have the same rank are
-            # ordered.
-            if k == 0:
-                for i, node1 in enumerate(ranks[k]):
-                    if i != len(ranks[k])-1:
-                        node2 = ranks[k][i+1]
-                        H.add_edge(node1, node2, style="invis")
-            if k == M:
-                for i, node1 in enumerate(ranks[k]):
-                    if i != len(ranks[k])-1:
-                        node2 = ranks[k][i+1]
-                        H.add_edge(node1, node2, style="invis")
+                # add invisible edges so that the nodes that have the same rank are
+                # ordered.
+
+                # if cno, only sink and sources are constrained
+                if rank_method == 'cno' and k in [0, M]:
+                    for i, node1 in enumerate(ranks[k]):
+                        if i != len(ranks[k])-1:
+                            node2 = ranks[k][i+1]
+                            H.add_edge(node1, node2, style="invis")
+                # if sorted, all species within a given rank are constrained
+                else:
+                    for i, node1 in enumerate(ranks[k]):
+                        if i != len(ranks[k])-1:
+                            node2 = ranks[k][i+1]
+                            H.add_edge(node1, node2, style="invis")
+            else:
+                # no constraint, no sorting if cnor
+                ranks[k] = [x for x in v if '=' not in x]
 
         # Note: if name is set to "cluster"+name, black box is added
         for rank in ranks.keys():
+            print(rank, ranks[rank])
             name = unicode(rank) # may be numbers
             if rank == 0:
                 # label will be used if name == 'cluster_source'
@@ -1287,8 +1297,8 @@ class CNOGraph(nx.DiGraph):
             elif rank == M:
                 H.add_subgraph(ranks[rank], name="sink", rank='sink')
             else:
-                if rank_method == "same":
-                    H.add_subgraph(ranks[rank], name=name, rank='same')
+                if rank_method in ["same", 'cnor', 'cno']:
+                    H.add_subgraph(ranks[rank], sortv=rank, name=name, rank='same')
         return H
 
     def _get_nonc(self):
