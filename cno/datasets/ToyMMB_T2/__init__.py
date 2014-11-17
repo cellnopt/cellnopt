@@ -18,7 +18,7 @@
 import os
 from . import __path__
 
-name = 'ToyMMB'
+name = 'ToyMMB_T2'
 
 __all__ = ['description', 'model_filename', 'data_filename', 'name']
 
@@ -30,5 +30,5 @@ __doc__ += description
 
 
 def plot():
-    from cno.io import CNOGraph
+    from cellnopt.core import CNOGraph
     CNOGraph(model_filename, data_filename).plot()

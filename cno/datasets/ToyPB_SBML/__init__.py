@@ -14,16 +14,16 @@
 #
 ##############################################################################
 """"""
-
 import os
 from . import __path__
 
-name = 'ToyMMB'
+
+name = 'ToyPB_SBML'
 
 __all__ = ['description', 'model_filename', 'data_filename', 'name']
 
 model_filename = __path__[0] + os.sep + "PKN-{0}.sif".format(name)
-data_filename = __path__[0] + os.sep + "MD-{0}.csv".format(name)
+data_filename = cnodata("MD-ToyPB.csv")
 description = open(__path__[0] + os.sep + "README.rst").read()
 
 __doc__ += description

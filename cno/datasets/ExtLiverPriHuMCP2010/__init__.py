@@ -18,7 +18,7 @@
 import os
 from . import __path__
 
-name = 'ToyMMB'
+name = 'ExtLiverPriHuMCP2010'
 
 __all__ = ['description', 'model_filename', 'data_filename', 'name']
 

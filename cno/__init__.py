@@ -49,4 +49,9 @@ from .core import *
 from .feeder import Feeder
 
 # SIMIULATOR
-from .boolean import CNORbool
+try:
+    from .boolean import CNORbool
+
+except Exception as err:
+    print(err.message)
+    print("Issue in boolean package. Please report the issue to github/cellnopt/cellnopt")

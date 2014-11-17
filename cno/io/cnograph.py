@@ -1036,7 +1036,7 @@ class CNOGraph(nx.DiGraph):
 
         # Set the colormap
         cmap = self._get_cmap(cmap)
-         
+
         # update the node attributes if required with default color
         # or ues the requried node attribute. 
         M = 1
@@ -1276,10 +1276,10 @@ class CNOGraph(nx.DiGraph):
                     if i != len(ranks[k])-1:
                         node2 = ranks[k][i+1]
                         H.add_edge(node1, node2, style="invis")
-            
-        # Note: if name is set to "cluster"+name, black box is put around the cluster
-        for rank in sorted(ranks.keys()):
-            name = unicode(rank)
+
+        # Note: if name is set to "cluster"+name, black box is added
+        for rank in ranks.keys():
+            name = unicode(rank) # may be numbers
             if rank == 0:
                 # label will be used if name == 'cluster_source'
                 H.add_subgraph(ranks[rank],  rank='source', name='source', 

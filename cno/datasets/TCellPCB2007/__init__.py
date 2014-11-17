@@ -18,7 +18,7 @@
 import os
 from . import __path__
 
-name = 'ToyMMB'
+name = 'TCellPCB2007'
 
 __all__ = ['description', 'model_filename', 'data_filename', 'name']
 
