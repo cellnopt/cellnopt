@@ -573,7 +573,7 @@ class CNOGraph(nx.DiGraph):
             if self.isand(this_lhs) is False:
                 self._add_simple_reaction(this_lhs + "=" + reac.rhs)
             else:
-                and_gate_name = this_lhs + "=" + rhs
+                and_gate_name = this_lhs + "=" + reac.rhs
                 # and gates need a little bit more work
                 # the and gate to the output
                 self.add_edge(and_gate_name, reac.rhs, link="+") 
@@ -1028,6 +1028,8 @@ class CNOGraph(nx.DiGraph):
             self.logging.error("empty graph, nothing to plot")
             return
 
+        if rank_method:
+            assert rank_method in ['cno', 'cnor', 'same', 'hardcoded']
         self._check_dot_prog(prog)
 
         # Get the default/user attributes for the graph/nodes/edges for graphviz
@@ -1115,7 +1117,18 @@ class CNOGraph(nx.DiGraph):
                 if filename.endswith('svg') and 'dpi' in H.graph_attr.keys():
                     del H.graph_attr['dpi']
                 #just to try
-                H.draw(path=filename, prog=prog, format=frmt)
+                if rank_method != 'hardcoded':
+                    H.draw(path=filename, prog=prog, format=frmt)
+                else:
+                    H.to_dot(infile.name)
+                    args=[" -T"+frmt, infile.name]
+                    args=' '.join(args)
+                    #print(os.path.exists(infile.name))
+                    data = H._run_prog(prog, args)
+                    fh = open(filename, "w")
+                    fh.write(data)
+                    fh.close()
+
                 count = 1000
                 ret = 0
             except Exception as err:
@@ -1243,7 +1256,13 @@ class CNOGraph(nx.DiGraph):
 
     def _get_ranked_agraph(self, rank_method=None):
         """and gates should have intermediate ranks"""
-        H = nx.to_agraph(self)
+
+        if rank_method == 'hardcoded':
+            H = AGraphCNO(self)
+            return H
+
+        else:
+            H = nx.to_agraph(self)
 
         for k, v in self.graph_options['graph'].iteritems():
             H.graph_attr[k] = v
@@ -1260,9 +1279,11 @@ class CNOGraph(nx.DiGraph):
         # order the graph for ranks
         allranks = self.get_same_rank() # this has been checkd on MMB to and seems correct
 
+        # if cno, create a specialised AGraph that write a CNO style hardcoded version
+        # 
+
         ranks  = {}
         M = max(allranks.keys())
-        print(M)
         for k, v in allranks.iteritems():
             if rank_method in ['cno', 'same']:
                 ranks[k] = sorted([x for x in v if '=' not in x],
@@ -1288,7 +1309,6 @@ class CNOGraph(nx.DiGraph):
 
         # Note: if name is set to "cluster"+name, black box is added
         for rank in ranks.keys():
-            print(rank, ranks[rank])
             name = unicode(rank) # may be numbers
             if rank == 0:
                 # label will be used if name == 'cluster_source'
@@ -1298,7 +1318,7 @@ class CNOGraph(nx.DiGraph):
                 H.add_subgraph(ranks[rank], name="sink", rank='sink')
             else:
                 if rank_method in ["same", 'cnor', 'cno']:
-                    H.add_subgraph(ranks[rank], sortv=rank, name=name, rank='same')
+                    H.add_subgraph(ranks[rank], name=name, rank='same')
         return H
 
     def _get_nonc(self):
@@ -2548,8 +2568,8 @@ class CNOGraph(nx.DiGraph):
         .. seealso:: :meth:`to_json`
         """
         from networkx.readwrite import json_graph
-        graph = json_graph.load(open(filename))
 
+        graph = json_graph.node_link_graph(json.loads(open(filename).read()))
         self.clear()
 
         for node in graph.nodes():
@@ -2791,4 +2811,82 @@ class CNOGraph(nx.DiGraph):
                 self.remove_edge(e[0], e[1])
 
 
+
+
+
+import networkx as nx
+import pygraphviz as gv
+class AGraphCNO(gv.AGraph):
+
+    def __init__(self, N):
+        """N should be a cnograph so that we can get the ranks"""
+        self.cnograph = N
+
+        directed = N.is_directed()
+        strict = N.number_of_selfloops()==0 and not N.is_multigraph()
+
+        super(AGraphCNO, self).__init__(name=N.name, strict=strict, directed=directed)
+
+
+        # default graph attributes
+        self.graph_attr.update(N.graph.get('graph',{}))
+        self.node_attr.update(N.graph.get('node',{}))
+        self.edge_attr.update(N.graph.get('edge',{}))
+
+        # add nodes
+        for n,nodedata in N.nodes(data=True):
+            self.add_node(n,**nodedata)
+
+        # loop over edges
+
+        if N.is_multigraph():
+            for u,v,key,edgedata in N.edges_iter(data=True,keys=True):
+                str_edgedata=dict((k,str(v)) for k,v in edgedata.items())
+                self.add_edge(u,v,key=str(key),**str_edgedata)
+        else:
+            for u,v,edgedata in N.edges_iter(data=True):
+                str_edgedata=dict((k,str(v)) for k,v in edgedata.items())
+                self.add_edge(u,v,**str_edgedata)
+
+    def to_dot(self, filename=None):
+        allranks = self.cnograph.get_same_rank()
+
+        txt = "digraph G{\n"
+        for k, v in self.cnograph.graph_options['graph'].iteritems():
+            txt += """    %s="%s";\n""" % (k,v)
+
+        for rank in sorted(allranks.keys()):
+            if rank == 0:
+                rankname = "source"
+            elif rank == max(allranks.keys()):
+                rankname = "sink"
+            else:
+                rankname = 'same'
+            if len(allranks[rank]):
+                names = ";".join(sorted(allranks[rank]))
+                txt += "    {rank=%s;%s;}\n" % (rankname, names)
+
+        for node in self.cnograph.nodes(data=True):
+            attrs = node[1]
+            if "^" in node[0]:
+                attrs['name'] = '"%s"' % node[0]
+                attrs['label'] = ''
+                attrs['penwidth'] = '' + 'shape="circle" width=.1 height=.1 fixedsize=True'
+            else:
+                attrs['name'] = node[0]
+                attrs['label'] = node[0]
+                attrs['penwidth'] = """penwidth="%s" """ % attrs['penwidth']
+            txt += """%(name)s [color="black", fillcolor="%(fillcolor)s" %(penwidth)s  shape="%(shape)s" style="%(style)s" label="%(label)s" fontname=Helvetica fontsize=22.0 ];\n""" % attrs
+
+        for edge in self.cnograph.edges(data=True):
+            attrs = edge[2]
+            attrs['in'] = '"%s"' % edge[0]
+            attrs['out'] = '"%s"' % edge[1]
+            attrs['label']= ''
+            txt += """ %(in)s -> %(out)s [ color="%(color)s" label="%(label)s" weight="1.000000" penwidth="4" arrowhead="%(arrowhead)s" style="solid"];\n""" % (attrs)
+        txt += "}"
+
+        fh = open(filename, 'w')
+        fh.write(txt)
+        fh.close()
 
