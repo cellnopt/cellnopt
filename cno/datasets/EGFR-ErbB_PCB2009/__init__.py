@@ -30,6 +30,6 @@ __doc__ += description
 
 
 def plot():
-    from cellnopt.core import CNOGraph
+    from cno.io.cnograph import CNOGraph
     CNOGraph(model_filename, data_filename).plot()
 
