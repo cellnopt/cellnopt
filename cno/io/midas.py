@@ -1420,6 +1420,7 @@ class XMIDAS(MIDASReader):
             m.plot(mode="mse")
 
         """
+        pylab.clf()
         if mode == "mse":
             if self.df.min().min()<0:
                 self.logging.warning("values are expected to be positive")
@@ -1475,8 +1476,6 @@ class XMIDAS(MIDASReader):
         pylab.clf()
         radviz(df[['experiment']+species], "experiment")
         pylab.legend(fontsize=fontsize)
-
-
 
     def to_midas(self, filename, expand_time_column=False):
         """Save XMIDAS into a MIDAS CSV file.
@@ -1572,6 +1571,10 @@ class XMIDAS(MIDASReader):
             return normed_midas
         else:
             self.df = normed_midas.copy()
+
+    def to_obs(self):
+        from cno.io.obs import OBS
+        obs = OBS()
 
     def to_measurements(self):
         """Returns a Measurements instance

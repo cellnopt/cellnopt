@@ -15,11 +15,11 @@
 ##############################################################################
 import numpy
 from scipy.optimize import fsolve
-import pylab 
+import pylab
 
 
-__all__ = ["ode_transfer_function", "normhill_tf",
-"plot_picture_cnorfuzzy_package"]
+__all__ = ["plot_ode_transfer_function", "normhill_tf",
+"create_picture_cnorfuzzy_package"]
 
 
 
@@ -44,8 +44,8 @@ def ode_transfer_function(x, tau, inputs):
         from cellnopt.core.matfun import ode_transfer_function
         from pylab import linspace, plot, show
         X = linspace(0,2,100)
-        dX = ode_transfer_function(X ,.1, 
-                {"B":{'k':1, 'n':.5, 'type':1}, 
+        dX = ode_transfer_function(X ,.1,
+                {"B":{'k':1, 'n':.5, 'type':1},
                 "Akt":{'k':0.5, 'n':2, 'type':-1}})
         plot(X,dX)
         show()
@@ -86,7 +86,7 @@ def _hill_function(k, n=3, EC50=0.5):
 
 def _findEC50(x50,k,n):
     return x50**n * (1. + k**n) - 0.5*(x50**n + k**n)
- 
+
 
 def getEC50(k,n):
     myres = fsolve(_findEC50, .5, args=(k,n))
@@ -107,7 +107,7 @@ def getk(N=[3,3,3,3,3,3,1.01], EC50=[0.2,0.3,0.4,0.5,0.6,0.7,0.5]):
 def create_picture_cnorfuzzy_package(fontsize=20, save=True):
     """Creates pictures of Fuzzy hill functions as in Morris et al.
 
-    .. plot:: 
+    .. plot::
         :include-source:
         :width: 50%
 
@@ -123,17 +123,17 @@ def create_picture_cnorfuzzy_package(fontsize=20, save=True):
     pylab.figure(1)
     pylab.clf()
     for i in range(0, len(n)):
-        pylab.plot(x, normhill_tf(x,k[i],n[i]), linewidth=2, 
+        pylab.plot(x, normhill_tf(x,k[i],n[i]), linewidth=2,
                 label="n=%s EC50=%s" % (n[i], ec50[i]))
 
     pylab.xlabel("Input Value", fontsize=22)
     pylab.ylabel("Output Value", fontsize=22)
     pylab.legend(loc="lower right")
-    pylab.xticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], 
+    pylab.xticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
             fontsize=fontsize)
-    pylab.yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1], 
+    pylab.yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
             fontsize=fontsize)
-       
+
     if save:
         pylab.savefig('tf1.pdf')
 
