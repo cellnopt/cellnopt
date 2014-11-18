@@ -56,5 +56,17 @@ def cnodata(filename=None):
         else:
             print(msg)
         return fullpath
+    elif "*" in filename:
+        tags = [x for x in filename.split("*") if x]
+        for register in registers:
+            found = True
+            for tag in tags:
+                if tag not in register:
+                    found = False
+            if found:
+                print(register)
     else:
         print(msg)
+
+
+
