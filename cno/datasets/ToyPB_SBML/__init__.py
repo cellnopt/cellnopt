@@ -16,7 +16,7 @@
 """"""
 import os
 from . import __path__
-
+from .cnodata import cnodata
 
 name = 'ToyPB_SBML'
 
