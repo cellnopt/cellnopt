@@ -1117,13 +1117,13 @@ class CNOGraph(nx.DiGraph):
                 if filename.endswith('svg') and 'dpi' in H.graph_attr.keys():
                     del H.graph_attr['dpi']
                 #just to try
+                print(rank_method)
                 if rank_method != 'hardcoded':
                     H.draw(path=filename, prog=prog, format=frmt)
                 else:
                     H.to_dot(infile.name)
                     args=[" -T"+frmt, infile.name]
                     args=' '.join(args)
-                    #print(os.path.exists(infile.name))
                     data = H._run_prog(prog, args)
                     fh = open(filename, "w")
                     fh.write(data)
@@ -1139,12 +1139,19 @@ class CNOGraph(nx.DiGraph):
         if ret !=0:
             if rank_method is not None:
                 self.logging.warning("%s program failed to create image" % prog)
-            H = nx.to_agraph(this)
+            H = self._get_ranked_agraph('hardcoded')
+            #H = nx.to_agraph(this)
             if filename.endswith('svg') and 'dpi' in H.graph_attr.keys():
                 del H.graph_attr['dpi']
             frmt = os.path.splitext(filename)[1][1:]
-            H.draw(path=filename, prog=prog, format=frmt)
-
+            #H.draw(path=filename, prog=prog, format=frmt)
+            H.to_dot(infile.name)
+            args=[" -T"+frmt, infile.name]
+            args=' '.join(args)
+            #print(os.path.exists(infile.name))
+            data = H._run_prog(prog, args)
+            fh = open(filename, "w")
+            fh.write(data)
 
         # Here is the visualisation only iif image was created
         if viewer=="pylab" and show is True:
@@ -1259,8 +1266,6 @@ class CNOGraph(nx.DiGraph):
 
         if rank_method == 'hardcoded':
             H = AGraphCNO(self)
-            return H
-
         else:
             H = nx.to_agraph(self)
 
@@ -1274,6 +1279,9 @@ class CNOGraph(nx.DiGraph):
         if rank_method is None:
             return H 
         if self.midas is None:
+            return H
+        if rank_method == 'hardcoded':
+            print("Return hardcoded layout")
             return H
 
         # order the graph for ranks
@@ -1374,7 +1382,6 @@ class CNOGraph(nx.DiGraph):
         # find 2 nodes that have at least one successor
         count = 0
         for i in range(0, nswap):
-            #print(i)
             edges = self.edges()
             np.random.shuffle(edges)
             e1, e2 = edges[0:2]
@@ -1390,7 +1397,6 @@ class CNOGraph(nx.DiGraph):
             G.remove_edge(e2[0], e2[1])
 
             if nx.is_connected(G.to_undirected()) == False:
-                #print("G is disconnected.skipping------")
                 continue
             if sum(G.in_degree().values()) != I:
                 # the link already exists
@@ -1409,7 +1415,6 @@ class CNOGraph(nx.DiGraph):
 
             assert nx.is_connected(self.to_undirected()) == True
             count +=1
-        print("swap %d edges" % count)
 
     def adjacency_matrix(self, nodelist=None, weight=None):
         """Return adjacency matrix.
@@ -1895,7 +1900,6 @@ class CNOGraph(nx.DiGraph):
 
         reac = self.and_symbol.join([unicode(x) for x in inputs])
         reac += "=" + unicode(output)
-        print(reac)
         # FIXME: what aboit sorting while doing the instanciation.
         reac = Reaction(reac)
         reac.sort()
@@ -2867,7 +2871,7 @@ class AGraphCNO(gv.AGraph):
                 txt += "    {rank=%s;%s;}\n" % (rankname, names)
 
         for node in self.cnograph.nodes(data=True):
-            attrs = node[1]
+            attrs = node[1].copy()
             if "^" in node[0]:
                 attrs['name'] = '"%s"' % node[0]
                 attrs['label'] = ''
@@ -2883,7 +2887,7 @@ class AGraphCNO(gv.AGraph):
             attrs['in'] = '"%s"' % edge[0]
             attrs['out'] = '"%s"' % edge[1]
             attrs['label']= ''
-            txt += """ %(in)s -> %(out)s [ color="%(color)s" label="%(label)s" weight="1.000000" penwidth="4" arrowhead="%(arrowhead)s" style="solid"];\n""" % (attrs)
+            txt += """ %(in)s -> %(out)s [ color="%(color)s" label="%(label)s" weight="1.000000" penwidth="2" arrowhead="%(arrowhead)s" style="solid"];\n""" % (attrs)
         txt += "}"
 
         fh = open(filename, 'w')
