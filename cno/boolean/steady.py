@@ -1,4 +1,5 @@
 from cno.core.base import CNOBase
+
 import pandas as pd
 import numpy as np
 import pylab
@@ -254,7 +255,7 @@ def test():
     from cno import cnodata
     s = Steady(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
     s.test()
-test()
+#test()
 
 
 
