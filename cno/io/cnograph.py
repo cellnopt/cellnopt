@@ -1127,7 +1127,7 @@ class CNOGraph(nx.DiGraph):
                 if rank_method != 'cno':
                     H.draw(path=filename, prog=prog, format=frmt)
                 else:
-                    H.to_dot(infile.name)
+                    H.to_dot(infile.name, frmt=frmt)
                     args=[" -T"+frmt, infile.name]
                     args=' '.join(args)
                     data = H._run_prog(prog, args)
@@ -1151,7 +1151,7 @@ class CNOGraph(nx.DiGraph):
                 del H.graph_attr['dpi']
             frmt = os.path.splitext(filename)[1][1:]
             #H.draw(path=filename, prog=prog, format=frmt)
-            H.to_dot(infile.name)
+            H.to_dot(infile.name, frmt=frmt)
             args=[" -T"+frmt, infile.name]
             args=' '.join(args)
             #print(os.path.exists(infile.name))
@@ -1160,7 +1160,7 @@ class CNOGraph(nx.DiGraph):
             fh.write(data)
 
         # Here is the visualisation only iif image was created
-        if viewer=="pylab" and show is True:
+        if viewer=="pylab" and show is True and frmt!='svg':
             if hold == False:
                 if hold is False:
                     pylab.clf()
@@ -1190,7 +1190,14 @@ class CNOGraph(nx.DiGraph):
                     e.set_yticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
 
         elif show is True:
-            subprocess.call("%s %s &" % (viewer, filename), shell=True)
+            try:
+                if viewer=='pylab':
+                    viewer = 'browse'
+                subprocess.call("%s %s &" % (viewer, filename), shell=True)
+            except:
+                # for MAC users ?
+                if viewer!='pylab':
+                    subprocess.call("open -a Preview %s &" % (viewer, filename), shell=True)
 
         if remove_dot == True:
             infile.delete = True
@@ -2866,11 +2873,13 @@ class AGraphCNO(gv.AGraph):
                 str_edgedata=dict((k,str(v)) for k,v in edgedata.items())
                 self.add_edge(u,v,**str_edgedata)
 
-    def to_dot(self, filename=None):
+    def to_dot(self, filename=None, frmt='png'):
         allranks = self.cnograph.get_same_rank()
 
         txt = "digraph G{\n"
         for k, v in self.cnograph.graph_options['graph'].iteritems():
+            if 'svg' in frmt and k == 'dpi':
+                continue
             txt += """    %s="%s";\n""" % (k,v)
 
         for rank in sorted(allranks.keys()):
