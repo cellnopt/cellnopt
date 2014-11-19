@@ -56,46 +56,43 @@ In a directory, you must provide 3 files:
 Optional data files also be provided:
 
     #. a MIDAS file (csv format) named **MD-Identifier.csv**
-    #. a network in SBML qual format (extension must be .xml)
+    #. a network in SBML qual format (extension must be **PKN-<identifier>.xml**)
 
 
-1.1 PKN file
+2.1 PKN file
 ~~~~~~~~~~~~~~
 The PKN file must be in SIF format and named **PKN-<identifier>.sif**
 
-1.2 MIDAS file
+2.2 MIDAS file
 ~~~~~~~~~~~~~~~
 The data file must be MIDAS format and named **MD-<identifier>.csv**
 If not provided because it already exist in another directory, use the __init__ file (see below)
 
-1.3 README file
+2.3 README file
 ~~~~~~~~~~~~~~~~~~~~
 Must be in RST format (like this document). Please, see examples within this github repository.
 
-1.4 __init__ file
+2.4 __init__ file
 ~~~~~~~~~~~~~~~~~~~~~~
 
 The __init__ file can be empty, in which case the name of the SIF, MIDAS and SBSML files will be inferred
 from the directory name. If not MIDAS is provided or for some reasons the SIF (and SBML) are named differently, 
-you can use a metadata dictionary into the __init__ file:
-
-```
-
-metadata = {
-    'data': '../ToyMMB/MD-ToyMMB.csv'
-}    
-
-```
+you can use a metadata dictionary into the __init__ file::
 
 
-1.5 Others
+    metadata = {
+        'data': '../ToyMMB/MD-ToyMMB.csv'
+    }    
+    
+
+2.5 Others
 ~~~~~~~~~~~~~~~
 You can of course add as much files as you want but please keep size as low as possible. 
 Examples of other files that can be provided are: 
 
 * SVG file of the network
 * dot file of the network
-* SBML-qual format
+
 
 :Note: When using **cnodata** function provided in CellNOpt, all sub-directories with an 
 __init__.py file are scanned automatically and the SIF, MIDAS and SBML-qual files with their full path 
@@ -109,6 +106,10 @@ Once you have added a sub-directory, users and developers can then access to you
     from cno import cnodata
     pkn = cnodata("PKN-identifier.sif")
     midas = cnodata("MD-identifier.csv")
+    
+    cnodata()
+    
+    cnodata(*Toy*csv)
 
 
 
