@@ -5,7 +5,7 @@ __all__ = ["CNOBase"]
 class CNOBase(object):
     """Alias to CNOGraph and common class to all simulators"""
     def __init__(self, pknmodel, data, verbose=False):
-
+        # TODO: check that files do exist and raise an error otherwise
         self._pknmodel = None
         self._data = None
         self._verbose = verbose

@@ -67,7 +67,7 @@ class CNORbool(CNOBase):
         self.session = RSession(dump_stdout=self.verboseR)
 
     def optimise(self, tag="cnorbool", reltol=0.1, 
-            expansion=True, compression=True):
+            expansion=True, maxgens=150, stallgenmax=100, compression=True):
 
         script_template = """
         library(CellNOptR)
@@ -76,7 +76,8 @@ class CNORbool(CNOBase):
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s, 
             expansion=%(expansion)s, maxInputsPerGate=3)
 
-        res = gaBinaryT1(cnolist, model, relTol=%(reltol)s)
+        res = gaBinaryT1(cnolist, model, relTol=%(reltol)s, 
+            stallGenMax=%(stallgenmax)s, maxGens=%(maxgens)s)
         sim_results = cutAndPlot(cnolist, model, list(res$bString),
                                  plotParams=list(maxrow = 80, cex=0.5),
                                  plotPDF=T, tag="%(tag)s")
@@ -108,6 +109,8 @@ class CNORbool(CNOBase):
                 'pkn': self.pknmodel.filename, 
                 'midas': self.data.filename,
                 'tag':tag,
+                'maxgens':maxgens,
+                'stallgenmax':stallgenmax,
                 'reltol':reltol, 
                 'compression': bool2R(compression),
                 'expansion': bool2R(expansion)
@@ -126,6 +129,7 @@ class CNORbool(CNOBase):
                               columns=self.session.reactions)
         models = Models(df)
         models.cnograph.midas = self.data.copy()
+        models.scores = self.session.all_scores
 
         self.results['cnorbool'] = {
                 'best_score': self.session.best_score,
@@ -239,3 +243,11 @@ class CNORbool(CNOBase):
     def _get_models(self):
         return self.results.cnorbool.models
     models = property(_get_models)
+
+
+    def plot_fit(self):
+        self.results.cnorbool.results[['Best_score','Avg_Score_Gen']].plot()
+        pylab.title("Score per generation")
+        pylab.xlabel("Generation")
+        pylab.ylabel("Score")
+

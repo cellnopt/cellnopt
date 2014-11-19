@@ -352,7 +352,6 @@ for net in networks:
 
         return conjunctions
 
-
     def plot_gtts(self):
         """Plot sub-optimal models grouped by MSEs and GTTS
 

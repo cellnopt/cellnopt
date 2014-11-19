@@ -2,9 +2,12 @@ import pylab
 import pandas as pd
 from easydev import precision
 
+and_symbol = "^"
+
+
 
 class Models(object):
-    """Class to read and plot models as exported by CASPO
+    """Class to read and plot models as exported by CASPO or CellNOptR 
 
     ::
 
@@ -51,6 +54,8 @@ class Models(object):
             print("could not interpret some reactions. cnograph may not be valid")
             pass
 
+        self.size = self.df.sum(axis=1)
+
     def get_average_model(self):
         """Returns the average model (on each reaction)"""
         return self.df.mean(axis=0)
@@ -93,7 +98,7 @@ class Models(object):
 
             # if values are between 0 and 1
             M = float(model.max())
-            self.cnograph.edge[edge[0]][edge[1]]["penwidth"] = precision(value,2)*100/M/10.
+            self.cnograph.edge[edge[0]][edge[1]]["penwidth"] = precision(value, 2) * 5/M
 
     def plot(self, model_number=None, *args, **kargs):
         """Plot the average model
@@ -113,10 +118,7 @@ class Models(object):
         return self.cnograph.to_sif(filename)
 
     def errorbar(self):
-        """Plot the average presence of reactions over all models
-
-
-        """
+        """Plot the average presence of reactions over all models"""
         mu = self.df.mean()
         mu.sort(inplace=True)
         sigma = self.df.std()
@@ -129,4 +131,78 @@ class Models(object):
         pylab.grid()
         pylab.ylim([-0.1, 1.1])
         pylab.xlim([-0.5, len(X)+.5])
+        pylab.tight_layout()
+
+
+    def heatmap(self, num=1,transpose=False, cmap='gist_heat_r'):
+        """
+    
+        .. plot::
+            :include-source:
+
+            from corda import *
+            m = Models(fit=0, factor=1)
+            m.heatmap()
+        """
+        #df = self.get_average_models()
+        from biokit.viz.heatmap import Heatmap
+        if transpose:
+            df = self.df.transpose()
+        else:
+            df = self.df
+        h = Heatmap(df)
+        h.plot(cmap=cmap,num=num)
+        return h
+
+    
+     
+    def _get_scores_vs_model_size_df(self):
+        df = pd.DataFrame()
+        df['mse'] = self.scores
+        df['size'] = self.size
+        return df
+
+    def scatter_scores_vs_model_size(self):
+        from biokit import viz
+        df = self._get_scores_vs_model_size_df()
+        viz.scatter_hist(df)
+   
+    def hist_mse(self, fontsize=16, **kargs):
+        """Plot histogram of the MSEs
+
+         .. plot::
+             :include-source:
+
+             >>> from cellnopt.optimiser import ASPBool
+             >>> from cellnopt.data import cnodata
+             >>> a = ASPBool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+             >>> a.run(fit=1)
+             >>> a.hist_mse()
+
+
+        """
+        pylab.clf()
+        mses = self.scores
+        opt = mses.min()
+        N = len(set(mses))
+        print("There are %s different MSE found amongst %s models" % (N,len(mses)))
+        res = pylab.hist(mses, **kargs)
+        pylab.title("MSEs Distribution of the %s best models " % len(mses),
+                    fontsize=fontsize)
+        pylab.grid()
+        pylab.plot([opt,opt], [0,max(res[0])], "r--",lw=2)
+        pylab.xlabel("Mean Square Error of all models", fontsize=fontsize)
+        pylab.ylabel("#",  fontsize=fontsize)
+
+    def hist2d_scores_vs_model_size(self, bins=None, cmap='gist_heat_r',fontsize=16):
+        from biokit import viz
+        df = self._get_scores_vs_model_size_df()
+        h = viz.Hist2d(df)
+        if bins == None:
+            mse_range = 20
+            size_range = df.size.max() - df.size.min() + 1
+            bins = (mse_range, size_range)
+        h.plot(bins=bins, Nlevels=10, cmap=cmap)
+        pylab.xlabel("Score", fontsize=fontsize)
+        pylab.ylabel("Model size", fontsize=fontsize)
 
