@@ -1,5 +1,5 @@
 :Description:  
-:Network: **PKN-LiverMSB2009.sif** provides a PKN used in the reference here below and **PKN-LiverMSB2009.xml** is the
+:Model: **PKN-LiverMSB2009.sif** provides a PKN used in the reference here below and **PKN-LiverMSB2009.xml** is the
     SBML-qual version.
 :Data: data in MIDAS format is in **MD-LiverMSB2009.csv**
 
@@ -8,6 +8,9 @@
    :alt: LiverMSB2009 figure
    :scale: 30%
 
+.. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/LiverMSB2009/LiverMSB2009.svg?
+   :alt: LiverMSB2009 figure
+   :scale: 30%
 
 references
 ----------------
