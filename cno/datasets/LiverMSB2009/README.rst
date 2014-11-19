@@ -8,9 +8,13 @@
    :alt: LiverMSB2009 figure
    :scale: 30%
 
+-
+
 .. image:: https://cdn.rawgit.com/cellnopt/cellnopt/master/cno/datasets/LiverMSB2009/LiverMSB2009.svg
    :alt: LiverMSB2009 figure
    :target: 
+   
+-
     
 references
 ----------------
