@@ -22,11 +22,13 @@ How to add a new directory/package ?
 If you want to add a model/data, first figure out a unique identifier, which will be used to 
 create a new sub-directory.
 
-There is no strict rules on naming the identifier but please use 
+There is one restriction: **do not use dash in the name** (e.g., Toy-MMB) because automatic import in Python may fail.
+
+Otherwise please follow those rules:
 
   #. `upper camel case convention <http://en.wikipedia.org/wiki/CamelCase>`_.
-  #. A directory that contain some data based on an existing directory should
-     reuse the identifier of the existing directory. You can either add a second identifier
+  #. A directory that contain a variant of an existing directory should
+     reuse the identifier of the existing directory. Then, append a second identifier
      separated by an underscore or no separation.
 
 :Examples: ::
@@ -45,12 +47,17 @@ directory simply **ToyExample_FeedbackBis** since it is also a variant of **ToyE
 2. Contents
 ---------------
 
-In a directory, you must provide 4 files:
+In a directory, you must provide 3 files:
 
     #. a network (SIF format) named **PKN-Identifier.sif**
-    #. a MIDAS file (csv format) named **MD-Identifier.csv**
     #. a README.rst file (contents does not require any specific template)
     #. an __init__.py file
+    
+Optional data files also be provided:
+
+    #. a MIDAS file (csv format) named **MD-Identifier.csv**
+    #. a network in SBML qual format (extension must be .xml)
+
 
 1.1 PKN file
 ~~~~~~~~~~~~~~
@@ -59,6 +66,7 @@ The PKN file must be in SIF format and named **PKN-<identifier>.sif**
 1.2 MIDAS file
 ~~~~~~~~~~~~~~~
 The data file must be MIDAS format and named **MD-<identifier>.csv**
+If not provided because it already exist in another directory, use the __init__ file (see below)
 
 1.3 README file
 ~~~~~~~~~~~~~~~~~~~~
@@ -67,25 +75,18 @@ Must be in RST format (like this document). Please, see examples within this git
 1.4 __init__ file
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Just copy and paste this file into your directory changinf the name (i.e. here below, 
-change ToyPB to your identifier)::
+The __init__ file can be empty, in which case the name of the SIF, MIDAS and SBSML files will be inferred
+from the directory name. If not MIDAS is provided or for some reasons the SIF (and SBML) are named differently, 
+you can use a metadata dictionary into the __init__ file:
 
-    import os
-    from . import __path__
+```
 
-    name = 'ToyPB'
+metadata = {
+    'data': '../ToyMMB/MD-ToyMMB.csv'
+}    
 
-    __all__ = ['description', 'model_filename', 'data_filename', 'name']
+```
 
-    model_filename = __path__[0] + os.sep + "PKN-{0}.sif".format(name)
-    data_filename = __path__[0] + os.sep + "MD-{0}.csv".format(name)
-    description = open(__path__[0] + os.sep + "README.rst").read()
-
-    __doc__ += description
-
-    def plot():
-        from cellnopt.core import CNOGraph
-            CNOGraph(model_filename, data_filename).plot()
 
 1.5 Others
 ~~~~~~~~~~~~~~~
