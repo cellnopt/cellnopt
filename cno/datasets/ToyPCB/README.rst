@@ -12,6 +12,12 @@
 .. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPCB/ToyPCB.png
    :alt: ToyPCB figure
 
+::
+
+    from cno import cnodata, CNOGraph
+    c = cnograph.CNOGraph(cnodata("PKN-ToyPCB.sif"), cnodata("MD-ToyPCB.csv"))
+    c.plot()
+
 
 References
 -------------
