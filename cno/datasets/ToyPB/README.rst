@@ -30,7 +30,7 @@ Here is a representation of the ToyPB model (with the data).
    :alt: ToyPB figure
 
 
-- The model in SBML-qual format is also available **PKN-ToyPB   .xml: 
+- The model in SBML-qual format is also available **PKN-ToyPB.xml**: 
   
   
 ```python
