@@ -22,6 +22,8 @@ import itertools
 import subprocess
 import shutil
 import json
+import collections
+from functools import wraps
 
 import matplotlib
 import pylab
@@ -70,6 +72,16 @@ class Link(object):
     def _get_link(self):
         return self._link
     link = property(_get_link, _set_link, doc="Getter/Setter for links")
+
+
+
+
+def modifier(func):
+    @wraps(func)
+    def wrapper(self, *args, **kargs):
+        return func(self, *args, **kargs)
+    return wrapper
+
 
 
 class Attributes(dict):
@@ -353,7 +365,7 @@ class CNOGraph(nx.DiGraph):
                  #'ranksep':.6,
                 'ratio':'auto', # numeric,  'fill','compress','expand','auto'
                 # 0.8 is good for laptop screens. 2 is good for 
-                'size': "10,10",
+                'size': "15,15",
                 # 'fontname': 'helvetica',
                 },
             'node':{
@@ -372,7 +384,6 @@ class CNOGraph(nx.DiGraph):
         # cellnoptR has always the same layout:
         #s.model.graph_options['graph']['nodesep'] = 0.5
         #s.model.plot(rank_method='same')
-
 
         self.plot_options = {
                 'colorbar.orientation': 'horizontal',
@@ -400,6 +411,7 @@ class CNOGraph(nx.DiGraph):
         self._compressed = []
         self._signals =[]
         self._nonc = None
+        self._ranks = None
 
         # the model
         if hasattr(model, '__class__') and \
@@ -510,14 +522,13 @@ class CNOGraph(nx.DiGraph):
         self.set_default_node_attributes() # must be call if sif or midas modified.
         self.logging.debug("model loaded")
 
+    @modifier
     def _add_simple_reaction(self, reac):
         """A=B or !A=B"""
 
         #reac = Reaction(reac) # validate the reaction
         #reac = reac.name
         lhs, rhs = reac.split("=", 1)
-        #if reac == "":
-        #    self.add_node(rhs)
         if rhs == "":
             self.add_node(lhs)
         else:
@@ -534,10 +545,12 @@ class CNOGraph(nx.DiGraph):
             else:
                 self.add_edge(lhs,rhs, link=link)
 
+    @modifier
     def add_reactions(self, reactions):
         for reac in reactions:
             self.add_reaction(reac)
 
+    @modifier
     def add_reaction(self, reac):
         """Add nodes and edges given a reaction
 
@@ -604,6 +617,7 @@ class CNOGraph(nx.DiGraph):
             attrs = self.set_default_edge_attributes(**attrs)
             self.edge[edge[0]][edge[1]] = attrs
 
+    @modifier
     def add_edge(self, u, v, attr_dict=None, **attr):
         """adds an edge between node u and v.
 
@@ -690,6 +704,7 @@ class CNOGraph(nx.DiGraph):
         else:
             super(CNOGraph, self).add_edge(u, v, attr_dict, **attr)
 
+    @modifier
     def clear(self):
         """Remove nodes and edges and MIDAS instance"""
         super(CNOGraph, self).clear()
@@ -698,6 +713,7 @@ class CNOGraph(nx.DiGraph):
         self._signals = []
         self._inhibitors = []
 
+    @modifier
     def clean_orphan_ands(self):
         """Remove AND gates that are not AND gates anymore
 
@@ -727,6 +743,7 @@ class CNOGraph(nx.DiGraph):
                 if x not in self.nodes():
                     raise CNOError(msg % ('signals', x))
 
+    @modifier
     def remove_and_gates(self):
         """Remove the AND nodes added by :meth:`expand_and_gates`"""
         for n in self._find_and_nodes():
@@ -1341,8 +1358,6 @@ class CNOGraph(nx.DiGraph):
                     species = sorted([x for x in ranks[rank] if x not in selfloops])
                     H.add_subgraph(species, name=name, rank='all')
 
-
-
         return H
 
     def _get_nonc(self):
@@ -1451,6 +1466,7 @@ class CNOGraph(nx.DiGraph):
         """
         return nx.adjacency_matrix(self, nodelist=nodelist).astype(int)
 
+    @modifier
     def remove_edge(self, u, v):
         """Remove the edge between u and v.
 
@@ -1463,6 +1479,7 @@ class CNOGraph(nx.DiGraph):
         #if "+" not in n:
         self.clean_orphan_ands()
 
+    @modifier
     def remove_node(self, n):
         """Remove a node n
 
@@ -1478,6 +1495,7 @@ class CNOGraph(nx.DiGraph):
         if "^" not in unicode(n):
             self.clean_orphan_ands()
 
+    @modifier
     def add_node(self, node, attr_dict=None, **attr):
         """Add a node
 
@@ -1516,7 +1534,9 @@ class CNOGraph(nx.DiGraph):
             attr_dict["fillcolor"] = "white"
             attr["fillcolor"] = "white"
         super(CNOGraph, self).add_node(node, attr_dict, **attr)
+        
 
+    @modifier
     def preprocessing(self, expansion=True, compression=True, cutnonc=True,
                       maxInputsPerGate=2):
         """Performs the 3 preprocessing steps (cutnonc, expansion, compression)
@@ -1543,6 +1563,7 @@ class CNOGraph(nx.DiGraph):
         if expansion:
             self.expand_and_gates(maxInputsPerGate=maxInputsPerGate)
 
+    @modifier
     def cutnonc(self):
         """Finds non-observable and non-controllable nodes and removes them.
 
@@ -1560,6 +1581,7 @@ class CNOGraph(nx.DiGraph):
         for node in nonc:
             self.collapse_node(node)
 
+    @modifier
     def compress(self, recursive=True, iteration=1, max_iteration=5):
         """Finds compressable nodes and removes them from the graph
 
@@ -1633,6 +1655,7 @@ class CNOGraph(nx.DiGraph):
 
         return attrs
 
+    @modifier
     def collapse_node(self, node):
         """Collapses a node (removes a node but connects input nodes to output nodes)
 
@@ -1760,12 +1783,14 @@ class CNOGraph(nx.DiGraph):
     def get_same_rank(self):
         """Return ranks of the nodes.
 
-        Used by plot/graphviz. Depends on attribute :attr:`dot_mode`
 
         """
+        # no need to run this function, which could be long if already computed
+        if self._ranks is not None:
+            return self._ranks.copy()
+
         import time
         t1 = time.time()
-        self.dot_mode = "end_signals_bottom"
         # some aliases
         try:
             stimuli = self.stimuli
@@ -1786,62 +1811,35 @@ class CNOGraph(nx.DiGraph):
         maxrank = int(self.get_max_rank())
         # start populating the ranks starting with the obvious one: stimuli and
         # signals
-        ranks = {}
+        ranks = collections.defaultdict(list)
         ranks[0] = stimuli
-        for i in range(1, maxrank+1):
-            ranks[i] = []
+        for node in sorted(self.nodes(), 
+                cmp=lambda x,y: cmp(unicode(x).lower(), unicode(y).lower())):
+            # skip and gate
+            if self.isand(node):
+                continue
+            # skip end signals for now
+            if node in signals and len(self.successors(node))==0:
+                continue
+            elif node not in stimuli:
+                distances = [func_path[s][node] for s in stimuli]
+                distances = [x for x in distances if x != pylab.inf]
+                if len(distances) != 0:
+                    M = int(np.nanmax([abs(x) for x in distances if x != pylab.inf]))
+                    ranks[M].append(node)
+                else:
+                    self.logging.debug('warning, rank %s is empyt'% node)
 
-        if self.dot_mode == 'free':
-            """default layout but stimuli on top"""
-            for node in self.nodes():
-                if node not in stimuli:
-                    distances = [func_path[s][node] for s in stimuli]
-                    distances = [abs(x) for x in distances if x != pylab.inf]
-                    if len(distances) != 0:
-                        M = pylab.nanmin([x for x in distances if x != pylab.inf])
-                        try:
-                            ranks[M].append(node)
-                        except:
-                            ranks[M] = [node]
-                    else:
-                        self.logging.debug('warning, rank %s is empyt'% node)
+        # now the end signal
+        for node in sorted(self.nodes(), 
+                cmp=lambda x,y: cmp(unicode(x).lower(),unicode(y).lower())):
+            if node in signals and len(self.successors(node))==0:
+                ranks[maxrank+1].append(node)
 
-        elif self.dot_mode == 'end_signals_bottom':
-            maxrank = max(ranks.keys())
-            ranks[maxrank+1] = []
-
-            for node in sorted(self.nodes(), 
-                    cmp=lambda x,y: cmp(unicode(x).lower(), unicode(y).lower())):
-                # skip and gate
-                if self.isand(node):
-                    continue
-                # skip end signals
-                if node in signals and len(self.successors(node))==0:
-                    continue
-                elif node not in stimuli:
-                    distances = [func_path[s][node] for s in stimuli]
-                    distances = [x for x in distances if x != pylab.inf]
-                    if len(distances) != 0:
-                        M = np.nanmax([abs(x) for x in distances if x != pylab.inf])
-                        try:
-                            ranks[M].append(node)
-                        except:
-                            ranks[M] = [node]
-                    else:
-                        self.logging.debug('warning, rank %s is empyt'% node)
-
-            for node in sorted(self.nodes(), 
-                    cmp=lambda x,y: cmp(unicode(x).lower(),unicode(y).lower())):
-
-                if node in signals and len(self.successors(node))==0:
-                    try:
-                        # +1 so that signals are alone on their row without nonc
-                        ranks[maxrank+1].append(node)
-                    except:                       
-                        ranks[maxrank] = [node]
         t2 = time.time()
-        if t2-t1>1:
+        if t2-t1 > 1:
             print("get_same_rank %s seconds" % str(t2-t1))
+        self._ranks = ranks.copy()
         return ranks
 
     def _get_inputs(self):
@@ -1947,6 +1945,7 @@ class CNOGraph(nx.DiGraph):
         andNodes = [node for node in self.nodes() if self.isand(node)]
         return andNodes
 
+    @modifier
     def expand_or_gates(self):
         """Expand OR gates given AND gates
 
@@ -1990,6 +1989,7 @@ class CNOGraph(nx.DiGraph):
                 link = self.edge[node][this]['link']
                 self.add_edge(node, s[0], link=link)
 
+    @modifier
     def expand_and_gates(self, maxInputsPerGate=2):
         """Expands the network to incorporate AND gates
 
@@ -2054,6 +2054,7 @@ class CNOGraph(nx.DiGraph):
         for node in nodes2expand:
             self._add_and_gates(node, maxInputsPerGate)
 
+    @modifier
     def add_cycle(self, nodes, **attr):
         """Add a cycle
 
@@ -2113,6 +2114,8 @@ class CNOGraph(nx.DiGraph):
         #for e in ebunch:
         #    self.add_edge(e[0], e[1], attr_dict=attr_dict, **attr)
 
+
+    @modifier
     def add_nodes_from(self, nbunch, attr_dict=None, **attr):
         """Add a bunch of nodes
 
@@ -2134,6 +2137,7 @@ class CNOGraph(nx.DiGraph):
         #for n in nbunch:
         #    self.add_node(n, attr_dict=attr_dict, **attr)
 
+    @modifier
     def remove_nodes_from(self, nbunch):
         """Removes a bunch of nodes
 
@@ -2498,7 +2502,7 @@ class CNOGraph(nx.DiGraph):
         #    self.logging.info("Highest betweeness centrality %s %s", v,k)
         return res
 
-    def export2gexf(self, filename):
+    def to_gexf(self, filename):
         """Export into GEXF format
 
         :param str filename:
@@ -2637,6 +2641,7 @@ class CNOGraph(nx.DiGraph):
         print("Flow hierarchy = %s (fraction of edges not participating in cycles)" % stats['flow'])
         print("Average degree = " + unicode(sum(self.degree().values())/float(len(self.nodes()))))
 
+    @modifier
     def merge_nodes(self, nodes, node):
         """Merge several nodes into a single one
 
@@ -2699,6 +2704,7 @@ class CNOGraph(nx.DiGraph):
                 self._inhibitors.remove(this)
             self._inhibitors.append(node)
 
+    @modifier
     def split_node(self, node, nodes):
         """
 
@@ -2829,7 +2835,7 @@ class CNOGraph(nx.DiGraph):
         self._stimuli = sources[0::2]
         self._signals = sinks[0::2]
 
-
+    @modifier
     def remove_self_loops(self):
         for e in self.edges():
             if e[0] == e[1]:
