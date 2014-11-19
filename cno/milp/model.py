@@ -52,9 +52,9 @@ class MILPTrain(object):
 
     def initialize_grouping_variables(self):
         # helper group variables
-        g_R = dict()  # R_i: signaling molecules (reactants) for reaction i
-        g_I = dict()  # I_i: inhibitors for reaction i
-        g_P = dict()  # P_i: products for reaction i
+        g_R = dict()  # \mathbf{R}_i: signaling molecules (reactants) for reaction i
+        g_I = dict()  # \mathbf{I}_i: inhibitors for reaction i
+        g_P = dict()  # \mathbf{P}_i: products for reaction i
         for i in self.rxn_raw:
             node_origin, node_product = i.split("->")
             g_P[i] = node_product
@@ -80,7 +80,7 @@ class MILPTrain(object):
 
     def define_decision_variables(self):
         # Variable declaration
-        # y_i: 1 if reaction i present, 0 otherwise
+        # y_i: 1 if reaction i is present, 0 otherwise
         # z_i^k: 1 if reaction i takes place in experiment k, 0 otherwise
         # x_j^k: 1 if species j is active in experiment k, 0 otherwise
         y_var = pulp.LpVariable.dicts("rxn", self.rxn, lowBound=0, upBound=1, cat=pulp.LpBinary)
@@ -90,7 +90,7 @@ class MILPTrain(object):
 
     def add_problem_constraints(self):
         # Nodes under stimuli are set according to the experiments
-        # x_j^k = 1    k=1,...,n_e    j in M^(k,1)
+        # x_j^k = 1, \qquad k=1,\dots,n_e \quad j \in \mathbf{M}^{k,1}
         introduced = self.midas.stimuli
         for k in self.experiment:
             for j in self.midas.names_stimuli:
@@ -98,7 +98,7 @@ class MILPTrain(object):
                 self.x_var[j][k].bounds(low=value, up=value)
 
         # Nodes under inhibitory compounds are set to zero when the inhibitor is present
-        # x_j^k = 0    k=1,...,n_e    j in M^(k,0)
+        # x_j^k = 0, \qquad k=1,\dots,n_e \quad j \in \mathbf{M}^{k,0}
         excluded = self.midas.inhibitors
         for k in self.experiment:
             for j in self.midas.names_inhibitors:
@@ -107,13 +107,13 @@ class MILPTrain(object):
                     self.x_var[j][k].bounds(low=0, up=0)
 
         # A reaction can only take place if it is possible
-        # z_i^k <= y_i    i=1,...,n_r    k=1,...,n_e
+        # z_i^k \leq y_i, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e
         for i in self.rxn:
             for k in self.experiment:
                 self.model += self.z_var[i][k] <= self.y_var[i]
 
         # A reaction can only take place if all reagents and no inhibitors are present.
-        # z_i^k <= x_j^k    i=1,...,n_r    k=1,...,n_e    j in R_i
+        # z_i^k \leq x_j^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{R}_i
         for i in self.rxn:
             for k in self.experiment:
                 if i in self.R:
@@ -121,7 +121,7 @@ class MILPTrain(object):
                     #self.model += self.z_var[i][k] <= self.x_var[j][k]
                     for j in self.R[i]:
                         self.model += self.z_var[i][k] <= self.x_var[j][k]
-        # z_i^k <= 1 - x_j^k    i=1,...,n_r    k=1,...,n_e    j in I_i
+        # z_i^k \leq 1 - x_j^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{I}_i
         for i in self.rxn:
             for k in self.experiment:
                 if i in self.I:
@@ -131,11 +131,12 @@ class MILPTrain(object):
                         self.model += self.z_var[i][k] <= 1 - self.x_var[j][k]
 
         # If a reaction is possible, all reagents are present and no inhibitors are present.
-        # z_i^k >= y_i + sum(x_j^k - 1)_(j in R_i) - sum(x_j^k)_(j in I_i)    i=1,...,n_r    k=1,...,ne
+        # z_i^k \geq y_i + \sum_{j \in \mathbf{R}_i} (x_j^k - 1) - \sum_{j \in \mathbf{I_i}} (x_j^k),
+        #   \qquad i=1,\dots,n_r \quad k=1,\dots,n_e
         # note: when adding terms to a constraint expression,
         # variables are added to the left of the inequality
         # and constant terms are moved to the right
-        # that is why we do -= for R_i and += for I_i
+        # that is why we do -= for \mathbf{R}_i and += for \mathbf{I}_i
         for i in self.rxn:
             for k in self.experiment:
                 constraint = self.z_var[i][k] >= self.y_var[i]
@@ -150,7 +151,7 @@ class MILPTrain(object):
                 self.model += constraint
 
         # A species will be formed if some reaction in which it is a product occurs.
-        # x_j^k >= z_i^k    i=1,...,n_r    k=1,...,n_e    j in P_i
+        # x_j^k \geq  z_i^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{P}_i
         for i in self.rxn:
             for k in self.experiment:
                 if i in self.P:
@@ -165,7 +166,7 @@ class MILPTrain(object):
 
         # A species will not be present if all reactions in which it appears as a product do not occur.
         # Note: manipulated species are not considered as products in reactions.
-        # x_j^k <= sum(z_i^k)_(i=1,...,n_r; j in P_i)    i=1,...,n_r    k=1,...,n_e
+        # x_j^k \leq \sum_{i=1,\dots,n_r; j \in \mathbf{P}_i} z_i^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e
         for j in self.node:
             for k in self.experiment:
                 # add constraint only if the product node has not been manually set
@@ -179,7 +180,7 @@ class MILPTrain(object):
                         self.model += self.x_var[j][k] <= rhs
 
     def error_objective_expression(self):
-        # sum(sum(alpha_j^k * (x_j^(k,m) + (1 - 2*x_j^(k,m))*x_j^k))_(j in M^(k,2)))_(k=1,...,n_e)
+        # \sum_{k=1,\dots,n_e} \sum_{j \in \mathbf{M}^{k,2}} \alpha_j^k (x_j^{k,m} + (1 - 2 x_j^{k,m}) x_j^k))
 
         time_start = self.midas.times[0]
         time_end = self.midas.times[1]
@@ -200,6 +201,6 @@ class MILPTrain(object):
         return error_obj
 
     def size_objective_expression(self):
-        # sum(beta_i*y_i)_(i=1,...,n_r)
+        # \sum_{i=1,\dots,n_r} \beta_i y_i
         size_obj = pulp.lpSum(self.y_var)
         return size_obj
