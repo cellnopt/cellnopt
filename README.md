@@ -20,10 +20,10 @@ To be provided:
 - [ ] fuzzy analysis
 - [x] connection to cnor feeder connection
 - [ ] ode analysis
-- [ ] Visualisation
-- [ ] data : move cellnopt.data into here
+- [x] Visualisation
+- [x] data : move cellnopt.data into here
 - [x] move cellnopt.admin to here ? 
-- [ ] move cellnopt.core as cellnopt.io in here ?
+- [x] move cellnopt.core as cellnopt.io in here ?
   - [x] midas
   - [x] sif/reactions
   - [x] cnograph
@@ -32,18 +32,12 @@ To be provided:
   - [ ] mapback
   - [ ] models
   - [x] cna
-- [ ] R packages available in CellNOptR repository
+- [x] R packages available in CellNOptR repository
   - [x] boolean T1
   - [x] boolean T2
   - [x] fuzzy
   - [x] discrete time
   - [x] ode
-- [ ] optimisation and modelisation
-  - [ ] boolean T1
-  - [ ] boolean T2
-  - [ ] fuzzy
-  - [ ] discrete time
-  - [ ] ode
 
 
 
