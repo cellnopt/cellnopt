@@ -1,17 +1,12 @@
 :Description: This model is used in the reference(s) here below.
-    The network was generated manually from the paper. The model
-    is available in SIF format (**PKN-ToyPCB.sif**) and SBML-qual format 
-    (**PKN-ToyPCB.xml**).
+    The network was generated manually from the paper. 
+:Model: The model is available in SIF format (**PKN-ToyPCB.sif**) and SBML-qual format 
+    (**PKN-ToyPCB.xml**) available from **cnodata**. See code below.
 :Data: The data in MIDAS format is **MD-ToyPCB.csv**. 
-    The data was generated
-    manually from the matlab data in the CNO matlab repository
-    (Data/SampleData/ToyModelPCB). Experiments with stimuli set to zero (all NA)
-    were removed.
-
+    The data was generated manually.
 
 .. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPCB/ToyPCB.png
    :alt: ToyPCB figure
-   :width: 40%
 
 .. code-block:: python
 
