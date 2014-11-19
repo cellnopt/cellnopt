@@ -67,7 +67,7 @@ class Link(object):
         elif link == '-':
             self.name = 'inhibition'
         else:
-            raise ValueError("Only + and - link are valid")
+            raise ValueError("Only + and - link are valid. Got %s" % link)
         self._link = link
     def _get_link(self):
         return self._link
@@ -784,14 +784,16 @@ class CNOGraph(nx.DiGraph):
         return G
 
     def __str__(self):
-        nodes = len([x for x in self.nodes() if '^' not in x])
-        andnodes = len([x for x in self.nodes() if '^' in x])
+        nodes = len([x for x in self.nodes() if self.and_symbol not in unicode(x)])
+        andnodes = len([x for x in self.nodes() if self.and_symbol in unicode(x)])
 
         msg = "The model contains %s nodes (and %s AND node)\n" % (nodes, andnodes)
 
         self.logging.warning("Edge counting valid only if and node have only 2 inputs")
-        edges = len([e for e in self.edges() if '^' not in e[0] and '^' not in e[1]])
-        andedges = len([e for e in self.edges() if '^'  in e[0] or '^'  in e[1]])/3
+        edges = len([e for e in self.edges() if self.and_symbol not in 
+            unicode(e[0]) and self.and_symbol not in unicode(e[1])])
+        andedges = len([e for e in self.edges() if self.and_symbol 
+            in unicode(e[0]) or self.and_symbol in unicode(e[1])])/3
         msg += "%s Hyperedges found (%s+%s) \n" % (edges+andedges, edges, andedges)
 
         return msg
@@ -1304,7 +1306,7 @@ class CNOGraph(nx.DiGraph):
         for k, v in self.graph_options['edge'].iteritems():
             H.edge_attr[k] = v
         for k, v in self.graph_options['node'].iteritems():
-            H.edge_attr[k] = v
+            H.node_attr[k] = v
 
         if rank_method is None:
             return H 
@@ -2819,21 +2821,57 @@ class CNOGraph(nx.DiGraph):
         namesNONC  = list(set(namesNONC)) # required ?
         return namesNONC
 
-    def random_poisson_graph(self, n=10, mu=3, remove_unconnected=False):
+    @modifier
+    def random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
+            remove_unconnected=True, 
+            remove_self_loops=True, maxtrials=50):
+        count = 0
+        while count < maxtrials:
+            self._random_poisson_graph(n, mu, ratio=ratio,
+                remove_unconnected=remove_unconnected, 
+                remove_self_loops=remove_self_loops)
+            if nx.is_connected(self.to_undirected()):
+                count = maxtrials + 1
+            else:
+                print("Creating a disconnected network. Trying again")
+                count += 1
+
+    def _random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
+            remove_unconnected=True, 
+            remove_self_loops=True):
         from scipy.stats import poisson
         z = [poisson.rvs(mu) for i in range(0,n)]
         G = nx.expected_degree_graph(z)
         self.clear()
+
         # converts to strings
-        self.add_edges_from(G.edges(), link="+")
-        if remove_unconnected==False:
+        # Ratio activation/inhibition
+        edges = G.edges()
+        assert ratio >= 0
+        assert ratio <= 1
+
+        N = int(len(edges)* ratio)
+        edges_pos = edges[0:N]
+        edges_neg = edges[N:]
+        self.add_edges_from(edges_pos, link="+")
+        self.add_edges_from(edges_neg, link="-")
+
+        # remove self loop first
+        if remove_self_loops:
+            self.remove_self_loops()
+
+        if remove_unconnected == False:
+            # add all nodes (even though they me be unconnected
             self.add_nodes_from(G.nodes())
 
         ranks = self.get_same_rank()
         sources = ranks[0]
         sinks = ranks[max(ranks.keys())]
-        self._stimuli = sources[0::2]
-        self._signals = sinks[0::2]
+        self._stimuli = sources
+        self._signals = sinks
+        self.reset_edge_attributes() # to create the colors/arrows
+
+
 
     @modifier
     def remove_self_loops(self):
