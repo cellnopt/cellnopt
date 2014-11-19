@@ -23,7 +23,8 @@ class Register(object):
         r.filter_directories() # keep those that are valid in the _registered attribute
 
     """
-    def __init__(self, pathname=__path__[0]):
+    def __init__(self, pathname=__path__[0], debug=False):
+        self.debug = debug
         self.pathname = pathname[:]
 
         self.directories = [x for x in os.listdir(pathname) 
@@ -42,11 +43,13 @@ class Register(object):
             Npkn = len(glob.glob(os.sep.join([self.pathname, register, 'PKN-*'])))
             Nmidas = len(glob.glob(os.sep.join([self.pathname, register, 'MD-*'])))
             if Npkn == 0:
-                print("CNO warning (datasets): {0} directory has no PKN".format(register))
-                print("CNO warning (datasets): {0} will not be available (no PKN)".format(register))
+                if self.debug:
+                    print("CNO warning (datasets): {0} directory has no PKN".format(register))
+                    print("CNO warning (datasets): {0} will not be available (no PKN)".format(register))
                 continue
             if Nmidas == 0:
-                print("CNO warning (datasets): {0} directory has no MIDAS".format(register))
+                if self.debug:
+                    print("CNO warning (datasets): {0} directory has no MIDAS".format(register))
             valid.append(register)
         self.directories = sorted(list(set(valid[:])))
 
@@ -61,7 +64,8 @@ class Register(object):
                 CNOGraph(self.model, self.data).plot(**kargs)
 
         for package in self.directories:
-            print("Importing %s" % package)
+            if self.debug:
+                print("Importing %s" % package)
             import importlib
             try:
                 this = importlib.import_module('cno.datasets.{0}'.format(package))
@@ -83,7 +87,6 @@ class Register(object):
                     model = metadata['model'].replace('/', os.sep)
                 else:
                     model = "PKN-" + name + ".sif" 
-                print("    "+model)
 
                 if 'data' in metadata.keys():
                     # replace / by os.sep for multiplatform compat
@@ -91,7 +94,6 @@ class Register(object):
                 else:
                     data = "MD-" + name + ".csv" 
 
-                print("    "+data)
                 this.model = this.__path__[0] + os.sep + model
                 this.data = this.__path__[0] + os.sep + data
                 this.plot = _PLOT(this.model, this.data).plot
