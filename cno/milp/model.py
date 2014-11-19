@@ -5,6 +5,13 @@ from numpy import isnan
 
 
 class MILPTrain(object):
+    """MILP model for training boolean signalling networks
+
+    For details about the approach see:
+    Mitsos A, Melas IN, Siminelakis P, Chairakaki AD, Saez-Rodriguez J, Alexopoulos LG. (2009) Identifying Drug Effects
+    via Pathway Alterations using an Integer Linear Programming Optimization Formulation on Phosphoproteomic Data.
+    PLoS Comput Biol 5(12): e1000591. doi:10.1371/journal.pcbi.1000591
+    """
 
     def __init__(self, pkn, midas):
         self.pkn = pkn
@@ -95,7 +102,7 @@ class MILPTrain(object):
         excluded = self.midas.inhibitors
         for k in self.experiment:
             for j in self.midas.names_inhibitors:
-                value = excluded.get_value(index=excluded.index[k], col=j+":i")
+                value = excluded.get_value(index=excluded.index[k], col=j)
                 if value == 1:
                     self.x_var[j][k].bounds(low=0, up=0)
 
@@ -151,7 +158,7 @@ class MILPTrain(object):
                     is_inhibited = False
                     if j in self.midas.names_inhibitors:
                         row_index = self.midas.inhibitors.index[k]
-                        is_inhibited = self.midas.inhibitors.get_value(index=row_index, col=j+":i") == 1
+                        is_inhibited = self.midas.inhibitors.get_value(index=row_index, col=j) == 1
                     # add constraint only if the product node has not been manually set
                     if not is_inhibited:
                         self.model += self.x_var[j][k] >= self.z_var[i][k]
@@ -165,7 +172,7 @@ class MILPTrain(object):
                 is_inhibited = False
                 if j in self.midas.names_inhibitors:
                     row_index = self.midas.inhibitors.index[k]
-                    is_inhibited = self.midas.inhibitors.get_value(index=row_index, col=j+":i") == 1
+                    is_inhibited = self.midas.inhibitors.get_value(index=row_index, col=j) == 1
                 if not is_inhibited:
                     rhs = sum(self.z_var[i][k] for i in self.rxn if i in self.P and j in self.P[i])
                     if rhs is not 0:
