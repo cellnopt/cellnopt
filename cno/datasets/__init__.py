@@ -51,7 +51,7 @@ class Register(object):
         self.directories = sorted(list(set(valid[:])))
 
     def import_all(self):
-        self.registered = []
+        self.registered = {}
         class _PLOT(object):
             def __init__(self, model, data):
                 self.model = model
@@ -60,11 +60,11 @@ class Register(object):
                 from cno.io import CNOGraph
                 CNOGraph(self.model, self.data).plot(**kargs)
 
-        for register in self.directories:
-            print("Importing %s" % register)
+        for package in self.directories:
+            print("Importing %s" % package)
             import importlib
             try:
-                this = importlib.import_module('cno.datasets.{0}'.format(register))
+                this = importlib.import_module('cno.datasets.{0}'.format(package))
                 # attach README dynamically
                 this.__doc__ = open(this.__path__[0] + os.sep + 'README.rst', 'r').read()
 
@@ -90,16 +90,24 @@ class Register(object):
                     data = metadata['data'].replace('/', os.sep)
                 else:
                     data = "MD-" + name + ".csv" 
-                
+
                 print("    "+data)
                 this.model = this.__path__[0] + os.sep + model
                 this.data = this.__path__[0] + os.sep + data
                 this.plot = _PLOT(this.model, this.data).plot
-                self.registered.append(this.model)
-                self.registered.append(this.data)
+
+                sbmlpath = this.model.replace(".sif", ".xml")
+                sbml = model.replace(".sif", ".xml")
+
+                self.registered[model] = this.model
+                self.registered[data] = this.data
+
+                if os.path.exists(sbmlpath):
+                    self.registered[sbml]  = sbmlpath
+
             except Exception as err:
                 print(err.message)
-                print("CNO warning (datasets): could not import {0}".format(register))
+                print("CNO warning (datasets): could not import {0}".format(package))
                 pass
 
 

@@ -1,12 +1,12 @@
 import os
 from cno.datasets import ToyMMB, ToyPB, ToyPCB, ExtLiverPCB
-from cno.datasets import cnodata, registers
+from cno.datasets import cnodata, register
 
 from nose.plugins.attrib import attr
 
 
 def test_registered_cnodata():
-    for filename in registers:
+    for filename in register.registered:
         fullpath = cnodata(filename)
         assert os.path.exists(fullpath)
 
@@ -17,13 +17,9 @@ def test_registered_cnodata():
         assert True
 
 def test_datasets_toymmb():
-    ToyMMB.model_filename
-    ToyMMB.data_filename
-    ToyMMB.description
+    ToyMMB.model
+    ToyMMB.data
     ToyMMB.plot()
-
-
-
 
 @attr('skip')
 def test_all_plots():
@@ -34,3 +30,8 @@ def test_all_plots():
     ds.ExtLiverPCB.plot()
     ds.LiverDREAM.plot()
     ds.ToyPB_True.plot()
+
+def test_cnodata():
+    cnodata()
+    cnodata('*SBML*')
+    
