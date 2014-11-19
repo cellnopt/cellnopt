@@ -34,4 +34,5 @@ def test_all_plots():
 def test_cnodata():
     cnodata()
     cnodata('*SBML*')
+    cnodata('unknown')
     

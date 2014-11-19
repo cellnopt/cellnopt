@@ -102,7 +102,12 @@ class Register(object):
                 sbml = model.replace(".sif", ".xml")
 
                 self.registered[model] = this.model
-                self.registered[data] = this.data
+
+                # If .. is found, it means it is an existing MIDAS file
+                # in another directory. So it will be found in anpther 
+                # directory
+                if ".." not in this.data:
+                    self.registered[data] = this.data
 
                 if os.path.exists(sbmlpath):
                     self.registered[sbml]  = sbmlpath

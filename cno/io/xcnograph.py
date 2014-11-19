@@ -106,7 +106,8 @@ class XCNOGraph(CNOGraph):
             pylab.axes([0.1, 0.1, 0.45, 0.45])
 
         UG = self.to_undirected()
-        Gcc = nx.connected_component_subgraphs(UG)[0]
+        Gcc = list(nx.connected_component_subgraphs(UG))
+        Gcc = Gcc[0]
         if layout == 'spring':
             pos = nx.spring_layout(Gcc)
         else:
@@ -123,8 +124,11 @@ class XCNOGraph(CNOGraph):
         :return: list of lists containing all found cycles
         """
         data = list(nx.simple_cycles(self))
-        pylab.hist([len(x) for x in data], **kargs)
-        pylab.title("Length of the feedback loops")
+        if len(data):
+            pylab.hist([len(x) for x in data], **kargs)
+            pylab.title("Length of the feedback loops")
+        else:
+            print('No loop/cycle found')
         return data
 
     def plot_in_out_degrees(self, show=True,ax=None, kind='kde'):
@@ -173,28 +177,31 @@ class XCNOGraph(CNOGraph):
 
         data = nx.simple_cycles(self)
         data = list(pylab.flatten(data))
-        counting = [(x, data.count(x)) for x in self.nodes() 
-                if data.count(x)!=0 and "and" not in unicode(x) and self.isand(x) is False]
 
-        M = float(max([count[1] for count in counting]))
-        # set a default
-        #for node in self.nodes():
-        #    self.node[node]['loops'] = "#FFFFFF"
+        # FIXME: may not be robust to have "and": could be a valid name
+        counting = [(x, data.count(x)) for x in self.nodes() 
+                if data.count(x)!=0 and unicode(x).startswith('and') is False 
+                and self.isand(x) is False]
+
         for node in self.nodes():
             self.node[node]['loops'] = 0
 
-        for count in counting:
-            #ratio_count = sm.to_rgba(count[1]/M)
-            ratio_count = count[1]/M
-            colorHex = ratio_count
-            #self.node[count[0]]['loops'] = colorHex
-            self.node[count[0]]['loops'] = ratio_count
-            self.node[count[0]]['style'] =  'filled,bold'
+        if len(counting):
+            M = float(max([count[1] for count in counting]))
+            # set a default
+            #for node in self.nodes():
+            #    self.node[node]['loops'] = "#FFFFFF"
+
+            for count in counting:
+                #ratio_count = sm.to_rgba(count[1]/M)
+                ratio_count = count[1]/M
+                colorHex = ratio_count
+                #self.node[count[0]]['loops'] = colorHex
+                self.node[count[0]]['loops'] = ratio_count
+                self.node[count[0]]['style'] =  'filled,bold'
 
         self.plot(node_attribute="loops", cmap=cmap, **kargs)
         return counting
-
-
 
     def degree_histogram(self, show=True, normed=False):
         """Compute histogram of the node degree (and plots the histogram)
@@ -255,6 +262,11 @@ class XCNOGraph(CNOGraph):
         N = len(nodeNames)
 
         data = self.adjacency_matrix(nodelist=nodeNames)
+        # This is now a sparse matrix (networkx 1.9).
+        try:
+            data = data.todense()
+        except:
+            pass
 
         pylab.pcolor(pylab.flipud(pylab.array(data)), edgecolors="k", **kargs)
         pylab.axis([0, N, 0, N])

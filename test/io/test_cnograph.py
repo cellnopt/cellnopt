@@ -285,7 +285,8 @@ def test_plot():
     c.plot(rank_method=None, show=False) # speeed up
     fh = tempfile.NamedTemporaryFile(suffix='.svg')
 
-    c.plot(rank_method='same', filename=fh.name, show=False) # speeed up
+    c.plot(rank_method='all', filename=fh.name, show=False) # speeed up
+    c.plot(rank_method='cno', filename=fh.name, show=False) # speeed up
 
     # node attribute
     c = CNOGraph()
