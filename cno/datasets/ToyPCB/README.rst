@@ -11,8 +11,9 @@
 
 .. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/ToyPCB/ToyPCB.png
    :alt: ToyPCB figure
+   :width: 40%
 
-::
+.. code-block:: python
 
     from cno import cnodata, CNOGraph
     c = cnograph.CNOGraph(cnodata("PKN-ToyPCB.sif"), cnodata("MD-ToyPCB.csv"))
