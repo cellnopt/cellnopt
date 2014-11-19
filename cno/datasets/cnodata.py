@@ -15,7 +15,7 @@
 ##############################################################################
 """"""
 import importlib
-from cno.datasets import registers
+from cno.datasets import register
 
 
 def cnodata(filename=None):
@@ -33,11 +33,14 @@ def cnodata(filename=None):
 
         cnodata("PKN-ToyPB.sif")
 
+    You can also search for a pattern::
+
+        cnodata('*SBML*')
 
     """
     if filename is None:
         print("Valid names are:")
-        print("\n".join(sorted(registers)))
+        print("\n".join(sorted(register)))
         return
 
     msg = "Unknown filename. "

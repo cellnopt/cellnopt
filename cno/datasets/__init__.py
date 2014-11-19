@@ -12,48 +12,106 @@ __all__ = ['cnodata']
 # Finds the directories automatically.
 # Nothing to change here below
 
-# we will store the relevant directories here
-_registered = []
 
-# here is the list
-pathname = __path__[0]
-directories = [x for x in os.listdir(pathname) if os.path.isdir(os.sep.join([pathname,x]))]
-assert len(directories)
-
-# but some may not be valid
-for register in directories:
-    if len(glob.glob(os.sep.join([pathname, register, 'PKN-*'])))==0:
-        pass
-        #print("register {0} not valid (no PKN found)".format(register))
-    if len(glob.glob(os.sep.join([pathname, register, 'MD-*'])))==0:
-        pass
-        #print("register {0} not valid (no MIDAS found)".format(register))
-    else:
-        _registered.append(register)
+class Register(object):
+    """Retrieve existing Network and MIDAS files in :mod:`cno.datasets`
 
 
-def _build_registers():
-    registers = []
-    for k in _registered:
-        registers.append("PKN-{0}.sif".format(k))
-    for k in _registered:
-        filename = "PKN-{0}.xml".format(k)
-        if os.path.exists(os.sep.join([pathname, k,filename])):
-            registers.append("PKN-{0}.xml".format(k))
-    for k in _registered:
-        registers.append("MD-{0}.csv".format(k))
-    registers = sorted(registers)
-    return registers
+        # finds all directories
+        r = Register() # finds all directories
+        # keep those that are valid in the _registered attribute
+        r.filter_directories() # keep those that are valid in the _registered attribute
 
-# add the PKN and MIDAS file in the list of files that can be
-# retrieved.
-registers = _build_registers()
+    """
+    def __init__(self, pathname=__path__[0]):
+        self.pathname = pathname[:]
 
-# dynamic import of all directories that contain a PKN and MIDAS
-# files
-for register in _registered:
-    import importlib
-    importlib.import_module('cno.datasets.{0}'.format(register))
+        self.directories = [x for x in os.listdir(pathname) 
+                if os.path.isdir(os.sep.join([pathname,x]))]
+
+        self.directories = sorted(self.directories)
+        assert len(self.directories)
+
+        self.filter_directories()
+        self.registered = []
+
+    def filter_directories(self):
+        # but some may not be valid
+        valid = []
+        for register in self.directories:
+            Npkn = len(glob.glob(os.sep.join([self.pathname, register, 'PKN-*'])))
+            Nmidas = len(glob.glob(os.sep.join([self.pathname, register, 'MD-*'])))
+            if Npkn == 0:
+                print("CNO warning (datasets): {0} directory has no PKN".format(register))
+                print("CNO warning (datasets): {0} will not be available (no PKN)".format(register))
+                continue
+            if Nmidas == 0:
+                print("CNO warning (datasets): {0} directory has no MIDAS".format(register))
+            valid.append(register)
+        self.directories = sorted(list(set(valid[:])))
+
+    def import_all(self):
+        self.registered = []
+        class _PLOT(object):
+            def __init__(self, model, data):
+                self.model = model
+                self.data = data
+            def plot(self, **kargs):
+                from cno.io import CNOGraph
+                CNOGraph(self.model, self.data).plot(**kargs)
+
+        for register in self.directories:
+            print("Importing %s" % register)
+            import importlib
+            try:
+                this = importlib.import_module('cno.datasets.{0}'.format(register))
+                # attach README dynamically
+                this.__doc__ = open(this.__path__[0] + os.sep + 'README.rst', 'r').read()
+
+                try:
+                    metadata = this.metadata
+                except:
+                    metadata = {}
+
+                if 'name' in metadata.keys():
+                    name = metadata['name']
+                else:
+                    name = os.path.split(this.__path__[0])[1]
+
+                if 'model' in metadata.keys():
+                    # replace / by os.sep for multiplatform compat
+                    model = metadata['model'].replace('/', os.sep)
+                else:
+                    model = "PKN-" + name + ".sif" 
+                print("    "+model)
+
+                if 'data' in metadata.keys():
+                    # replace / by os.sep for multiplatform compat
+                    data = metadata['data'].replace('/', os.sep)
+                else:
+                    data = "MD-" + name + ".csv" 
+                
+                print("    "+data)
+                this.model = this.__path__[0] + os.sep + model
+                this.data = this.__path__[0] + os.sep + data
+                this.plot = _PLOT(this.model, this.data).plot
+                self.registered.append(this.model)
+                self.registered.append(this.data)
+            except Exception as err:
+                print(err.message)
+                print("CNO warning (datasets): could not import {0}".format(register))
+                pass
 
 
+# Now, we build an instance of Register that filters out directories, which do not have
+# at least one PKN, and finally import dynamically all packages in the namespace
+register = Register(__path__[0])
+register.filter_directories()
+register.import_all()
+names = register.directories
+# register variable is used inside cnodata
+
+# import cnodata function in the dataset package
 from .cnodata import cnodata
+
+
