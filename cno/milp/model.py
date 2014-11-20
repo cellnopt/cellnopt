@@ -2,6 +2,8 @@ __author__ = 'ltobalina'
 
 import pulp
 from numpy import isnan
+from cno.io import Reaction
+from itertools import izip
 
 
 class MILPTrain(object):
@@ -44,9 +46,10 @@ class MILPTrain(object):
 
     def initialize_indexing_variables(self):
         # helper indexing variables
-        rxn_raw = [e[0]+"->"+e[1] for e in self.pkn.edges_iter() if "=" not in e[1]]
-        rxn = [rxn.replace("^", "_and_").replace("!", "not_").replace("=", "_e_") for rxn in rxn_raw]
-        node = [n for n in self.pkn.nodes_iter() if "=" not in n]
+        rxn_raw = self.pkn.reactions
+        # replace special characters in reaction names to avoid name interpretation problems in the MILP formulation
+        rxn = [rxn.replace("^", "_and_").replace("!", "not_").replace("=", "_eq_") for rxn in rxn_raw]
+        node = self.pkn.species
         experiment = [k for k in range(self.midas.nExps)]
         return rxn_raw, rxn, node, experiment
 
@@ -55,26 +58,17 @@ class MILPTrain(object):
         g_R = dict()  # \mathbf{R}_i: signaling molecules (reactants) for reaction i
         g_I = dict()  # \mathbf{I}_i: inhibitors for reaction i
         g_P = dict()  # \mathbf{P}_i: products for reaction i
-        for i in self.rxn_raw:
-            node_origin, node_product = i.split("->")
+        for i, i_raw in izip(self.rxn, self.rxn_raw):
+            current_rxn = Reaction(i_raw)
+
+            node_origin = current_rxn.get_signed_lhs_species()
+            if node_origin['+']:
+                g_R[i] = node_origin['+']
+            if node_origin['-']:
+                g_I[i] = node_origin['-']
+
+            node_product = current_rxn.rhs
             g_P[i] = node_product
-            if "=" not in node_origin:
-                link_type = self.pkn.get_edge_data(node_origin, node_product)['link']
-                if link_type == '+':
-                    g_R[i] = [node_origin]
-                elif link_type == '-':
-                    g_I[i] = [node_origin]
-            else:
-                for pred in self.pkn.predecessors(node_origin):
-                    link_type = self.pkn.get_edge_data(pred, node_origin)['link']
-                    if link_type == '+':
-                        if i not in g_R:
-                            g_R[i] = []
-                        g_R[i].append(pred)
-                    elif link_type == '-':
-                        if i not in g_I:
-                            g_I[i] = []
-                        g_I[i].append(pred)
 
         return g_R, g_I, g_P
 
@@ -83,9 +77,9 @@ class MILPTrain(object):
         # y_i: 1 if reaction i is present, 0 otherwise
         # z_i^k: 1 if reaction i takes place in experiment k, 0 otherwise
         # x_j^k: 1 if species j is active in experiment k, 0 otherwise
-        y_var = pulp.LpVariable.dicts("rxn", self.rxn, lowBound=0, upBound=1, cat=pulp.LpBinary)
-        z_var = pulp.LpVariable.dicts("rxn", (self.rxn, self.experiment), lowBound=0, upBound=1, cat=pulp.LpBinary)
-        x_var = pulp.LpVariable.dicts("n", (self.node, self.experiment), lowBound=0, upBound=1, cat=pulp.LpBinary)
+        y_var = pulp.LpVariable.dicts("y", self.rxn, lowBound=0, upBound=1, cat=pulp.LpBinary)
+        z_var = pulp.LpVariable.dicts("z", (self.rxn, self.experiment), lowBound=0, upBound=1, cat=pulp.LpBinary)
+        x_var = pulp.LpVariable.dicts("x", (self.node, self.experiment), lowBound=0, upBound=1, cat=pulp.LpBinary)
         return y_var, z_var, x_var
 
     def add_problem_constraints(self):
@@ -117,16 +111,12 @@ class MILPTrain(object):
         for i in self.rxn:
             for k in self.experiment:
                 if i in self.R:
-                    #j = self.R[i]
-                    #self.model += self.z_var[i][k] <= self.x_var[j][k]
                     for j in self.R[i]:
                         self.model += self.z_var[i][k] <= self.x_var[j][k]
         # z_i^k \leq 1 - x_j^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{I}_i
         for i in self.rxn:
             for k in self.experiment:
                 if i in self.I:
-                    #j = self.I[i]
-                    #self.model += self.z_var[i][k] <= 1 - self.x_var[j][k]
                     for j in self.I[i]:
                         self.model += self.z_var[i][k] <= 1 - self.x_var[j][k]
 
@@ -141,12 +131,8 @@ class MILPTrain(object):
             for k in self.experiment:
                 constraint = self.z_var[i][k] >= self.y_var[i]
                 if i in self.R:
-                    #j = self.R[i]
-                    #constraint -= self.x_var[j][k]-1
-                    constraint -= pulp.lpSum(self.x_var[j][k] for j in self.R[i]) - 1
+                    constraint -= pulp.lpSum((self.x_var[j][k] - 1) for j in self.R[i])
                 if i in self.I:
-                    #j = self.I[i]
-                    #constraint += self.x_var[j][k]
                     constraint += pulp.lpSum(self.x_var[j][k] for j in self.I[i])
                 self.model += constraint
 
