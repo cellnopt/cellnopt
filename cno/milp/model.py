@@ -54,14 +54,75 @@ class MILPTrain(object):
         :param CNOGraph pkn: prior knowledge network.
         :param XMIDAS midas: experimental data.
         """
-        self.pkn = pkn
-        self.midas = midas
+        self._pkn = pkn
+        self._midas = midas
 
         self.rxn_raw, self.rxn, self.node, self.experiment = self.initialize_indexing_variables()
         self.R, self.I, self.P = self.initialize_grouping_variables()
 
         self.model = pulp.LpProblem(name="BoolNetTrain")
         self.y_var, self.z_var, self.x_var = self.define_decision_variables()
+
+    @property
+    def pkn(self):
+        return self._pkn
+
+    @pkn.setter
+    def pkn(self, new_pkn):
+        self._pkn = new_pkn
+        self._reset_class_attributes()
+        self._reset_problem()
+
+    @property
+    def midas(self):
+        return self._midas
+
+    @midas.setter
+    def midas(self, new_midas):
+        self._midas = new_midas
+        self._reset_class_attributes()
+        self._reset_problem()
+
+    def change_pkn_and_midas(self, new_pkn, new_midas):
+        """Change information about the stored pkn and midas.
+
+        This function changes both attributes, the pkn and the midas.
+
+        :param CNOGraph new_pkn: new prior knowledge network.
+        :param XMIDAS new_midas: new experimental data.
+        :return:
+        """
+        self._pkn = new_pkn
+        self._midas = new_midas
+        self._reset_class_attributes()
+        self._reset_problem()
+
+    def _reset_class_attributes(self):
+        """Reset class attributes.
+
+        This function recalculates rxn_raw, rxn, node, experiment, R, I, P, y_var, z_var and x_var.
+        It is designed to be called when either pkn or midas are changed by the user.
+        """
+        self.rxn_raw, self.rxn, self.node, self.experiment = self.initialize_indexing_variables()
+        self.R, self.I, self.P = self.initialize_grouping_variables()
+
+        self.y_var, self.z_var, self.x_var = self.define_decision_variables()
+
+    def _reset_problem(self):
+        """Reset the optimization problem to an empty problem.
+
+        This function removes all the variables and constraints, as well as the objective function, from the
+        pulp.LpProblem() instance.
+        """
+        # remove objective function
+        self.model.objective = None
+        # remove constraints
+        self.model.constraints.clear()
+        # remove variables
+        # Note: I cannot find any method in the pulp.LpProblem() class to remove the attached variables. This two lines
+        # make the trick, but may not be optimal.
+        self.model._variable_ids.clear()
+        self.model._variables = []
 
     def train(self):
         """Initialize and solve the optimization problem.
