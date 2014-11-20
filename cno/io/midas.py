@@ -102,7 +102,7 @@ class MIDASReader(MIDAS):
             return
         self.logging.debug("Reading the data")
         # skip spaces after delimiter
-        self._data = pd.read_csv(self.filename, skipinitialspace=True, 
+        self._data = pd.read_csv(self.filename, skipinitialspace=True,
                 sep=",")
         self.logging.debug(" - Processing cell lines")
         # figure out the cell line names
@@ -113,7 +113,7 @@ class MIDASReader(MIDAS):
         self.logging.debug(" - Checking format")
 
         # some cleanup to remove columns that have to be ignored
-        labels = ["TR:"+x for x in self._ignore_codes 
+        labels = ["TR:"+x for x in self._ignore_codes
                 if "TR:"+x in self._data.columns]
 
         self._data = self._data.drop(labels, axis=1)
@@ -738,6 +738,7 @@ class XMIDAS(MIDASReader):
             labels = [x if "experiment" in str(x) else "experiment_"+str(x)
                     for x in labels]
 
+        # FIXME try if it fails must call set_index
         self.reset_index()
         for label in labels:
             if label not in set(self.df[level]):
@@ -1140,7 +1141,7 @@ class XMIDAS(MIDASReader):
             #vMax = float(self.df.max(skipna=True).max(skipna=True))
             for j in range(0, self.nSignals):
                 y = self.df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
-                
+
                 trend.set(y)
                 Y = y
 
@@ -1572,9 +1573,7 @@ class XMIDAS(MIDASReader):
         else:
             self.df = normed_midas.copy()
 
-    def to_obs(self):
-        from cno.io.obs import OBS
-        obs = OBS()
+
 
     def to_measurements(self):
         """Returns a Measurements instance
@@ -2042,7 +2041,7 @@ class Trend(object):
     normed_times = property(_get_normed_times, doc="return normed time array")
 
     def _get_normed_values(self):
-        # FIXME do we want to use the span ?? 
+        # FIXME do we want to use the span ??
         #span = float(self.values.max()) - float(self.values.min())
         return self.values / float(self.values.max())
         #return (self.values -self.values.min())/ span

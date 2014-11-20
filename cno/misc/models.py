@@ -7,7 +7,7 @@ and_symbol = "^"
 
 
 class Models(object):
-    """Class to read and plot models as exported by CASPO or CellNOptR 
+    """Class to read and plot models as exported by CASPO or CellNOptR
 
     ::
 
@@ -136,7 +136,7 @@ class Models(object):
 
     def heatmap(self, num=1,transpose=False, cmap='gist_heat_r'):
         """
-    
+
         .. plot::
             :include-source:
 
@@ -154,55 +154,7 @@ class Models(object):
         h.plot(cmap=cmap,num=num)
         return h
 
-    
-     
-    def _get_scores_vs_model_size_df(self):
-        df = pd.DataFrame()
-        df['mse'] = self.scores
-        df['size'] = self.size
-        return df
-
-    def scatter_scores_vs_model_size(self):
-        from biokit import viz
-        df = self._get_scores_vs_model_size_df()
-        viz.scatter_hist(df)
-   
-    def hist_mse(self, fontsize=16, **kargs):
-        """Plot histogram of the MSEs
-
-         .. plot::
-             :include-source:
-
-             >>> from cellnopt.optimiser import ASPBool
-             >>> from cellnopt.data import cnodata
-             >>> a = ASPBool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-             >>> a.run(fit=1)
-             >>> a.hist_mse()
 
 
-        """
-        pylab.clf()
-        mses = self.scores
-        opt = mses.min()
-        N = len(set(mses))
-        print("There are %s different MSE found amongst %s models" % (N,len(mses)))
-        res = pylab.hist(mses, **kargs)
-        pylab.title("MSEs Distribution of the %s best models " % len(mses),
-                    fontsize=fontsize)
-        pylab.grid()
-        pylab.plot([opt,opt], [0,max(res[0])], "r--",lw=2)
-        pylab.xlabel("Mean Square Error of all models", fontsize=fontsize)
-        pylab.ylabel("#",  fontsize=fontsize)
 
-    def hist2d_scores_vs_model_size(self, bins=None, cmap='gist_heat_r',fontsize=16):
-        from biokit import viz
-        df = self._get_scores_vs_model_size_df()
-        h = viz.Hist2d(df)
-        if bins == None:
-            mse_range = 20
-            size_range = df.size.max() - df.size.min() + 1
-            bins = (mse_range, size_range)
-        h.plot(bins=bins, Nlevels=10, cmap=cmap)
-        pylab.xlabel("Score", fontsize=fontsize)
-        pylab.ylabel("Model size", fontsize=fontsize)
 

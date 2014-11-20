@@ -13,8 +13,6 @@
 #  website: http://www.ebi.ac.uk/~cokelaer/XXX
 #
 ##############################################################################
-import tempfile
-import subprocess
 
 from easydev import Logging, AttrDict
 
@@ -48,7 +46,7 @@ class CNORbool(CNOBase):
         :include-source:
 
         from cno import cnodata, CNORbool
-        c = CNORbool(cnodata("PKN-ToyMMB.sif"), 
+        c = CNORbool(cnodata("PKN-ToyMMB.sif"),
             cnodata("MD-ToyMMB.csv"))
         c.optimise()
         c.plot_errors()
@@ -66,17 +64,17 @@ class CNORbool(CNOBase):
         """
         self.session = RSession(dump_stdout=self.verboseR)
 
-    def optimise(self, tag="cnorbool", reltol=0.1, 
+    def optimise(self, tag="cnorbool", reltol=0.1,
             expansion=True, maxgens=150, stallgenmax=100, compression=True):
 
         script_template = """
         library(CellNOptR)
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
-        model = preprocessing(cnolist, pknmodel, compression=%(compression)s, 
+        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
             expansion=%(expansion)s, maxInputsPerGate=3)
 
-        res = gaBinaryT1(cnolist, model, relTol=%(reltol)s, 
+        res = gaBinaryT1(cnolist, model, relTol=%(reltol)s,
             stallGenMax=%(stallgenmax)s, maxGens=%(maxgens)s)
         sim_results = cutAndPlot(cnolist, model, list(res$bString),
                                  plotParams=list(maxrow = 80, cex=0.5),
@@ -106,12 +104,12 @@ class CNORbool(CNOBase):
         self.results['cnorbool'] = {}
 
         script = script_template % {
-                'pkn': self.pknmodel.filename, 
+                'pkn': self.pknmodel.filename,
                 'midas': self.data.filename,
                 'tag':tag,
                 'maxgens':maxgens,
                 'stallgenmax':stallgenmax,
-                'reltol':reltol, 
+                'reltol':reltol,
                 'compression': bool2R(compression),
                 'expansion': bool2R(expansion)
                 }
@@ -130,6 +128,9 @@ class CNORbool(CNOBase):
         models = Models(df)
         models.cnograph.midas = self.data.copy()
         models.scores = self.session.all_scores
+
+        from cno.misc.results import BooleanResults
+        results = BooleanResults()
 
         self.results['cnorbool'] = {
                 'best_score': self.session.best_score,
@@ -172,32 +173,31 @@ class CNORbool(CNOBase):
         t0 = pd.DataFrame(t0, columns=species)
         t0['experiment'] = midas.experiments.index
         t0['time'] = midas.times[0]
-        t0['cellLine'] = midas.cellLines[0]
+        t0['cell'] = midas.cellLines[0]
 
         t1 = pd.DataFrame(t1, columns=species)
         t1['experiment'] = midas.experiments.index
         t1['time'] = midas.times[1]
-        t1['cellLine'] = midas.cellLines[0]
+        t1['cell'] = midas.cellLines[0]
 
-        df = pd.concat([t0,t1]).set_index(['cellLine', 'experiment', 'time'])
+        df = pd.concat([t0,t1]).set_index(['cell', 'experiment', 'time'])
         df.sortlevel(1, inplace=True)
 
         midas.sim = df.copy()
         midas.cmap_scale = 1   # same a CellNOptR
-        midas.plot(mode="mse")
+        # need to cut the times
+
+        valid_times = midas.sim.index.levels[2].values
+        midas.remove_times([x for x in midas.times if x not in valid_times])
+        try:midas.plot(mode="mse")
+        except:pass
 
         #midas.plotSim()
-        pylab.savefig("Error-{0}.png".format(tag), dpi=200)
-        pylab.savefig("Error-{0}.svg".format(tag), dpi=200)
-        if close:
-            pylab.close()
+        #pylab.savefig("Error-{0}.png".format(tag), dpi=200)
+        #pylab.savefig("Error-{0}.svg".format(tag), dpi=200)
+        #if close:
+        #    pylab.close()
         return midas
-
-    def __str__(self):
-        txt = ""
-        for cell in self.cellLines:
-            txt += "{0}: {1}".format(cell, self.results['best_score']) + "\n"
-        return txt
 
     def simulate(self, bs=None, compression=True, expansion=True):
         """
@@ -213,7 +213,6 @@ class CNORbool(CNOBase):
 
 
         """
-
         if bs == None:
             bs = ",".join([str(x) for x in self.results.cnorbool.best_bitstring])
         else:
@@ -224,13 +223,13 @@ class CNORbool(CNOBase):
         library(CellNOptR)
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
-        model = preprocessing(cnolist, pknmodel, compression=%(compression)s, 
+        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
             expansion=%(expansion)s, maxInputsPerGate=3)
         mse = computeScoreT1(cnolist, model, %(bs)s)
         """
 
         script = script_template % {
-                'pkn': self.pknmodel.filename, 
+                'pkn': self.pknmodel.filename,
                 'midas': self.data.filename,
                 'compression': bool2R(compression),
                 'expansion': bool2R(expansion),
@@ -239,15 +238,9 @@ class CNORbool(CNOBase):
 
         self.session.run(script)
         return self.session.mse
-       
+
     def _get_models(self):
         return self.results.cnorbool.models
     models = property(_get_models)
 
-
-    def plot_fit(self):
-        self.results.cnorbool.results[['Best_score','Avg_Score_Gen']].plot()
-        pylab.title("Score per generation")
-        pylab.xlabel("Generation")
-        pylab.ylabel("Score")
 
