@@ -69,6 +69,10 @@ class MILPTrain(object):
         The problem is solved in two steps. First, the algorithm searches for a network with the best possible fit.
         Second, the algorithm searches for the smallest possible network that returns the best fit found.
         """
+        # reset constraint set
+        self.model.constraints.clear()
+
+        # add problem constraints
         self.add_problem_constraints()
 
         # Optimize for error
