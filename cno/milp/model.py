@@ -190,3 +190,9 @@ class MILPTrain(object):
         # \sum_{i=1,\dots,n_r} \beta_i y_i
         size_obj = pulp.lpSum(self.y_var)
         return size_obj
+
+    def get_rxn_solution(self):
+        rxn_sol = dict.fromkeys(self.rxn_raw, 0)
+        for i, i_raw in izip(self.rxn, self.rxn_raw):
+            rxn_sol[i_raw] = self.y_var[i].value()
+        return rxn_sol
