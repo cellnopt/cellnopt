@@ -7,15 +7,53 @@ from itertools import izip
 
 
 class MILPTrain(object):
-    """MILP model for training boolean signalling networks
+    """Mixed Integer Linear Program (MILP) model for training boolean signalling networks.
+
+    This class builds an optimization model from a given prior knowledge network (pkn) and data in midas format.
+    The aim is to select a subset of interactions from the given pkn that are able to explain the observed data under a
+    boolean network framework.
+
+    The problem is solved in two steps. First, the algorithm searches for a network with the best possible fit. Second,
+    the algorithm searches for the smallest possible network that returns the best fit found.
+
+    Example:
+    >>> from cno import cnodata
+    >>> from cno.io import CNOGraph, XMIDAS
+    >>> import cno.milp.model
+
+    >>> filename_pkn = cnodata("PKN-ToyMMB.sif")
+    >>> filename_midas = cnodata("MD-ToyMMB.csv")
+    >>> pkn = CNOGraph(filename_pkn, filename_midas)
+    >>> midas = pkn.midas
+
+    >>> pkn.compress()
+    >>> pkn.expand_and_gates()
+
+    >>> model = cno.milp.model.MILPTrain(pkn, midas)
+    >>> model.train()
+    >>> #model.get_rxn_solution()
+
+    The problem is implemented using PuLP, a linear programming toolkit for python than can interface with different
+    linear programming solvers, both commercial (e.g. CPLEX, Gurobi) and open-source (e.g. CBC). The pulp.LpProblem()
+    instance is stored in MILPTrain.model attribute. The user can select a different solver by using the setSolver()
+    method provided in the pulp.LpProblem() instance. For more details, see the PuLP documentation.
 
     For details about the approach see:
     Mitsos A, Melas IN, Siminelakis P, Chairakaki AD, Saez-Rodriguez J, Alexopoulos LG. (2009) Identifying Drug Effects
     via Pathway Alterations using an Integer Linear Programming Optimization Formulation on Phosphoproteomic Data.
     PLoS Comput Biol 5(12): e1000591. doi:10.1371/journal.pcbi.1000591
+
+    Note: the constraint explained in equation number 2 in the paper is not included in this implementation. This
+    constraint would allow the modeller to limit the combinations of connectivities considered. It is thus not essential
+    for solving the main problem.
     """
 
     def __init__(self, pkn, midas):
+        """Initialization function.
+
+        :param CNOGraph pkn: prior knowledge network.
+        :param XMIDAS midas: experimental data.
+        """
         self.pkn = pkn
         self.midas = midas
 
@@ -26,6 +64,11 @@ class MILPTrain(object):
         self.y_var, self.z_var, self.x_var = self.define_decision_variables()
 
     def train(self):
+        """Initialize and solve the optimization problem.
+
+        The problem is solved in two steps. First, the algorithm searches for a network with the best possible fit.
+        Second, the algorithm searches for the smallest possible network that returns the best fit found.
+        """
         self.add_problem_constraints()
 
         # Optimize for error
@@ -45,6 +88,7 @@ class MILPTrain(object):
             raise Exception("Infeasible model.")
 
     def initialize_indexing_variables(self):
+        """Initialize indexing variables used in the formulation of the model."""
         # helper indexing variables
         rxn_raw = self.pkn.reactions
         # replace special characters in reaction names to avoid name interpretation problems in the MILP formulation
@@ -54,6 +98,12 @@ class MILPTrain(object):
         return rxn_raw, rxn, node, experiment
 
     def initialize_grouping_variables(self):
+        """Initialize grouping variables used in the formulation of the model.
+
+        :math:`\mathbf{R}_i`: signaling molecules (reactants) for reaction i.
+        :math:`\mathbf{I}_i`: inhibitors for reaction i.
+        :math:`\mathbf{P}_i`: products for reaction i.
+        """
         # helper group variables
         g_R = dict()  # \mathbf{R}_i: signaling molecules (reactants) for reaction i
         g_I = dict()  # \mathbf{I}_i: inhibitors for reaction i
@@ -73,16 +123,28 @@ class MILPTrain(object):
         return g_R, g_I, g_P
 
     def define_decision_variables(self):
+        """Decision variables used in the formulation of the model.
+
+        :math:`y_i`: 1 if reaction i is present, 0 otherwise.
+        :math:`z_i^k`: 1 if reaction i takes place in experiment k, 0 otherwise.
+        :math:`x_j^k`: 1 if species j is active in experiment k, 0 otherwise.
+        """
         # Variable declaration
-        # y_i: 1 if reaction i is present, 0 otherwise
-        # z_i^k: 1 if reaction i takes place in experiment k, 0 otherwise
-        # x_j^k: 1 if species j is active in experiment k, 0 otherwise
         y_var = pulp.LpVariable.dicts("y", self.rxn, lowBound=0, upBound=1, cat=pulp.LpBinary)
         z_var = pulp.LpVariable.dicts("z", (self.rxn, self.experiment), lowBound=0, upBound=1, cat=pulp.LpBinary)
         x_var = pulp.LpVariable.dicts("x", (self.node, self.experiment), lowBound=0, upBound=1, cat=pulp.LpBinary)
         return y_var, z_var, x_var
 
     def add_problem_constraints(self):
+        """Add modelling constraints to the optimization problem.
+
+        This function adds constraints described in equations (3) to (10) of the paper
+        Mitsos A, Melas IN, Siminelakis P, Chairakaki AD, Saez-Rodriguez J, Alexopoulos LG. (2009) Identifying Drug
+        Effects via Pathway Alterations using an Integer Linear Programming Optimization Formulation on Phosphoproteomic
+        Data. PLoS Comput Biol 5(12): e1000591. doi:10.1371/journal.pcbi.1000591
+        """
+
+        # equation number 10 in Mitsos et al. 2009
         # Nodes under stimuli are set according to the experiments
         # x_j^k = 1, \qquad k=1,\dots,n_e \quad j \in \mathbf{M}^{k,1}
         introduced = self.midas.stimuli
@@ -91,6 +153,7 @@ class MILPTrain(object):
                 value = introduced.get_value(index=introduced.index[k], col=j)
                 self.x_var[j][k].bounds(low=value, up=value)
 
+        # equation number 9 in Mitsos et al. 2009
         # Nodes under inhibitory compounds are set to zero when the inhibitor is present
         # x_j^k = 0, \qquad k=1,\dots,n_e \quad j \in \mathbf{M}^{k,0}
         excluded = self.midas.inhibitors
@@ -100,12 +163,14 @@ class MILPTrain(object):
                 if value == 1:
                     self.x_var[j][k].bounds(low=0, up=0)
 
+        # equation number 3 in Mitsos et al. 2009
         # A reaction can only take place if it is possible
         # z_i^k \leq y_i, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e
         for i in self.rxn:
             for k in self.experiment:
                 self.model += self.z_var[i][k] <= self.y_var[i]
 
+        # equation number 4 in Mitsos et al. 2009
         # A reaction can only take place if all reagents and no inhibitors are present.
         # z_i^k \leq x_j^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{R}_i
         for i in self.rxn:
@@ -113,6 +178,7 @@ class MILPTrain(object):
                 if i in self.R:
                     for j in self.R[i]:
                         self.model += self.z_var[i][k] <= self.x_var[j][k]
+        # equation number 5 in Mitsos et al. 2009
         # z_i^k \leq 1 - x_j^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{I}_i
         for i in self.rxn:
             for k in self.experiment:
@@ -120,6 +186,7 @@ class MILPTrain(object):
                     for j in self.I[i]:
                         self.model += self.z_var[i][k] <= 1 - self.x_var[j][k]
 
+        # equation number 6 in Mitsos et al. 2009
         # If a reaction is possible, all reagents are present and no inhibitors are present.
         # z_i^k \geq y_i + \sum_{j \in \mathbf{R}_i} (x_j^k - 1) - \sum_{j \in \mathbf{I_i}} (x_j^k),
         #   \qquad i=1,\dots,n_r \quad k=1,\dots,n_e
@@ -136,6 +203,7 @@ class MILPTrain(object):
                     constraint += pulp.lpSum(self.x_var[j][k] for j in self.I[i])
                 self.model += constraint
 
+        # equation number 7 in Mitsos et al. 2009
         # A species will be formed if some reaction in which it is a product occurs.
         # x_j^k \geq  z_i^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{P}_i
         for i in self.rxn:
@@ -150,6 +218,7 @@ class MILPTrain(object):
                     if not is_inhibited:
                         self.model += self.x_var[j][k] >= self.z_var[i][k]
 
+        # equation number 8 in Mitsos et al. 2009
         # A species will not be present if all reactions in which it appears as a product do not occur.
         # Note: manipulated species are not considered as products in reactions.
         # x_j^k \leq \sum_{i=1,\dots,n_r; j \in \mathbf{P}_i} z_i^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e
@@ -166,8 +235,14 @@ class MILPTrain(object):
                         self.model += self.x_var[j][k] <= rhs
 
     def error_objective_expression(self):
-        # \sum_{k=1,\dots,n_e} \sum_{j \in \mathbf{M}^{k,2}} \alpha_j^k (x_j^{k,m} + (1 - 2 x_j^{k,m}) x_j^k))
+        """Define the error objective function.
 
+        ..math::
+            \sum_{k=1,\dots,n_e} \sum_{j \in \mathbf{M}^{k,2}} \alpha_j^k (x_j^{k,m} + (1 - 2 x_j^{k,m}) x_j^k))
+
+        :return: pulp.LpAffineExpression
+        """
+        # equation number 1 (first part) in Mitsos et al. 2009
         time_start = self.midas.times[0]
         time_end = self.midas.times[1]
         measured = self.midas.df
@@ -187,11 +262,21 @@ class MILPTrain(object):
         return error_obj
 
     def size_objective_expression(self):
-        # \sum_{i=1,\dots,n_r} \beta_i y_i
+        """Define the network size objective function.
+
+        ..math::
+            \sum_{i=1,\dots,n_r} \beta_i y_i
+        """
+        # equation number 1 (second part) in Mitsos et al. 2009
         size_obj = pulp.lpSum(self.y_var)
         return size_obj
 
     def get_rxn_solution(self):
+        """Get which reactions are part of the optimized network.
+
+        :return: dictionary with reaction names as keys and 1 or 0 as value indicating if the reaction is present in the
+        optimized network or not.
+        """
         rxn_sol = dict.fromkeys(self.rxn_raw, 0)
         for i, i_raw in izip(self.rxn, self.rxn_raw):
             rxn_sol[i_raw] = self.y_var[i].value()
