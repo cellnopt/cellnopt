@@ -233,7 +233,7 @@ class MILPTrain(object):
         # z_i^k \leq y_i, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e
         for i in self.rxn:
             for k in self.experiment:
-                self.model += self.z_var[i][k] <= self.y_var[i]
+                self.model += self.z_var[i][k] <= self.y_var[i], 'C3_{}_{}'.format(i, k)
 
         # equation number 4 in Mitsos et al. 2009
         # A reaction can only take place if all reagents and no inhibitors are present.
@@ -242,14 +242,14 @@ class MILPTrain(object):
             for k in self.experiment:
                 if i in self.R:
                     for j in self.R[i]:
-                        self.model += self.z_var[i][k] <= self.x_var[j][k]
+                        self.model += self.z_var[i][k] <= self.x_var[j][k], 'C4_{}_{}_{}'.format(i, k, j)
         # equation number 5 in Mitsos et al. 2009
         # z_i^k \leq 1 - x_j^k, \qquad i=1,\dots,n_r \quad k=1,\dots,n_e \quad j \in \mathbf{I}_i
         for i in self.rxn:
             for k in self.experiment:
                 if i in self.I:
                     for j in self.I[i]:
-                        self.model += self.z_var[i][k] <= 1 - self.x_var[j][k]
+                        self.model += self.z_var[i][k] <= 1 - self.x_var[j][k], 'C5_{}_{}_{}'.format(i, k, j)
 
         # equation number 6 in Mitsos et al. 2009
         # If a reaction is possible, all reagents are present and no inhibitors are present.
@@ -266,7 +266,7 @@ class MILPTrain(object):
                     constraint -= pulp.lpSum((self.x_var[j][k] - 1) for j in self.R[i])
                 if i in self.I:
                     constraint += pulp.lpSum(self.x_var[j][k] for j in self.I[i])
-                self.model += constraint
+                self.model += constraint, 'C6_{}_{}'.format(i, k)
 
         # equation number 7 in Mitsos et al. 2009
         # A species will be formed if some reaction in which it is a product occurs.
@@ -281,7 +281,7 @@ class MILPTrain(object):
                         is_inhibited = self.midas.inhibitors.get_value(index=row_index, col=j) == 1
                     # add constraint only if the product node has not been manually set
                     if not is_inhibited:
-                        self.model += self.x_var[j][k] >= self.z_var[i][k]
+                        self.model += self.x_var[j][k] >= self.z_var[i][k], 'C7_{}_{}_{}'.format(i, k, j)
 
         # equation number 8 in Mitsos et al. 2009
         # A species will not be present if all reactions in which it appears as a product do not occur.
@@ -297,7 +297,7 @@ class MILPTrain(object):
                 if not is_inhibited:
                     rhs = sum(self.z_var[i][k] for i in self.rxn if i in self.P and j in self.P[i])
                     if rhs is not 0:
-                        self.model += self.x_var[j][k] <= rhs
+                        self.model += self.x_var[j][k] <= rhs, 'C8_{}_{}'.format(j, k)
 
     def error_objective_expression(self):
         """Define the error objective function.
