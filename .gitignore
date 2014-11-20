@@ -54,3 +54,6 @@ docs/_build/
 
 # PyCharm
 .idea/
+
+# PuLP problem files
+*-pulp.mps
