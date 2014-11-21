@@ -190,6 +190,14 @@ class Reaction(ReactionBase):
                         (reaction, self.valid_symbols))
         return reaction
 
+    def ands2ors(self, reaction):
+        reaction = Reaction(reaction)
+        lhs = reaction.get_signed_lhs_species()
+        rhs = reaction.rhs
+        reactions = [x + "=" + rhs for x in lhs['+']]
+        reactions += ["!" + x + "=" + rhs for x in lhs['-']]
+        return reactions
+
     def sort(self, inplace=True):
         """Rearrange species in alphabetical order
 
@@ -291,6 +299,12 @@ class Reaction(ReactionBase):
         r2 = Reaction(other)
         r2.sort()
         if r1.name == r2.name:
+            return True
+        else:
+            return False
+
+    def __contains__(self, other):
+        if other in self.name:
             return True
         else:
             return False
