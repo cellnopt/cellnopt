@@ -31,6 +31,9 @@ class Models(object):
 
         .. todo:: values are 0/1 since we have bit strings but could be anything in other
         formalisms (e.g., ODE) how to handle those cases ?
+
+        :param dta: a filename with columns as the reacitons and rowss as 
+            parameters for each reactions. Each row is therefore a model.
         """
         # FIXME interpret the first columns
         if isinstance(data, str):
@@ -41,20 +44,24 @@ class Models(object):
                 self.df.columns = reacID.ix[:,0]
         elif isinstance(data, pd.DataFrame):
             self.df = data.copy()
+        elif isinstance(data, Models):
+            print("HERE")
+            self.df = data.df.copy()
+        else:
+            raise CNOError("input data not understood. Could be a filename, a dataframe or a Models instance")
 
+
+        # TODO: In a reaction from cnograph, they should be not ORs, just simple
+        # reactions and ANDS (e.g., A^B=C). If "A+B=C" is found, this is coming
+        # from CellNOptR, ,which has a different conventions. So, we replace
+        # all + by "^" !! Do we want a warning ?
         self.df.columns = [x.replace("+", "^") for x in self.df.columns]
 
         # keep this import here to avoid cycling imports
         from cno.io.cnograph import CNOGraph
         self.cnograph = CNOGraph()
-        try:
-            for this in self.df.columns:
-                self.cnograph.add_reaction(this)
-        except:
-            print("could not interpret some reactions. cnograph may not be valid")
-            pass
-
-        self.size = self.df.sum(axis=1)
+        for this in self.df.columns:
+            self.cnograph.add_reaction(this)
 
     def get_average_model(self):
         """Returns the average model (on each reaction)"""
@@ -66,19 +73,21 @@ class Models(object):
         res = res.fillna(0)
         return res
 
-    def compute_average(self, model_number=None, *args, **kargs):
+    def compute_average(self, model_number=None):
         """Compute the average and update the cnograph accordingly
 
         :param int model_number: model_number as shown by :attr:`df.index`
             if not provided, the average is taken
         """
-        if model_number==None:
+        if model_number is None:
             model = self.get_average_model()
         elif model_number == 'cv':
             model = self.get_cv_model()
         else:
             model = self.df.ix[model_number]
 
+        # This is to set the average and label and penwidth
+        # TODO: could be simplified using Reaction ?
         for edge in self.cnograph.edges(data=True):
             link = edge[2]['link']
             if "^" not in edge[0] and "^" not in edge[1]:
@@ -100,12 +109,15 @@ class Models(object):
             M = float(model.max())
             self.cnograph.edge[edge[0]][edge[1]]["penwidth"] = precision(value, 2) * 5/M
 
-    def plot(self, model_number=None, *args, **kargs):
-        """Plot the average model
+    def plot(self, model_number=None, cmap='gist_heat_r', 
+            colorbar=True, *args, **kargs):
+        """Plot the average model"""
+        self.compute_average(model_number=model_number)
+        self.cnograph.plot(edge_attribute="average", cmap=cmap, 
+                colorbar=colorbar,**kargs)
 
-        """
-        self.compute_average(model_number=model_number, *args, **kargs)
-        self.cnograph.plot(edge_attribute="average", **kargs)
+    def to_csv(self, filename):
+        self.df.to_csv(filename)
 
     def to_sif(self, filename=None):
         """Exports 2 SIF using the "and" convention
@@ -133,8 +145,7 @@ class Models(object):
         pylab.xlim([-0.5, len(X)+.5])
         pylab.tight_layout()
 
-
-    def heatmap(self, num=1,transpose=False, cmap='gist_heat_r'):
+    def heatmap(self, num=1, transpose=False, cmap='gist_heat_r', heatmap_attr={}):
         """
 
         .. plot::
@@ -151,9 +162,28 @@ class Models(object):
         else:
             df = self.df
         h = Heatmap(df)
-        h.plot(cmap=cmap,num=num)
+        h.plot(cmap=cmap,num=num, **heatmap_attr)
         return h
 
+    def __add__(self, other):
+        import pandas as pd
+        df = pd.concat([self.df, other.df])
+        df.drop_duplicates(inplace=True)
+        return Models(df)
+
+    def __eq__(self, other):
+        if len(self.df) != len(other.df):
+            return False
+        df1 = self.df.copy()
+        df2 = other.df.copy()
+        if all(df1.columns != df2.columns):
+            return False
+        # make sure the columns are ordered similarly
+        df2 = df2[df1.columns]
+        return all(df1.sort() == df2.sort())
+
+    def __len__(self):
+        return len(self.df)
 
 
 
