@@ -1148,6 +1148,12 @@ class CNOGraph(nx.DiGraph):
         if edge_attribute:
             M = self._set_edge_attribute_color(edge_attribute, cmap)
 
+            # set edge with edge_attribute set to 0 as invisible edges
+            reactions = [self.edge2reaction(edge) for edge in self.edges(data=True) 
+                    if edge[2][edge_attribute]>0]
+            self.set_edge_visibility_from_reactions(reactions)
+
+
         # create temp files
         # FIXME we create png here ?? do we use outfile ?
         infile  = tempfile.NamedTemporaryFile(suffix=".dot", delete=False)
