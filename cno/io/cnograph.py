@@ -28,6 +28,7 @@ from functools import wraps
 import matplotlib
 import pylab
 import networkx as nx
+import pygraphviz as gv
 import numpy as np
 from easydev import Logging, AttrDict
 
@@ -2923,8 +2924,7 @@ class CNOGraph(nx.DiGraph):
         self.clear()
 
         # converts to strings
-        # Ratio activation/inhibition
-        edges = G.edges()
+        edges = [(unicode(e[0]), unicode(e[1])) for e in G.edges()]
         assert ratio >= 0
         assert ratio <= 1
 
@@ -2947,7 +2947,6 @@ class CNOGraph(nx.DiGraph):
         sinks = ranks[max(ranks.keys())]
         Nstim = min(len(sources), Nstimuli)
         Nsignals = min(len(sinks), Nsignals)
-        print(Nsignals,  Nstim)
         self._stimuli = sources[0:Nstim]
         self._signals = sinks[0:Nsignals]
         self.set_default_node_attributes()
@@ -2960,10 +2959,6 @@ class CNOGraph(nx.DiGraph):
 
 
 
-
-
-import networkx as nx
-import pygraphviz as gv
 class AGraphCNO(gv.AGraph):
 
     def __init__(self, N):
