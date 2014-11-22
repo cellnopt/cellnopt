@@ -5,8 +5,18 @@ import pandas as pd
 
 
 class Results(object):
-    def __init__(self, name='default'):
-        self.models = Models()
+    """
+
+    Plots whatever is related to the size of the models (e.g., number of active edges)
+    and the score (e.g., MSE)
+
+    These are the most generic information thta could be retrieved and that are not specific
+    to a formalism.
+
+    For instance, histogram of the scores.
+    """
+    def __init__(self, models):
+        self.models = models.copy()
 
     def _get_scores(self):
         return self.models['score']
@@ -14,7 +24,7 @@ class Results(object):
 
     def _get_scores_vs_model_size_df(self):
         df = pd.DataFrame()
-        df['mse'] = self.scores
+        df['score'] = self.scores
         df['size'] = self.size
         return df
 
@@ -24,7 +34,7 @@ class Results(object):
         pylab.xlabel("Generation")
         pylab.ylabel("Score")
 
-    def hist_mse(self, fontsize=16, **kargs):
+    def hist_scores(self, fontsize=16, **kargs):
         """Plot histogram of the MSEs
 
          .. plot::
@@ -34,17 +44,16 @@ class Results(object):
              >>> from cellnopt.data import cnodata
              >>> a = ASPBool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
              >>> a.run(fit=1)
-             >>> a.hist_mse()
-
+             >>> a.hist_scores()
 
         """
         pylab.clf()
-        mses = self.scores
+        scores = self.scores
         opt = self.scores.min()
-        N = len(set(mses))
-        print("There are %s different MSE found amongst %s models" % (N,len(mses)))
-        res = pylab.hist(mses, **kargs)
-        pylab.title("MSEs Distribution of the %s best models " % len(mses),
+        N = len(set(scores))
+        print("There are %s different MSE found amongst %s models" % (N,len(scores)))
+        res = pylab.hist(scores, **kargs)
+        pylab.title("MSEs Distribution of the %s best models " % len(scores),
                     fontsize=fontsize)
         pylab.grid()
         pylab.plot([opt,opt], [0,max(res[0])], "r--",lw=2)
@@ -56,9 +65,9 @@ class Results(object):
         df = self._get_scores_vs_model_size_df()
         h = viz.Hist2d(df)
         if bins == None:
-            mse_range = 20
+            scores_range = 20
             size_range = df.size.max() - df.size.min() + 1
-            bins = (mse_range, size_range)
+            bins = (scores_range, size_range)
         h.plot(bins=bins, Nlevels=10, cmap=cmap)
         pylab.xlabel("Score", fontsize=fontsize)
         pylab.ylabel("Model size", fontsize=fontsize)

@@ -9,6 +9,14 @@ and_symbol = "^"
 class Models(object):
     """Class to read and plot models as exported by CASPO or CellNOptR
 
+
+    Models contains dataframe with reactions as columns and models as rows.
+    For each reaction, we can then obtain the average paramters for a reaction.
+    In a boolean case, a Model stores a value made of 0/1
+
+    No scores are stored. No sizes are stored. Sizes could be extracted easily 
+    as sum over rows.
+
     ::
 
         >>> import models
@@ -24,6 +32,9 @@ class Models(object):
         code in :meth:`cno.io.cnograph.plot`.
 
 
+    - plots average models with edges on/off
+    - plot of errobars on edges sorted by average presence
+    - plots heatmap of the models
     """
     def __init__(self, data, reacID=None, index_col=None):
         """
@@ -35,7 +46,7 @@ class Models(object):
         :param dta: a filename with columns as the reacitons and rowss as 
             parameters for each reactions. Each row is therefore a model.
         """
-        # FIXME interpret the first columns
+        # FIXME interpret the first columns automatically ?
         if isinstance(data, str):
             self.filename = data
             self.df = pd.read_csv(self.filename, index_col=index_col)
@@ -45,11 +56,9 @@ class Models(object):
         elif isinstance(data, pd.DataFrame):
             self.df = data.copy()
         elif isinstance(data, Models):
-            print("HERE")
             self.df = data.df.copy()
         else:
             raise CNOError("input data not understood. Could be a filename, a dataframe or a Models instance")
-
 
         # TODO: In a reaction from cnograph, they should be not ORs, just simple
         # reactions and ANDS (e.g., A^B=C). If "A+B=C" is found, this is coming
@@ -90,15 +99,15 @@ class Models(object):
         # TODO: could be simplified using Reaction ?
         for edge in self.cnograph.edges(data=True):
             link = edge[2]['link']
-            if "^" not in edge[0] and "^" not in edge[1]:
-                if link=="-":
-                    name = "!"+edge[0]+"="+edge[1]
+            if and_symbol not in edge[0] and and_symbol not in edge[1]:
+                if link == "-" :
+                    name = "!" + edge[0] + "=" + edge[1]
                 else:
-                    name = edge[0]+"="+edge[1]
+                    name = edge[0] + "=" + edge[1]
                 value = model[name]
-            elif "^" in edge[0]:
+            elif and_symbol in edge[0]:
                 value = model[edge[0]]
-            elif "^" in edge[1]:
+            elif and_symbol in edge[1]:
                 value = model[edge[1]]
             else:
                 raise ValueError()
@@ -185,6 +194,10 @@ class Models(object):
     def __len__(self):
         return len(self.df)
 
+    def __str__(self):
+        txt = "Models contains {0} rows".format(len(self))
+        return txt
 
-
+    def copy(self):
+        return Models(self)
 
