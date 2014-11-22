@@ -1890,12 +1890,56 @@ class CNOGraph(nx.DiGraph):
                 for k,v in attr_dict[node].iteritems():
                     self.node[node][k] = v
 
-    def set_edge_visibility_from_reactions(self, reactions):
+    def _remove_edge_attribute(self, name):
         for edge in self.edges(data=True):
-            if "^" in edge[1]:
-                reaction = edge[1]
-            elif "^" in edge[0]:
-                reaction = edge[0]
+            try:
+                del self.edge[edge[0]][edge[1]][name]
+            except:
+                pass
+
+
+    def set_edge_attribute(self, name, values):
+        # values is a dictionary of reaction as keys 
+        for reaction in values.keys():
+            if reaction in values.keys():
+                edges = self.reac2edges(reaction)
+                for edge in edges:
+                    e0, e1 = edge[0], edge[1]
+                    self.edge[e0][e1][name] = values[reaction]
+
+
+
+    def reac2edges(self, reaction):
+        """Here no informatiom about links is returned"""
+        if reaction not in self.reactions:
+            raise CNOError("Unknown reaction {0}".format(reaction))
+        reac = Reaction(reaction)
+        if "^" in reaction:
+            inputs = reac.lhs_species
+            out = reac.rhs
+            return [(this, reaction) for this in inputs] + [(reaction,out)]
+        else: #simple case
+            e0 = reac.lhs
+            e1 = reac.rhs
+            return [(e0.replace("!",""), e1.replace("!",""))]
+
+
+
+    def set_edge_visibility_from_reactions(self, reactions):
+        # First, reset the style, which may have been set already
+        self._remove_edge_attribute('style')
+
+        # AND gate should be handled differently
+
+        for edge in self.edges(data=True):
+            if self.and_symbol in edge[1]:
+                reaction = edge[0] + "=" + edge[1]
+                if edge[2]['link'] == "-":
+                    reaction = "!" + reaction
+            elif self.and_symbol in edge[0]:
+                reaction = edge[0] + "=" + edge[1] 
+                if edge[2]['link'] == "-":
+                    reaction = "!" + reaction
             else:
                 reaction = self.edge2reaction(edge)
 

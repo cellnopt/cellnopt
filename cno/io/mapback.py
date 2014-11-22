@@ -40,14 +40,20 @@ class MapBack(object):
 
     def plot_optimised_model(self, reactions):
         model = self.model.copy()
-        model.set_edge_visibility_from_reactions(reactions)
-        model.plot()
+        mapback = [(reac,1) if reac in reactions else (reac,0) 
+                for reac in model.reactions]
+        mapback = dict(mapback)
+        model.set_edge_attribute('mapback', mapback)
+        model.plot(edge_attribute='mapback', cmap='gray_r')
         return model
 
     def plot_mapback(self, reactions):
         model = self.pknmodel.copy()
-        model.set_edge_visibility_from_reactions(reactions)
-        model.plot()
+        mapback = [(reac,1) if reac in reactions else (reac,0) 
+                for reac in model.reactions]
+        mapback = dict(mapback)
+        model.set_edge_attribute('mapback', mapback)
+        model.plot(edge_attribute='mapback', cmap='gray_r')
         return model
 
     def plotall(self, reactions):
@@ -145,7 +151,6 @@ class MapBack(object):
 
                 # seqrch this sugrqph for paths between startnode and endnode
                 paths = self.search_path(startNode, rhs)
-                print(paths)
 
                 for path in paths:
                     for j2 in range(1, len((path))):

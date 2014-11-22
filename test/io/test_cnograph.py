@@ -225,6 +225,10 @@ def test_check_compatible_midas():
     except CNOError:
         assert True
 
+def test_renaming_of_ang_gates_after_compression():
+    c = cnograph.CNOGraph(cnodata("PKN-ToyPB_True.sif"), cnodata("MD-ToyPB_True.csv"))
+    c.preprocessing(compression=True, expansion=False)
+    assert 'sos^tnfa=p38' in c.nodes()
 
 
 
@@ -415,6 +419,8 @@ class test_CNOGraph(CNOGraph):
         c.read_json(fh.name)
         fh.delete = True
         fh.close()
+
+
 
 
 def test_link():
