@@ -8,7 +8,7 @@ from nose.plugins.attrib import attr
 def test_registered_cnodata():
     for filename in register.registered:
         fullpath = cnodata(filename)
-        assert os.path.exists(fullpath)
+        assert os.path.exists(fullpath), (filename,fullpath)
 
     try:
         cnodata('dummy')

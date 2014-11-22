@@ -29,4 +29,10 @@ def test_xcnograph():
     c.plot_feedback_loops_species()
 
 
+def test_poisson():
+    c = XCNOGraph()
+    c.random_poisson_graph(n=100, mu=2.5, remove_unconnected=False)
+    # test also recursive compression
+    c.expand_and_gates()
+    c.compress()
 

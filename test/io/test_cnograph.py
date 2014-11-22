@@ -81,7 +81,7 @@ def test_operators():
 
     c5 = CNOGraph()
     c5.add_edge("A+!B", "C", link="+")
-    assert c5.reactions == ['A=C', '!B=C']
+    assert c5.reactions == sorted(['A=C', '!B=C'])
 
 
 
@@ -226,12 +226,6 @@ def test_check_compatible_midas():
         assert True
 
 
-def test_random_poisson():
-    c = CNOGraph()
-    c.random_poisson_graph(n=100, mu=2.5, remove_unconnected=False)
-    # test also recursive compression
-    c.expand_and_gates()
-    c.compress()
 
 
 def test_split_node():
@@ -254,7 +248,7 @@ def test_split_node():
     c._signals = ['B']
     c._inhibitors = ['C']
     # not yet inplace
-    c = c.rename_node({'A':'a', 'B':'b', 'C':'c'})
+    c.relabel_nodes({'A':'a', 'B':'b', 'C':'c'})
     c.split_node('a', ['A1', 'A2'])
     c.split_node('b', ['B1', 'B2'])
     c.split_node('c', ['C1', 'C2'])
@@ -316,10 +310,19 @@ class test_CNOGraph(CNOGraph):
         print(c2)
         assert c2 == self.cnograph
 
-    def test_rename_node(self):
+    def test_relabel_nodes(self):
         c = self.cnograph.copy()
         c.expand_and_gates()
-        c.rename_node({'ras':'RAS'}).plot()
+        c.relabel_nodes({'ras':'RAS'})
+
+        # check that the data on node are kept
+        c = CNOGraph()
+        c.add_reaction("!A+B=C")
+        c.node['A']['data'] = [1,2]
+        c.relabel_nodes({'A': 'AA'})
+        assert c.node['AA']['data'] == [1,2]
+        # check that data on edge are kept, in particular the link attribute
+        assert c.edge['AA']['C']['link'] == '-'
         
     def test_plotting(self):
         c = self.cnograph.copy()
@@ -407,7 +410,7 @@ class test_CNOGraph(CNOGraph):
         fh = tempfile.NamedTemporaryFile(delete=False)
         c.to_sif(fh.name)
         c.to_sbmlqual(fh.name)
-        c.export2gexf(fh.name)
+        c.to_gexf(fh.name)
         c.to_json(fh.name)
         c.read_json(fh.name)
         fh.delete = True
