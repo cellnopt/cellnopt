@@ -16,24 +16,13 @@
 from __future__ import print_function
 import os
 import copy
-import tempfile
-import itertools
-import subprocess
-import shutil
-import json
 
 from matplotlib import colors
 import pylab
 import networkx as nx
 import numpy as np
-import easydev
-from easydev import Logging
 
 # cellnopt modules
-from cno.io.sif import SIF
-from cno.io.midas import XMIDAS
-from cno.io.reactions import Reaction
-from cno.misc import CNOError
 from colormap import Colormap
 from cno.io.cnograph import CNOGraph
 
@@ -43,7 +32,7 @@ __all__ = ["XCNOGraph"]
 
 class XCNOGraph(CNOGraph):
     """extra plotting and statistical tools"""
-    def __init__(self, model=None, midas=None, verbose=True):
+    def __init__(self, model=None, midas=None, verbose=False):
         super(XCNOGraph, self).__init__(model, midas, verbose=verbose)
 
     def hcluster(self):
@@ -333,4 +322,54 @@ class XCNOGraph(CNOGraph):
 
         nodeNames = np.array(nodeNames)[indices]
         nodeNamesY = np.array(nodeNamesY)[indices[::-1]]
+
+    def random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
+            remove_unconnected=True, Nsignals=5, Nstimuli=5, 
+            remove_self_loops=True, maxtrials=50):
+        """Experimental random graph creation"""
+        count = 0
+        while count < maxtrials:
+            self._random_poisson_graph(n, mu, ratio=ratio,
+                remove_unconnected=remove_unconnected, 
+                remove_self_loops=remove_self_loops)
+            if nx.is_connected(self.to_undirected()):
+                count = maxtrials + 1
+            else:
+                count += 1
+
+    def _random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
+            remove_unconnected=True, 
+            remove_self_loops=True,  Nsignals=5, Nstimuli=5):
+        from scipy.stats import poisson
+        z = [poisson.rvs(mu) for i in range(0,n)]
+        G = nx.expected_degree_graph(z)
+        self.clear()
+
+        # converts to strings
+        edges = [(unicode(e[0]), unicode(e[1])) for e in G.edges()]
+        assert ratio >= 0
+        assert ratio <= 1
+
+        N = int(len(edges)* ratio)
+        edges_pos = edges[0:N]
+        edges_neg = edges[N:]
+        self.add_edges_from(edges_pos, link="+")
+        self.add_edges_from(edges_neg, link="-")
+
+        # remove self loop first
+        if remove_self_loops:
+            self.remove_self_loops()
+
+        if remove_unconnected == False:
+            # add all nodes (even though they me be unconnected
+            self.add_nodes_from(G.nodes())
+
+        ranks = self.get_same_rank()
+        sources = ranks[0]
+        sinks = ranks[max(ranks.keys())]
+        Nstim = min(len(sources), Nstimuli)
+        Nsignals = min(len(sinks), Nsignals)
+        self._stimuli = sources[0:Nstim]
+        self._signals = sinks[0:Nsignals]
+        self.set_default_node_attributes()
 

@@ -2406,7 +2406,6 @@ class CNOGraph(nx.DiGraph):
     def relabel_nodes(self, mapping, inplace=True):
         """Function to rename a node, while keeping all its attributes.
 
-
         :param dict mapping: a dictionary mapping old names (keys) to new names
             (values )
         :return: new cnograph object
@@ -2453,6 +2452,10 @@ class CNOGraph(nx.DiGraph):
         _inhibitors = self._inhibitors[:]
         _signals = self._signals[:]
         _compressed = self._compressed[:]
+
+        # TODO: revisit with Reactions
+
+        # This is losing the edge attributes
         self = nx.relabel_nodes(self, mapping, copy=False)
         self._stimuli = [mapping[x] if x in mapping.keys() else x for x in _stimuli]
         self._signals = [mapping[x] if x in mapping.keys() else x for x in _signals]
@@ -2899,57 +2902,6 @@ class CNOGraph(nx.DiGraph):
 
         namesNONC  = list(set(namesNONC)) # required ?
         return namesNONC
-
-    @modifier
-    def random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
-            remove_unconnected=True, Nsignals=5, Nstimuli=5, 
-            remove_self_loops=True, maxtrials=50):
-        """Experimental random graph creation"""
-        count = 0
-        while count < maxtrials:
-            self._random_poisson_graph(n, mu, ratio=ratio,
-                remove_unconnected=remove_unconnected, 
-                remove_self_loops=remove_self_loops)
-            if nx.is_connected(self.to_undirected()):
-                count = maxtrials + 1
-            else:
-                count += 1
-
-    def _random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
-            remove_unconnected=True, 
-            remove_self_loops=True,  Nsignals=5, Nstimuli=5):
-        from scipy.stats import poisson
-        z = [poisson.rvs(mu) for i in range(0,n)]
-        G = nx.expected_degree_graph(z)
-        self.clear()
-
-        # converts to strings
-        edges = [(unicode(e[0]), unicode(e[1])) for e in G.edges()]
-        assert ratio >= 0
-        assert ratio <= 1
-
-        N = int(len(edges)* ratio)
-        edges_pos = edges[0:N]
-        edges_neg = edges[N:]
-        self.add_edges_from(edges_pos, link="+")
-        self.add_edges_from(edges_neg, link="-")
-
-        # remove self loop first
-        if remove_self_loops:
-            self.remove_self_loops()
-
-        if remove_unconnected == False:
-            # add all nodes (even though they me be unconnected
-            self.add_nodes_from(G.nodes())
-
-        ranks = self.get_same_rank()
-        sources = ranks[0]
-        sinks = ranks[max(ranks.keys())]
-        Nstim = min(len(sources), Nstimuli)
-        Nsignals = min(len(sinks), Nsignals)
-        self._stimuli = sources[0:Nstim]
-        self._signals = sinks[0:Nsignals]
-        self.set_default_node_attributes()
 
     @modifier
     def remove_self_loops(self):

@@ -104,9 +104,11 @@ class Register(object):
                 self.registered[model] = this.model
 
                 # If .. is found, it means it is an existing MIDAS file
-                # in another directory. So it will be found in anpther 
-                # directory
+                # in another directory.                  
                 if ".." not in this.data:
+                    self.registered[data] = this.data
+                else:
+                    data = "MD-" + package + '.csv'
                     self.registered[data] = this.data
 
                 if os.path.exists(sbmlpath):
