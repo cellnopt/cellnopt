@@ -40,7 +40,7 @@ class ReactionBase(object):
     and_symbol = "^"
 
 
-class Reaction(ReactionBase):
+class Reaction(str, ReactionBase):
     """Logical Reaction
 
     A Reaction can encode logical ANDs and ORs as well as NOT::
@@ -90,7 +90,7 @@ class Reaction(ReactionBase):
     ANDs operator are not simplified. More sophisticated simplifications using Truth
     Table could be used but will not be implemented in this class for now.
     """
-    def __init__(self, reaction=None, strict_rules=True):
+    def __new__(cls, reaction=None, strict_rules=True):
         """
 
         :param str reaction: a valid reaction (e.g., A=B, A+B=C, !B=D, C^D=F, ...),
@@ -98,7 +98,14 @@ class Reaction(ReactionBase):
         :param bool strict_rules: if True, reactions cannot start with =, ^ or +
             signs (default to True).
         """
+        # Since __init__ is called after the object is constructed, 
+        # it is too late to modify the value for immutable types. 
+        # Note that __new__ is a classmethod, 
+        self = str.__new__(cls, reaction)
         self._strict_rules = strict_rules
+
+        # since srtings are immutable, we use this attribute to play around
+        # with the name
         self._name = None
         if reaction is not None:
             # could be a Reaction instance
@@ -109,6 +116,7 @@ class Reaction(ReactionBase):
                 self.name = reaction[:]
             else:
                 raise CNOError("neither a string nor a Reaction instance")
+        return self
 
     def _set_name(self, reaction):
         if reaction is not None:
@@ -129,7 +137,7 @@ class Reaction(ReactionBase):
 
 
         """
-        if reac == None:
+        if reac is None:
             reac = self.name[:]
         species = re.split("[+|=|^|!]", reac)
         species = [x for x in species if x]
@@ -303,15 +311,6 @@ class Reaction(ReactionBase):
         else:
             return False
 
-    def __contains__(self, other):
-        if other in self.name:
-            return True
-        else:
-            return False
-
-    def __str__(self):
-        txt = str(self.name)
-        return txt
 
 
 class Reactions(ReactionBase):
