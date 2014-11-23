@@ -44,7 +44,10 @@ from .testing import getdata
 
 # CORE package
 from .core import *
- 
+
+#Boolean package
+from .boolean import *
+
 # FEEDER package
 from .feeder import Feeder
 

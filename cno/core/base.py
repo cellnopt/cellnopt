@@ -24,7 +24,7 @@ class CNOBase(object):
         return self._verbose
     def _set_verbose(self, value):
         # TODO check value is a bool
-        self.verbose = verbose
+        self._verbose = verbose
     verbose = property(_get_verbose, _set_verbose)
 
     def _get_model(self):

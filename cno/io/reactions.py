@@ -183,7 +183,7 @@ class Reaction(str, ReactionBase):
         # = sign is compulsary
         N = reaction.count("=")
         if N != 1:
-            raise CNOError("Invalid reaction name (only one = character expected. found %s)".format(N))
+            raise CNOError("Invalid reaction name (only one = character expected. found {0})".format(N))
         #
         if self._strict_rules:
             if reaction[0] in ["=", "^" , "+"]:

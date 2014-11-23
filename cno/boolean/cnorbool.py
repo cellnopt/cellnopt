@@ -52,17 +52,22 @@ class CNORbool(CNOBase):
         c.plot_errors()
 
     """
-    def __init__(self, model, data, verbose=True):
-        super(CNORbool, self).__init__(model, data, verbose)
-        self.verboseR = verbose
+    def __init__(self, model, data, verbose=True, verboseR=False):
+        super(CNORbool, self).__init__(model, data, verbose=verbose)
+
+
+        # this code could be moved to CNOBase
+        self._verboseR = verboseR
+
         self.session = RSession(verbose=self.verboseR)
         self.parameters = {} # fill with GA binary parameters
 
-    def reconnect(self):
-        """If you cancel a job, you may need to reconnect the R server.
-
-        """
-        self.session = RSession(dump_stdout=self.verboseR)
+    def _get_verboseR(self):
+        return self._verboseR
+    def _set_verboseR(self, value):
+        self._verboseR = value
+        self.session.dump_stdout = value
+    verboseR = property(_get_verboseR, _set_verboseR)
 
     def optimise(self, tag="cnorbool", reltol=0.1,
             expansion=True, maxgens=150, stallgenmax=100, compression=True):
@@ -115,8 +120,9 @@ class CNORbool(CNOBase):
                 }
         self.session.run(script)
 
-            # need to change type of some columns, which are all string
+        # need to change type of some columns, which are all string
         results = self.session.results
+
         columns_int = ['Generation', 'Stall_Generation']
         columns_float = ['Best_score', 'Avg_Score_Gen', 'Best_score_Gen', 'Iter_time']
         results[columns_int] = results[columns_int].astype(int)
@@ -125,12 +131,15 @@ class CNORbool(CNOBase):
         from cno.misc.models import Models
         df = pd.DataFrame(self.session.all_bitstrings,
                               columns=self.session.reactions)
+
+        # cnograph created automatically from the reactions
         models = Models(df)
         models.cnograph.midas = self.data.copy()
         models.scores = self.session.all_scores
 
         from cno.misc.results import BooleanResults
         results = BooleanResults()
+
 
         self.results['cnorbool'] = {
                 'best_score': self.session.best_score,
