@@ -64,8 +64,8 @@ setup(
     #package_dir = {'':''},
     #packages = ['cno'],
     #package_dir  = package_dir,
-    install_requires = ['numpy', 'matplotlib', 'pandas', 'bioservices',
-    'colormap>=0.9.3', 'pyper', 'pygraphviz'],
+    install_requires = ['numpy', 'matplotlib', 'pandas', 'networkx', 'bioservices',
+    'colormap>=0.9.3',  'pygraphviz'],
     zip_safe=False,
 
 
