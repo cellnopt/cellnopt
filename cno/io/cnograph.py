@@ -24,13 +24,14 @@ import shutil
 import json
 import collections
 from functools import wraps
+import io
 
 import matplotlib
 import pylab
 import networkx as nx
 import pygraphviz as gv
 import numpy as np
-from easydev import Logging, AttrDict
+from easydev import Logging, AttrDict, TempFile
 
 # cellnopt modules
 from cno.io.sif import SIF
@@ -1292,6 +1293,37 @@ class CNOGraph(nx.DiGraph):
         #        _ = zp.pan_factory(ax)
         #    except:
         #        pass
+
+    def _repr_png_(self):
+        """Returns an Image for display in an IPython console"""
+        fh = TempFile(suffix='.png')
+        self.plot(show=False, filename=fh.name)
+        return fh.name
+
+    def _repr_svg_(self):
+        """Returns an Image for display in an IPython console"""
+        from IPython.display import SVG
+        fh = TempFile(suffix='.svg')
+        self.plot(show=False, filename=fh.name)
+        return fh.name
+
+    @property
+    def png(self):
+        from IPython.display import Image
+        data = Image(self._repr_png_(), embed=True, width=200)
+        return data
+
+    @property
+    def svg(self):
+        from IPython.display import SVG
+        data = SVG(self._repr_svg_() )
+        return data
+
+    @property
+    def _ipython_display_(self):
+        from IPython.display import Image
+        data = Image(self._repr_png_(), embed=True, width=200)
+        return data
 
     def _plot_rmse_fromR(self, filename, F=.3, scale=2, col=None):
         """
