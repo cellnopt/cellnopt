@@ -3,6 +3,7 @@
     and encoded in **PKN-ToyPB_SBML.xml** . This is variant of **PKN-ToyPB_True.sif**.
 :Data: There is no data provided but one could use the data used in **ToyPB** that 
     was generated from **ToyPB_True** model and a set of ODE parameters.
+:BioModel: MODEL1411240000
 
 Here is a representation of the model
 
