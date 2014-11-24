@@ -58,3 +58,7 @@ try:
 except Exception as err:
     print(err.message)
     print("Issue in boolean package. Please report the issue to github/cellnopt/cellnopt")
+
+
+#MINLP
+from .milp import *

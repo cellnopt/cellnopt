@@ -14,22 +14,23 @@ class MILPTrain(object):
     The problem is solved in two steps. First, the algorithm searches for a network with the best possible fit. Second,
     the algorithm searches for the smallest possible network that returns the best fit found.
 
-    Example:
-    >>> from cno import cnodata
-    >>> from cno.io import CNOGraph, XMIDAS
-    >>> import cno.milp.model
+    Example::
 
-    >>> filename_pkn = cnodata("PKN-ToyMMB.sif")
-    >>> filename_midas = cnodata("MD-ToyMMB.csv")
-    >>> pkn = CNOGraph(filename_pkn, filename_midas)
-    >>> midas = pkn.midas
+        >>> from cno import cnodata
+        >>> from cno.io import CNOGraph, XMIDAS
+        >>> import cno.milp.model
 
-    >>> pkn.compress()
-    >>> pkn.expand_and_gates()
+        >>> filename_pkn = cnodata("PKN-ToyMMB.sif")
+        >>> filename_midas = cnodata("MD-ToyMMB.csv")
+        >>> pkn = CNOGraph(filename_pkn, filename_midas)
+        >>> midas = pkn.midas
 
-    >>> model = cno.milp.model.MILPTrain(pkn, midas)
-    >>> model.train()
-    >>> #model.get_rxn_solution()
+        >>> pkn.compress()
+        >>> pkn.expand_and_gates()
+
+        >>> model = cno.milp.model.MILPTrain(pkn, midas)
+        >>> model.train()
+        >>> #model.get_rxn_solution()
 
     The problem is implemented using PuLP, a linear programming toolkit for python than can interface with different
     linear programming solvers, both commercial (e.g. CPLEX, Gurobi) and open-source (e.g. CBC). The pulp.LpProblem()
@@ -163,9 +164,9 @@ class MILPTrain(object):
     def initialize_grouping_variables(self):
         """Initialize grouping variables used in the formulation of the model.
 
-        :math:`\mathbf{R}_i`: signaling molecules (reactants) for reaction i.
-        :math:`\mathbf{I}_i`: inhibitors for reaction i.
-        :math:`\mathbf{P}_i`: products for reaction i.
+        * :math:`\mathbf{R}_i`: signaling molecules (reactants) for reaction i.
+        * :math:`\mathbf{I}_i`: inhibitors for reaction i.
+        * :math:`\mathbf{P}_i`: products for reaction i.
         """
         # helper group variables
         g_R = dict()  # \mathbf{R}_i: signaling molecules (reactants) for reaction i
@@ -188,9 +189,9 @@ class MILPTrain(object):
     def define_decision_variables(self):
         """Decision variables used in the formulation of the model.
 
-        :math:`y_i`: 1 if reaction i is present, 0 otherwise.
-        :math:`z_i^k`: 1 if reaction i takes place in experiment k, 0 otherwise.
-        :math:`x_j^k`: 1 if species j is active in experiment k, 0 otherwise.
+        * :math:`y_i`: 1 if reaction i is present, 0 otherwise.
+        * :math:`z_i^k`: 1 if reaction i takes place in experiment k, 0 otherwise.
+        * :math:`x_j^k`: 1 if species j is active in experiment k, 0 otherwise.
         """
         # Variable declaration
         y_var = pulp.LpVariable.dicts("y", self.rxn, lowBound=0, upBound=1, cat=pulp.LpBinary)
@@ -298,12 +299,14 @@ class MILPTrain(object):
                         self.model += self.x_var[j][k] <= rhs, 'C8_{}_{}'.format(j, k)
 
     def error_objective_expression(self):
-        """Define the error objective function.
+        r"""Define the error objective function.
 
-        ..math::
+        .. math::
+
             \sum_{k=1,\dots,n_e} \sum_{j \in \mathbf{M}^{k,2}} \alpha_j^k (x_j^{k,m} + (1 - 2 x_j^{k,m}) x_j^k))
 
         :return: pulp.LpAffineExpression
+
         """
         # equation number 1 (first part) in Mitsos et al. 2009
         time_start = self.midas.times[0]
@@ -325,9 +328,9 @@ class MILPTrain(object):
         return error_obj
 
     def size_objective_expression(self):
-        """Define the network size objective function.
+        r"""Define the network size objective function.
 
-        ..math::
+        .. math::
             \sum_{i=1,\dots,n_r} \beta_i y_i
         """
         # equation number 1 (second part) in Mitsos et al. 2009

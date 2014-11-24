@@ -4,7 +4,8 @@
 Formalisms
 ==============
 
-
+boolean
+----------
 .. automodule:: cno.feeder.feeder
     :members:
     :undoc-members:
@@ -17,6 +18,14 @@ Formalisms
     :inherited-members:
     :synopsis: 
 
+milp
+-------
+
+.. automodule:: cno.milp.model
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :synopsis: 
 
 Data Structures
 ================
