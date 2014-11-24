@@ -7,17 +7,17 @@ cellnopt
 .. image:: https://pypip.in/d/cellnopt/badge.png
     :target: https://crate.io/packages/cellnopt
 
-.. image:: https://secure.travis-ci.org/cokelaer/cellnopt.png
-    :target: http://travis-ci.org/cokelaer/cellnopt
+.. image:: https://secure.travis-ci.org/cellnopt/cellnopt.png
+    :target: http://travis-ci.org/cellnopt/cellnopt
 
-.. image:: https://coveralls.io/repos/cokelaer/cellnopt/badge.png?branch=master 
-   :target: https://coveralls.io/r/cokelaer/cellnopt?branch=master 
+.. image:: https://coveralls.io/repos/cellnopt/cellnopt/badge.png?branch=master 
+   :target: https://coveralls.io/r/cellnopt/cellnopt?branch=master 
 
-.. image:: https://landscape.io/github/cokelaer/cellnopt/master/landscape.png
-   :target: https://landscape.io/github/cokelaer/cellnopt/master
+.. image:: https://landscape.io/github/cellnopt/cellnopt/master/landscape.png
+   :target: https://landscape.io/github/cellnopt/cellnopt/master
 
-.. image:: https://badge.waffle.io/cokelaer/cellnopt.png?label=ready&title=Ready 
-   :target: https://waffle.io/cokelaer/cellnopt
+.. image:: https://badge.waffle.io/cellnopt/cellnopt.png?label=ready&title=Ready 
+   :target: https://waffle.io/cellnopt/cellnopt
 
 
 In progress. The sub-package cno.io is ready and is a replacement for
