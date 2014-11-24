@@ -2,7 +2,7 @@ cellnopt
 ========
 
 .. image:: https://badge.fury.io/py/cellnopt.svg
-    :target: https://pypi.python.org/pypi/cellnopt
+    :target: https://pypi.python.org/pypi/cno
 
 .. image:: https://pypip.in/d/cellnopt/badge.png
     :target: https://crate.io/packages/cellnopt
