@@ -1,5 +1,3 @@
-__author__ = 'ltobalina'
-
 import pulp
 from numpy import isnan
 from cno.io import Reaction

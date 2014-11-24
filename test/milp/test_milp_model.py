@@ -1,6 +1,3 @@
-__author__ = 'ltobalina'
-
-
 import cno.milp.model
 import pulp
 
