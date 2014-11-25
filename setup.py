@@ -40,7 +40,7 @@ metainfo = {
 
 
 
-with open('README.md') as f:
+with open('README.rst') as f:
     readme = f.read()
 
 
@@ -64,8 +64,13 @@ setup(
     #package_dir = {'':''},
     #packages = ['cno'],
     #package_dir  = package_dir,
+<<<<<<< HEAD
     install_requires = ['numpy', 'matplotlib', 'scipy', 'pandas', 'bioservices',
     'colormap>=0.9.3', 'pyper', 'pygraphviz'],
+=======
+    install_requires = ['numpy', 'matplotlib', 'pandas', 'networkx', 'bioservices',
+    'colormap>=0.9.3',  'pygraphviz'],
+>>>>>>> 525625e0ead94b6dc6f12d34e5ee9a60d617b34c
     zip_safe=False,
 
 
