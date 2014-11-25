@@ -22,7 +22,7 @@ metainfo = {
     'url' : ['http://pypi.python.org/pypi/cno'],
     'description': "CNO (Cell Net Optimiser): Manipulate, Visualise and Optimise Biological Networks to Perturbation Data." ,
     'platforms' : ['Linux', 'Unix', 'MacOsX', 'Windows'],
-    'keywords' : ['CellNOpt', 'CellNOptR', 'CNO', 'Logical model', 'SBML', 'SIF', 
+    'keywords' : ['CellNOpt', 'CellNOptR', 'CNO', 'Logical model', 'SBML', 'SIF',
         'Boolean', 'ODE', 'Fuzzy', 'Optimisation', 'Protein Network'],
     'classifiers' : [
           'Development Status :: 1 - Planning',
@@ -56,7 +56,7 @@ setup(
     description = metainfo['description'],
     license          = metainfo['license'],
     platforms        = metainfo['platforms'],
-    url              = metainfo['url'],      
+    url              = metainfo['url'],
     download_url     = metainfo['download_url'],
     classifiers      = metainfo['classifiers'],
 
@@ -64,13 +64,13 @@ setup(
     #package_dir = {'':''},
     #packages = ['cno'],
     #package_dir  = package_dir,
-    install_requires = ['numpy', 'matplotlib', 'pandas', 'bioservices',
+    install_requires = ['numpy', 'matplotlib', 'scipy', 'pandas', 'bioservices',
     'colormap>=0.9.3', 'pyper', 'pygraphviz'],
     zip_safe=False,
 
 
     packages = find_packages(),
-    
+
     # is this required ?
     package_data={
         'cno.datasets.ToyMMB': ['*'],
