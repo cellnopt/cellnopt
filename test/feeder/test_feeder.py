@@ -1,4 +1,4 @@
-from cellnopt.core import cnodata
+from cno import cnodata
 from cno.feeder import Feeder
 
 
