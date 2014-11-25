@@ -1,8 +1,9 @@
 from cno.boolean import CASPO
 from cno import cnodata
+from nose.plugins.attrib import attr
 
 
-
+@attr('skip_travis')
 class TestCASPO(object):
     @classmethod
     def setup_class(klass):
@@ -17,6 +18,3 @@ class TestCASPO(object):
         self.caspo.hist_model_size()
 
 
-t = TestCASPO()
-t.setup_class()
-t.test_plot()

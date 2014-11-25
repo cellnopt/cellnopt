@@ -1,6 +1,8 @@
 from cno.admin import DistributeRPackage
+from nose.plugins.attrib import attr
 
 
+@attr('skip_travis')
 def test_distribute():
 
     dp = DistributeRPackage('CellNOptR')

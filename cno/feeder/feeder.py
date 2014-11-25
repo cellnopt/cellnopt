@@ -13,11 +13,7 @@
 #  website: http://github.com/cellnopt
 #
 ##############################################################################
-"""Wrapping of CNORfeeder package (see bioconductor)
-
-
-
-"""
+"""Wrapping of CNORfeeder package (see bioconductor)"""
 
 from biokit import rtools
 
