@@ -33,12 +33,10 @@ class TruthTable(object):
             else:
                 self._eval_species(this)
 
-        cmplen = lambda x,y : cmp(len(x),len(y))
-
         # compute the final reaction
         values = self.df[self.reaction.lhs.split("+")].max(axis=1)
         self.df[self.reaction.lhs] = values
-        self.df.columns = sorted(list(self.df.columns), cmp=cmplen)
+        self.df.columns = sorted(list(self.df.columns), key=lambda x: len(x))
 
     def _get_tt(self):
         return self.df[self.species+[self.reaction.lhs]]
