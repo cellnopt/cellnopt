@@ -13,7 +13,6 @@ def test_adj2sif():
     s.to_sif()
 
     fd, name = mkstemp(suffix=".sif")
-    print name
     s.to_sif(name)
     s2 = SIF(name)
     s2.nodes1 == ["A", "A"]
