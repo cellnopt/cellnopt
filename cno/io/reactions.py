@@ -293,7 +293,7 @@ class Reaction(str, ReactionBase):
         return new_name
 
     def rename_species(self, mapping={}):
-        for k,v in  mapping.iteritems():
+        for k,v in  mapping.items():
             self.name = self._rename_one_species(self.name, k, v)
             
     def __eq__(self, other):

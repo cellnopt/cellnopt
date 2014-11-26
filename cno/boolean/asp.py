@@ -72,7 +72,7 @@ for net in networks:
     cnograph = CNOGraph()
     cnograph.add_nodes_from(net.variables)
     cnograph.midas = midas
-    for var, clauses in net.mapping.iteritems():
+    for var, clauses in net.mapping.items():
         for clause in clauses:
             cnograph.add_reaction("%s=%s" % (str(clause).replace('+','^'), var))
     graphs.append(cnograph)

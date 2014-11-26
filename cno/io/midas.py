@@ -134,7 +134,7 @@ class MIDASReader(MIDAS):
 
     def _filtering_raw_data(self):
         # problably not the most efficient:
-        for key, value in self.exclude_rows.iteritems():
+        for key, value in self.exclude_rows.items():
             self._data = self._data[self._data[key] != value]
 
     def _preprocess_cellines(self):
@@ -956,7 +956,7 @@ class XMIDAS(MIDASReader):
         """
         self.reset_index()
         # key may be same as value, in which case replace method fails. So, we get rid of them
-        to_replace = dict([(k,v) for k,v in to_replace.iteritems() if k!=v])
+        to_replace = dict([(k,v) for k,v in to_replace.items() if k!=v])
         self.df.replace({"time": to_replace}, inplace=True)
         self.set_index()
 

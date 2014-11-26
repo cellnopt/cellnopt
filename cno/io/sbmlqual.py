@@ -299,7 +299,7 @@ class Qual(object):
     def open(self):
         if self.xmlns is False:
             txt = """<qual:{0}""".format(self.tag)
-            for k,v in self.open_attribute.iteritems():
+            for k,v in self.open_attribute.items():
                 txt+= """ qual:{0}="{1}" """.format(k,v) # note the space before 'qual'
             txt += ">\n"
         else:

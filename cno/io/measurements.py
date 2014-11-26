@@ -95,7 +95,7 @@ class Measurement(object):
         return self._stimuli
     def _set_stimuli(self, stimuli):
         isinstance(stimuli, dict)
-        for k,v in stimuli.iteritems():
+        for k,v in stimuli.items():
             if v >1 or v<0:
                 raise ValueError("Value of the stimulus {} must be inside the range [0,1]".format(k))
         self._stimuli = stimuli.copy()
@@ -105,7 +105,7 @@ class Measurement(object):
         return self._inhibitors
     def _set_inhibitors(self, inhibitors):
         isinstance(inhibitors, dict)
-        for k,v in inhibitors.iteritems():
+        for k,v in inhibitors.items():
             if v >1 or v<0:
                 raise ValueError("Value of the inhibitor {} must be inside the range [0,1]".format(k))
         self._inhibitors = inhibitors.copy()

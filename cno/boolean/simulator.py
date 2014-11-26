@@ -136,7 +136,7 @@ class _Simulator(object):
         raise NotImplementedError
 
     def set_initial_values(self, values={}):
-        for k,v in values.iteritems():
+        for k,v in values.items():
             self.data[k][self.tick] = v
  
     def simulate(self, N=10, reset=True):

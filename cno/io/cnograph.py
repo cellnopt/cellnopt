@@ -98,7 +98,7 @@ class Attributes(dict):
     """Simple dictionary to handle attributes (nodes or eges)"""
     def __init__(self, color, **kargs):
         self['color'] = color
-        for k,v in kargs.iteritems():
+        for k,v in kargs.items():
             self[k] = v
 
 
@@ -1293,6 +1293,7 @@ class CNOGraph(nx.DiGraph):
         #        _ = zp.pan_factory(ax)
         #    except:
         #        pass
+    
 
     def _repr_png_(self):
         """Returns an Image for display in an IPython console"""
@@ -1388,11 +1389,11 @@ class CNOGraph(nx.DiGraph):
         else:
             H = nx.to_agraph(self)
 
-        for k, v in self.graph_options['graph'].iteritems():
+        for k, v in self.graph_options['graph'].items():
             H.graph_attr[k] = v
-        for k, v in self.graph_options['edge'].iteritems():
+        for k, v in self.graph_options['edge'].items():
             H.edge_attr[k] = v
-        for k, v in self.graph_options['node'].iteritems():
+        for k, v in self.graph_options['node'].items():
             H.node_attr[k] = v
 
         if rank_method is None:
@@ -1405,7 +1406,7 @@ class CNOGraph(nx.DiGraph):
         allranks = self.get_same_rank() # this has been checkd on MMB to and seems correct
         ranks  = {}
         M = max(allranks.keys())
-        for k, v in allranks.iteritems():
+        for k, v in allranks.items():
             if rank_method in ['inout', 'all']:
                 #H.strict = True
                 ranks[k] = sorted([x for x in v if '=' not in x],
@@ -1902,7 +1903,7 @@ class CNOGraph(nx.DiGraph):
         """
         for node in self.nodes():
             attrs = self.get_node_attributes(node)
-            for k,v in attrs.iteritems():
+            for k,v in attrs.items():
                 self.node[node][k] = v
 
     def set_node_attributes(self, attr_dict ):
@@ -1919,7 +1920,7 @@ class CNOGraph(nx.DiGraph):
 
         for node in nodes:
             if node in self.nodes():
-                for k,v in attr_dict[node].iteritems():
+                for k,v in attr_dict[node].items():
                     self.node[node][k] = v
 
     def _remove_edge_attribute(self, name):
@@ -3029,7 +3030,7 @@ class AGraphCNO(gv.AGraph):
         allranks = self.cnograph.get_same_rank()
 
         txt = "digraph G{\n"
-        for k, v in self.cnograph.graph_options['graph'].iteritems():
+        for k, v in self.cnograph.graph_options['graph'].items():
             if 'svg' in frmt and k == 'dpi':
                 continue
             txt += """    %s="%s";\n""" % (k,v)

@@ -54,8 +54,8 @@ class XCNOGraph(CNOGraph):
         n = len(self.nodes())
         distances=np.zeros((n,n))
         nodes = self.nodes()
-        for u,p in path_length.iteritems():
-            for v,d in p.iteritems():
+        for u,p in path_length.items():
+            for v,d in p.items():
                 distances[nodes.index(u)-1][nodes.index(v)-1] = d
         sd = distance.squareform(distances)
         hier = hierarchy.average(sd)

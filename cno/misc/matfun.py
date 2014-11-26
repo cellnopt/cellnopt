@@ -52,7 +52,7 @@ def ode_transfer_function(x, tau, inputs):
 
     """
     results = []
-    for species, value in inputs.iteritems():
+    for species, value in inputs.items():
         res = normhill_tf(x, value['k'], value['n'], g=1)
         if value['type'] == -1:
             res = 1 -res
