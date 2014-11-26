@@ -92,8 +92,7 @@ class MIDASReader(MIDAS):
     User should not need to use this class. Use :class:`XMIDAS` instead.
 
     """
-    def __init__(self, filename, verbose='ERROR', exclude_rows={},
-                 duplicate_time_zero=False):
+    def __init__(self, filename, verbose='ERROR', exclude_rows={}):
         super(MIDASReader, self).__init__(filename, verbose)
 
         self.exclude_rows = exclude_rows
@@ -354,15 +353,15 @@ class MIDASReader(MIDAS):
 
             print(S)
 
-            #if S > 0:
-            #    self.logging.debug("Duplicating time zero based on inhibitors")
-            #    self._duplicate_time_zero_using_inhibitors_only()
-            #elif S == 0:
-            #    self.logging.debug("Duplicating time zero")
-            #    self._duplicate_time_zero()
-            #elif S == -1:
-            #    self.logging.debug("Adding time zero")
-            #    self._add_time_zero()
+            if S > 0:
+                self.logging.debug("Duplicating time zero based on inhibitors")
+                self._duplicate_time_zero_using_inhibitors_only()
+            elif S == 0:
+                self.logging.debug("Duplicating time zero")
+                self._duplicate_time_zero()
+            elif S == -1:
+                self.logging.debug("Adding time zero")
+                self._add_time_zero()
 
                 # drop the time 0, which has no data in principle
 
@@ -397,16 +396,17 @@ class MIDASReader(MIDAS):
     def _duplicate_time_zero(self):
         tobeadded = pd.DataFrame()
 
-        # first, drop all time 0 (there should be only one anyway)
+        # Let us identify the data for the time0
         df = self.df.query('time==0')
         # true if only one cell line
         assert len(df.reset_index()['experiment']) == 1
         exp0 = df.reset_index()['experiment'][0]
-        df = self.df.xs((self.cellLine, exp0))
+        df = self.df.query("time==0 and experiment==@exp0")
 
+        # now, let us get rid of all time 0
         self.df = self.df.query('time!=0')
 
-        print((df))
+        # and add it back for each experiment
         experiments = list(self.experiments.index)
 
         for i, this_exp in enumerate(experiments):
@@ -419,14 +419,12 @@ class MIDASReader(MIDAS):
             # we can now merge with the full data set
             tobeadded = pd.concat([tobeadded, newrow])
 
-        print(df)
-        print(tobeadded)
         # finally concatenate all the rows with the dataframe df
         df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
 
         df = df.set_index(self._levels)
         df = df.sortlevel([self._levels[1]]) # experiment
-        #self.df = df.copy()
+        self.df = df.copy()
 
     def _drop_orphan_experiments(self):
         """rename experiment accordingly"""

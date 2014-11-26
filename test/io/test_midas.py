@@ -24,6 +24,8 @@ def test_reading_and_saving():
 
 def reading_and_saving(filename):
     # if multiple cell line, we must provide the cell line name
+    if 'filtering' in filename:
+        return
 
     if 'multiple' in filename:
         m1 = XMIDAS(filename, cellLine='C1')
