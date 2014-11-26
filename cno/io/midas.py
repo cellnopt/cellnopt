@@ -208,7 +208,7 @@ class MIDASReader(MIDAS):
         if len([x for x in self._data.columns if x.startswith("DV")]) == 0:
             raise CNOError("Header of MIDAS file has no columns starting with DV. expects at least one")
 
-    def _set_missing_time_zero((self)):
+    def _set_missing_time_zero(self):
          # check if zero time data is available for all experiments
         unique_times = sorted(list(self.df.index.levels[2]))
 
