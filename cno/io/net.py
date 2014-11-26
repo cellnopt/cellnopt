@@ -67,8 +67,8 @@ class NET(object):
                     self.add_net(row)
                 else:
                     print("warning. found an empty line. skipped")
-        except IOError, e:
-            raise IOError(e)
+        except IOError as err:
+            raise IOError(err)
         else:
             # if the file was opened, let us close it.
             f.close()
