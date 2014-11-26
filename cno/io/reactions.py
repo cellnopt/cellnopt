@@ -34,8 +34,6 @@ from cno.misc import CNOError
 
 __all__ = ["Reaction", "Reactions"]
 
-def cmp(a, b):
-    return (a > b) - (a < b)
 
 class ReactionBase(object):
     valid_symbols = ["+","!", "&", "^"]
@@ -234,12 +232,12 @@ class Reaction(str, ReactionBase):
         for this in splitted_ors:
             species_ands = this.split("^")
             # sort the species within the ANDs
-            species_ands.sort(cmp=lambda x,y: cmp(x.replace("!", ""), y.replace("!", "")))
+            species_ands = sorted(species_ands, key=lambda x: x.replace("!", ""))
             species_ands = "^".join(species_ands)
             species.append(species_ands)
 
         # now sort the ORs
-        species.sort(cmp=lambda x,y: cmp(x.replace("!", ""), y.replace("!", "")))
+        species = sorted(species, key=lambda x: x.replace("!", ""))
         # and finally rejoin them
         species = "+".join(species)
 

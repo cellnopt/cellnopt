@@ -44,9 +44,6 @@ import colormap
 __all__ = ["CNOGraph", "CNOGraphAttributes"]
 
 
-def cmp(a, b):
-    return (a > b) - (a < b)
-
 class Link(object):
     """Simple class to handle links
    
@@ -1415,7 +1412,7 @@ class CNOGraph(nx.DiGraph):
             if rank_method in ['inout', 'all']:
                 #H.strict = True
                 ranks[k] = sorted([x for x in v if '=' not in x],
-                    cmp=lambda x,y:cmp(x.lower(), y.lower()))
+                        key=lambda x: x.lower())
             else:
                 ranks[k] = [x for x in v if '=' not in x]
 
@@ -2018,7 +2015,7 @@ class CNOGraph(nx.DiGraph):
         ranks = collections.defaultdict(list)
         ranks[0] = stimuli
         for node in sorted(self.nodes(), 
-                cmp=lambda x,y: cmp(str(x).lower(), str(y).lower())):
+                key=lambda x: str(x).lower()):
             # skip and gate
             if self.isand(node):
                 continue
@@ -2035,8 +2032,7 @@ class CNOGraph(nx.DiGraph):
                     self.logging.debug('warning, rank %s is empyt'% node)
 
         # now the end signal
-        for node in sorted(self.nodes(), 
-                cmp=lambda x,y: cmp(str(x).lower(),str(y).lower())):
+        for node in sorted(self.nodes(), key=lambda x: str(x).lower()):
             if node in signals and len(self.successors(node))==0:
                 ranks[maxrank+1].append(node)
 
