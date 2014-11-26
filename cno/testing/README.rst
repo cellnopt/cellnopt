@@ -1,12 +1,34 @@
-data sets for testing purposes. 
+data sets for testing purposes.
 ==================================
 
 
-MIDAS related
----------------
+==================================== ===================================================
+filename                             description
+==================================== ===================================================
+MD-test_filtering.csv                contains an ID columns with rows to be filtered
+MD-test_1cue_noinhibitor.csv
+MD-test.csv
+MD-test_no_celllines.csv
+MD-test_time0_to_duplicate.csv
+MD-test_wrong_celllines2.csv
+MD-test.xml
+MD-test_4andgates.csv
+MD-test_diamond.csv
+MD-test_one_exp.csv
+MD-test_undefined_celllines.csv
+MD-test_wrong_celllines3.csv
+MD-test_average.csv
+MD-test_filtering.py
+MD-test_one_inhibitor.csv
+MD-test_unnorm.csv
+MD-test_wrong_header.csv
+MD-test_cnograph.csv
+MD-test_multiple_cellline.csv
+MD-test_one_stimulus.csv
+MD-test_unnorm_exp.csv
+MD-test_wrong_time.csv
 
-- MD-MultipleCellLines.csv : a MIDAS file wit several cell lines
-- MD-Test.csv: a general MIDAS file
+==================================== ===================================================
 
 Graph/SIF related
 ------------------
@@ -23,23 +45,14 @@ Graph/SIF related
 
 
 ======================= ======================================
-filename                used by 
+filename                used by
 ======================= ======================================
 kinetic.csv             kinexus
-MD-ToyMMB.csv           general
 PKN-ToyMMB.net          sif2asp
 PKN-ToyMMB.sif          general
 reactions               Reactions
 test.sif
-MD-one_exp              MIDAS with single experiment
-MD-one_stimulus         MIDAS with single stimuli
-MD-one_inhiibitor       MIDAS special case  
-MD-unnorm.csv           MIDAS to test normalisation(time)
-MD-unnorm_exp.csv       MIDAS to test normalisation(exp)
-MD-Test.csv             Same as MD-ToyPB with NA
-MD-Test2.csv            same as above with 2 cell lines
 PKN-Test.sif            same as PKN-ToyPB but with nonc
-MD-average.csv          test average over time
 ======================= ======================================
 
 
