@@ -99,8 +99,8 @@ class NET(object):
     def _check(self, net):
         try:
             self._split_net(net)
-        except Exception, e:
-            raise Exception(e)
+        except Exception as err:
+            raise Exception(err)
 
     def __str__(self):
         txt = ""

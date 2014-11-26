@@ -34,6 +34,8 @@ from cno.misc import CNOError
 
 __all__ = ["Reaction", "Reactions"]
 
+def cmp(a, b):
+    return (a > b) - (a < b)
 
 class ReactionBase(object):
     valid_symbols = ["+","!", "&", "^"]

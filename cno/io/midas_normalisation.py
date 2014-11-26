@@ -161,7 +161,7 @@ class XMIDASNormalise(NormaliseMIDASBase):
     def __init__(self, data, mode="time", verbose=True, saturation=np.inf,
                  detection=0., EC50noise=0., EC50data=0.5, HillCoeff=2.,
                 changeThreshold=0.):
-
+        from cno.io.midas import midas 
         super(XMIDASNormalise, self).__init__(mode=mode, verbose=verbose,
                 saturation=saturation, detection=detection, EC50noise=EC50noise,
                 EC50data=EC50data, HillCoeff=HillCoeff,

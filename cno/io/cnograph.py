@@ -44,6 +44,9 @@ import colormap
 __all__ = ["CNOGraph", "CNOGraphAttributes"]
 
 
+def cmp(a, b):
+    return (a > b) - (a < b)
+
 class Link(object):
     """Simple class to handle links
    

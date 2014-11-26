@@ -158,7 +158,7 @@ class Metabolites(object):
             # no valid file
             print("No valid notes were found. Skipping.")
             return
-        except Exception, e:
+        except Exception:
             raise Exception
 
         # if the file was found, read it and populated specNotes
