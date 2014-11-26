@@ -286,7 +286,7 @@ class MIDASReader(MIDAS):
         # note that ,,, is interpreted as ,NaN,NaN,NaN
         # but , , , is interpreted as ," "," "," ",
         self._experiments = self._experiments.applymap(lambda x: 0
-            if isinstance(x, basestring) and x.isspace() else x)
+            if isinstance(x, str) and x.isspace() else x)
 
         # must convert read data into numeric value.
         self._experiments = self._experiments.convert_objects(convert_numeric=True,
