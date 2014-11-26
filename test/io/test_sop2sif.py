@@ -12,7 +12,6 @@ def test_sop2sif():
     f = tempfile.NamedTemporaryFile()
     s2s.export2sif(filename=f.name, include_and_gates=True)
 
-    print len(s2s.species)
     #assert len(s2s.reacID) == 173
     assert len(s2s.reactions) == 348
     

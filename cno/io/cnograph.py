@@ -428,12 +428,12 @@ class CNOGraph(nx.DiGraph):
         if hasattr(model, '__class__') and \
             model.__class__.__name__ in ['CNOGraph', 'XCNOGraph']:
             for node in model.nodes():
-                self.add_node(unicode(node))
+                self.add_node(str(node))
             for edge in model.edges(data=True):
                 if "link" in edge[2]:
-                    self.add_edge(unicode(edge[0]), unicode(edge[1]), link=edge[2]['link'])
+                    self.add_edge(str(edge[0]), str(edge[1]), link=edge[2]['link'])
                 else:
-                    self.add_edge(unicode(edge[0]), unicode(edge[1]), link="+")
+                    self.add_edge(str(edge[0]), str(edge[1]), link="+")
             self.set_default_node_attributes() # must be call if sif or midas modified.
             self.filename = None
             if model.midas is not None:
@@ -518,7 +518,9 @@ class CNOGraph(nx.DiGraph):
         self.clear()
         self.logging.debug("reading the model")
 
-        if isinstance(model, (str, unicode)):
+        
+        #if isinstance(model, (str, unicode)):
+        if isinstance(model, (str)):
             sif = SIF(model)
         elif isinstance(model, SIF):
             sif = model
@@ -737,7 +739,7 @@ class CNOGraph(nx.DiGraph):
         attr = self.set_default_edge_attributes(**attr)
 
         # cast u to str to search for + sign
-        if "+" in unicode(u):
+        if "+" in str(u):
             lhs = u.split("+")
             for x in lhs:
                 if x.startswith("!"):
@@ -831,16 +833,16 @@ class CNOGraph(nx.DiGraph):
         return G
 
     def __str__(self):
-        nodes = len([x for x in self.nodes() if self.and_symbol not in unicode(x)])
-        andnodes = len([x for x in self.nodes() if self.and_symbol in unicode(x)])
+        nodes = len([x for x in self.nodes() if self.and_symbol not in str(x)])
+        andnodes = len([x for x in self.nodes() if self.and_symbol in str(x)])
 
         msg = "The model contains %s nodes (and %s AND node)\n" % (nodes, andnodes)
 
         self.logging.warning("Edge counting valid only if and node have only 2 inputs")
         edges = len([e for e in self.edges() if self.and_symbol not in 
-            unicode(e[0]) and self.and_symbol not in unicode(e[1])])
+            str(e[0]) and self.and_symbol not in str(e[1])])
         andedges = len([e for e in self.edges() if self.and_symbol 
-            in unicode(e[0]) or self.and_symbol in unicode(e[1])])/3
+            in str(e[0]) or self.and_symbol in str(e[1])])/3
         msg += "%s Hyperedges found (%s+%s) \n" % (edges+andedges, edges, andedges)
 
         return msg
@@ -1351,7 +1353,7 @@ class CNOGraph(nx.DiGraph):
             if this in self.signals:
                 mse = df.ix[this] #.values[0]
                 self.node[this]['mse'] =  (1-(mse/F)**scale)
-                self.node[this]['label'] =  this+"\n"+unicode(int(mse*1000)/1000.)
+                self.node[this]['label'] =  this+"\n"+str(int(mse*1000)/1000.)
             else:
                 self.node[this]['mse'] = 1
         cm = colormap.Colormap()
@@ -1424,7 +1426,7 @@ class CNOGraph(nx.DiGraph):
         # The inverse resets the attribute e.g., style="invis"
 
         for rank in ranks.keys():
-            name = unicode(rank) # may be numbers
+            name = str(rank) # may be numbers
             if rank == 0:
                 # label will be used if name == 'cluster_source'
                 species = [x for x in ranks[rank] if x not in selfloops]
@@ -1583,7 +1585,7 @@ class CNOGraph(nx.DiGraph):
 
         """
         super(CNOGraph, self).remove_node(n)
-        if "^" not in unicode(n):
+        if "^" not in str(n):
             self.clean_orphan_ands()
 
 
@@ -1872,7 +1874,7 @@ class CNOGraph(nx.DiGraph):
             elif node in self.compressable_nodes:
                 attr = self.attributes['compressed'].copy()
         else:
-            if '^' in unicode(node):
+            if '^' in str(node):
                 attr = self.attributes['and'].copy()
 
         if node in self._stimuli:
@@ -2013,7 +2015,7 @@ class CNOGraph(nx.DiGraph):
         ranks = collections.defaultdict(list)
         ranks[0] = stimuli
         for node in sorted(self.nodes(), 
-                cmp=lambda x,y: cmp(unicode(x).lower(), unicode(y).lower())):
+                cmp=lambda x,y: cmp(str(x).lower(), str(y).lower())):
             # skip and gate
             if self.isand(node):
                 continue
@@ -2031,7 +2033,7 @@ class CNOGraph(nx.DiGraph):
 
         # now the end signal
         for node in sorted(self.nodes(), 
-                cmp=lambda x,y: cmp(unicode(x).lower(),unicode(y).lower())):
+                cmp=lambda x,y: cmp(str(x).lower(),str(y).lower())):
             if node in signals and len(self.successors(node))==0:
                 ranks[maxrank+1].append(node)
 
@@ -2112,12 +2114,12 @@ class CNOGraph(nx.DiGraph):
         inputs = []
         for node in inputsNodes:
             if self.edge[node][output]['link']=="-":
-                inputs.append("!"+unicode(node))
+                inputs.append("!"+str(node))
             else:
                 inputs.append(node)
 
-        reac = self.and_symbol.join([unicode(x) for x in inputs])
-        reac += "=" + unicode(output)
+        reac = self.and_symbol.join([str(x) for x in inputs])
+        reac += "=" + str(output)
         # FIXME: what aboit sorting while doing the instanciation.
         reac = Reaction(reac)
         reac.sort()
@@ -2133,7 +2135,7 @@ class CNOGraph(nx.DiGraph):
             return "=".join(["!"+e1, e2])
 
     def isand(self, node):
-        if self.and_symbol in unicode(node):
+        if self.and_symbol in str(node):
             return True
         else:
             return False
@@ -2806,7 +2808,7 @@ class CNOGraph(nx.DiGraph):
         """Plot information about the graph"""
         stats = self.get_stats()
         print("Flow hierarchy = %s (fraction of edges not participating in cycles)" % stats['flow'])
-        print("Average degree = " + unicode(sum(self.degree().values())/float(len(self.nodes()))))
+        print("Average degree = " + str(sum(self.degree().values())/float(len(self.nodes()))))
 
     @modifier
     def merge_nodes(self, nodes, node):

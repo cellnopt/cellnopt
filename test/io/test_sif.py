@@ -55,7 +55,6 @@ def test_save():
     s1 = SIF(simple)
     import tempfile
     f = tempfile.NamedTemporaryFile(suffix=".sif")
-    print f.name
     s1.save(f.name)
     s3 = SIF(f.name)
     assert s1 == s3

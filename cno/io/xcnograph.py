@@ -169,7 +169,7 @@ class XCNOGraph(CNOGraph):
 
         # FIXME: may not be robust to have "and": could be a valid name
         counting = [(x, data.count(x)) for x in self.nodes() 
-                if data.count(x)!=0 and unicode(x).startswith('and') is False 
+                if data.count(x)!=0 and str(x).startswith('and') is False 
                 and self.isand(x) is False]
 
         for node in self.nodes():
@@ -346,7 +346,7 @@ class XCNOGraph(CNOGraph):
         self.clear()
 
         # converts to strings
-        edges = [(unicode(e[0]), unicode(e[1])) for e in G.edges()]
+        edges = [(str(e[0]), str(e[1])) for e in G.edges()]
         assert ratio >= 0
         assert ratio <= 1
 

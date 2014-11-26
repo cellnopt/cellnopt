@@ -16,7 +16,6 @@
 ##############################################################################
 """:Topic: **convert SIF format to ASP sign consistency**"""
 from __future__ import print_function
-#from __future__ import unicode_literals
 
 from cno.io.sif import SIF
 
