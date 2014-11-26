@@ -322,6 +322,9 @@ def test_constructor_time():
        [269]]))
 
 
+def test_filtering():
+    m = XMIDAS(getdata("MD-test_filtering.csv"), exclude_rows={'ID:type':'blank'})
+    assert m.df.sum().sum() == 2072
 
 
 """
@@ -351,20 +354,5 @@ def _compare_pycno_vs_cnor(filename):
 
     # TODO(tc): seems that we need to transpose one matrix. do not seem neat
     #assert numpy.array(m.dataMatrix).all() == numpy.array(mr.dataMatrix).transpose().all()
-
-
-
-
-def test_xmidas_add_noise():
-    m = XMIDAS(cnodata("MD-ToyPB.csv"))
-    m.add_uniform_distributed_noise(mode="bounded")
-    m.add_uniform_distributed_noise(mode="free")
-    m.add_uniform_distributed_noise(inplace=True)
-    m.add_gaussian_noise()
-    m.add_gaussian_noise(inplace=True)
-
-
-
-
 
 """
