@@ -6,7 +6,8 @@ try:
     from itertools import izip
 except:
     # python3
-    pass
+    izip = zip
+    
 
 
 class MILPTrain(object):
