@@ -145,7 +145,7 @@ class CNA(Reactions):
             try:
                 beforePipe, afterPipe = x.split('|') # there should be only one pipe per
                 # line, so if it fails, this is a format error
-            except ValueError, e:
+            except ValueError as err:
                 raise ValueError("Error msg to do")
 
             reacID = beforePipe.split()[0].strip()
