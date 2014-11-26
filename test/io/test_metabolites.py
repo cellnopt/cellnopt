@@ -16,11 +16,11 @@ def test_metabolites():
 
 def test_metabolitessamples():
     for filename in getdata_metabolites():
-        print filename
+        print(filename)
         yield readfiles, filename
 
 def readfiles(filename):
-    print 'Reading metabolies',
+    print('Reading metabolies')
     try:
         try:
             m = Metabolites(os.path.split(filename)[1])
@@ -28,7 +28,7 @@ def readfiles(filename):
         except:
             assert False
     except:
-        print 'failed. File could not be found ? Skipped'
+        print('failed. File could not be found ? Skipped')
 
 
 #test_metabolitessamples()
