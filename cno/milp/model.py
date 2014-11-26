@@ -1,12 +1,6 @@
 import pulp
 from numpy import isnan
 from cno.io import Reaction
-try:
-    # python 2
-    from itertools import izip
-except:
-    # python3
-    izip = zip
     
 
 
@@ -178,7 +172,7 @@ class MILPTrain(object):
         g_R = dict()  # \mathbf{R}_i: signaling molecules (reactants) for reaction i
         g_I = dict()  # \mathbf{I}_i: inhibitors for reaction i
         g_P = dict()  # \mathbf{P}_i: products for reaction i
-        for i, i_raw in izip(self.rxn, self.rxn_raw):
+        for i, i_raw in zip(self.rxn, self.rxn_raw):
             current_rxn = Reaction(i_raw)
 
             node_origin = current_rxn.get_signed_lhs_species()
@@ -350,6 +344,6 @@ class MILPTrain(object):
             indicating if the reaction is present in the optimized network or not.
         """
         rxn_sol = dict.fromkeys(self.rxn_raw, 0)
-        for i, i_raw in izip(self.rxn, self.rxn_raw):
+        for i, i_raw in zip(self.rxn, self.rxn_raw):
             rxn_sol[i_raw] = self.y_var[i].value()
         return rxn_sol
