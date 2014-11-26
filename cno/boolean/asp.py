@@ -410,7 +410,7 @@ for net in networks:
         for this_mse in unique_mses:
             for i, mse in enumerate(mses):
                 if round(mse, 4) == this_mse:
-                    print this_mse, Ngtts[i]
+                    print( this_mse, Ngtts[i])
                     group[this_mse].append(Ngtts[i])
             print("----")
 
@@ -425,13 +425,13 @@ for net in networks:
         M = max(Ngtts) * 1.1
 
         for m in sorted(unique_mses):
-            print m, sorted(group[m], reverse=True)
+            print(m, sorted(group[m], reverse=True))
             pylab.bar(range(N, N+len(group[m])), sorted(group[m], reverse=True,),
                    width=0.8 , color=colors[icolor%6], label="%s" % m) # %6 = number of colors
             pylab.plot([N,N],[0, M], 'k--')
 
             icolor += 1
-            print N, N+len(group[m])
+            print(N, N+len(group[m]))
             N += len(group[m])
         pylab.grid(axis="y")
         pylab.legend(loc="upper left", ncol=2)

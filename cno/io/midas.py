@@ -24,8 +24,9 @@ import pandas as pd
 from easydev.logging_tools import Logging
 import colormap
 
-from measurements import Measurement
-import midas_normalisation as normalisation
+from cno.io.measurements import Measurement
+from cno.io import midas_normalisation as normalisation
+
 
 from cno.core import DevTools
 from cno.misc import CNOError

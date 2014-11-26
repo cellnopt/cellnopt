@@ -45,8 +45,8 @@ class EDA(object):
         self.threshold = threshold
         try:
             self._load()
-        except Exception, e:
-            print(e)
+        except Exception as err:
+            print(err.message)
             print("Could not read the EDA file")
             raise Exception
 

@@ -126,7 +126,7 @@ class Metabolites(object):
                 self.specBoxes.append([i+1, float(xpos), float(ypos), 0, float(map_nr), float(rtype)])
             except:
                 self.specBoxes.append([i+1, 50,50,0,1,1])
-                print 'warning. set default values' 
+                print('warning. set default values')
                 #raise ValueError('Could not parse line. Missing data/column ?')
 
 

@@ -13,9 +13,14 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-import midas
 import easydev
 import numpy as np
+
+try:
+    from cno.io.midas import XMIDAS
+except:
+    pass
+
 
 __all__ = ["XMIDASNormalise"]
 
@@ -164,8 +169,8 @@ class XMIDASNormalise(NormaliseMIDASBase):
 
         # is the data a filename ?
         if isinstance(data, str):
-            data = midas.XMIDAS(data)
-        elif isinstance(data, midas.XMIDAS):
+            data = XMIDAS(data)
+        elif isinstance(data, XMIDAS):
             pass
         else:
             raise TypeError("Input must be a filename string or a XMIDAS instance")
