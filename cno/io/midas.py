@@ -97,6 +97,8 @@ class MIDASReader(MIDAS):
         super(MIDASReader, self).__init__(filename, verbose)
 
         self.exclude_rows = exclude_rows
+        # names of the multi index level (rows)
+        self._levels = ["cell", "experiment", "time"]
 
     def read(self):
         # If the provided filename is not defined, nothing to do
@@ -203,32 +205,25 @@ class MIDASReader(MIDAS):
                 txt += "    Column's name must start with one of the valid code {}\n".format(self._valid_codes)
                 raise CNOError(txt)
 
-        # check if zero time data is available
-        self._set_missing_time_zero()
-
         if len([x for x in self._data.columns if x.startswith("DV")]) == 0:
             raise CNOError("Header of MIDAS file has no columns starting with DV. expects at least one")
 
     def _set_missing_time_zero((self)):
-         # check if zero time data is available
-        df = self._data[[this for this in self._data.columns if this.startswith("DA")]]
-        unique_times = list(set(df.as_matrix().flatten()))
-        unique_times.sort()
-        if len(unique_times) <2:
-            raise CNOError("Must contains at least 2 time points including time zero.")
-        if 0 not in unique_times or len(unique_times)<=1:
-            raise CNOError("You must have zero times in the MIDAS file, that was not found.")
-        times = list(df.as_matrix().flatten())
-        counter = {}
-        for time in unique_times:
-            counter[time] = times.count(time)
+         # check if zero time data is available for all experiments
+        unique_times = sorted(list(self.df.index.levels[2]))
 
         self._missing_time_zero = False
-        if len(set(counter.keys())) >= 2:
-            if counter[0] != counter[unique_times[1]]:
+
+        if len(unique_times) < 2 or 0 not in unique_times:
+            self._missing_time_zero = True
+
+        labels = list(self.df.index.labels[2])
+        counter = {}
+        for label in set(labels):
+            counter[label] = labels.count(label)
+        for label in set(labels):
+            if counter[0] != counter[label]:
                 self._missing_time_zero = True
-            else:
-                pass
 
     def _init(self):
         """Builds the dataframe"""
@@ -334,21 +329,42 @@ class MIDASReader(MIDAS):
 
         self._experiments.sortlevel(axis=1, inplace=True)
 
+        self._set_missing_time_zero()
+
         if self._missing_time_zero == True:
+            # 3 cases:
+            # - no time zero provided
+            # - one control provided all inh and all stim off so sum==0
+            # - one control provided for each different set of inhibitors (could include previous case)
+
             df = self.df.query('time==0')
-            exp0 = df.index.values[1][1]
-            S = self.experiments.xs((exp0)).sum()
-
-            if S != 0:
-                self.logging.debug("Duplicating time zero based on inhibitors")
-                self._duplicate_time_zero_using_inhibitors_only()
-            elif S == 0:
-                self.logging.debug("Duplicating time zero")
-                self._duplicate_time_zero()
-                # drop the time 0, which has no data in principle
-
+            if len(df) == 0:
+                # no time 0 provided --> case 1
+                S = -1
             else:
-                CNOError("Don't know what to do with missing time zeror")
+                # if S == 0, we may still be in case where there are
+                # other control for different inhibitors, so we need t check that
+                if len(df.reset_index()['experiment'])>1:
+                    S = 1
+                else:
+                    S = 0
+                #exp0 = df.index.values[0][1]
+                #S = self.experiments.xs((exp0)).sum()
+                # if there is only 1 control, then S = 0 (case 2)
+
+            print(S)
+
+            #if S > 0:
+            #    self.logging.debug("Duplicating time zero based on inhibitors")
+            #    self._duplicate_time_zero_using_inhibitors_only()
+            #elif S == 0:
+            #    self.logging.debug("Duplicating time zero")
+            #    self._duplicate_time_zero()
+            #elif S == -1:
+            #    self.logging.debug("Adding time zero")
+            #    self._add_time_zero()
+
+                # drop the time 0, which has no data in principle
 
             #self._set_missing_time_zero()
             #if self._missing_time_zero is True:
@@ -362,38 +378,59 @@ class MIDASReader(MIDAS):
             self.logging.warning("values larger than 1. " +
             "You may want to normalise/scale the data")
 
+    def _add_time_zero(self):
+        # copy the dataframe with data assuming time0 does not exsits
+        # actually, we should have a row only for each unique experiment
+        # excluding time since we could have tim1, time2, ...
+        times = self.df.query("time!=0").index.levels[2]
+        time = times[0]
+        tobeadded = self.df.query("time==@time") * 0
+        tobeadded.reset_index(inplace=True)
+        tobeadded['time'] = [0] * len(tobeadded)
+        tobeadded.set_index(self._levels, inplace=True)
+
+        df = pd.concat([self.df, tobeadded])
+        #df = df.set_index(self._levels)
+        df = df.sortlevel([self._levels[1], self._levels[2]]) # experiment
+        self.df = df.copy()
+
     def _duplicate_time_zero(self):
         tobeadded = pd.DataFrame()
 
-        # first name of experiment with time 0
+        # first, drop all time 0 (there should be only one anyway)
         df = self.df.query('time==0')
-        exp0 = df.index.values[0][1]#0 access to first index, 1 to the exp index
-        df = self.df.xs((self.cellLine,exp0))
-        self.df.drop([(self.cellLine, exp0,0)], inplace=True)
-        self.experiments.drop(exp0, inplace=True)
-        self._reset_experiment_names()
+        # true if only one cell line
+        assert len(df.reset_index()['experiment']) == 1
+        exp0 = df.reset_index()['experiment'][0]
+        df = self.df.xs((self.cellLine, exp0))
+
+        self.df = self.df.query('time!=0')
+
+        print((df))
         experiments = list(self.experiments.index)
-        # NEED to rename experiments from 0 to N
 
         for i, this_exp in enumerate(experiments):
-            times = self.df.ix[self.cellLine].ix[experiments[i]].index
-            if 0  in times:
-                continue
             #newdata = self.df.xs((self.cellLine, this_exp))
             newrow = df.copy()
             # let us add some index information that is now missing
-
             newrow[self._levels[0]] = self.cellLine
             newrow[self._levels[1]] = this_exp
             newrow[self._levels[2]] = 0
-
             # we can now merge with the full data set
             tobeadded = pd.concat([tobeadded, newrow])
+
+        print(df)
+        print(tobeadded)
         # finally concatenate all the rows with the dataframe df
         df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
+
         df = df.set_index(self._levels)
         df = df.sortlevel([self._levels[1]]) # experiment
-        self.df = df.copy()
+        #self.df = df.copy()
+
+    def _drop_orphan_experiments(self):
+        """rename experiment accordingly"""
+        self._reset_experiment_names()
 
     def _reset_experiment_names(self):
         names = list(self.experiments.index)
@@ -404,9 +441,7 @@ class MIDASReader(MIDAS):
         # also need to reset the experiment in df:
         self.df.reset_index(inplace=True)
         self.df['experiment'] = [mapping[x] for x in self.df['experiment']]
-        self.df.set_index(["cell", "experiment", "time"], inplace=True)
-
-
+        self.df.set_index(self._levels, inplace=True)
 
     def _duplicate_time_zero_using_inhibitors_only(self):
         """
@@ -507,8 +542,7 @@ class XMIDAS(MIDASReader):
         self._celltype_index = 0
         self._experiment_index = 1
         self._time_index = 2
-        # names of the multi index level (rows)
-        self._levels = ["cell", "experiment", "time"]
+
 
         self.verbose = verbose
 

@@ -321,6 +321,8 @@ def test_constructor_time():
        [485],
        [269]]))
 
+def test_constructor_no_time_zero():
+    m = XMIDAS(getdata("MD-test_no_time0.csv"))
 
 def test_filtering():
     m = XMIDAS(getdata("MD-test_filtering.csv"), exclude_rows={'ID:type':'blank'})
