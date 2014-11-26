@@ -1,7 +1,12 @@
 import pulp
 from numpy import isnan
 from cno.io import Reaction
-from itertools import izip
+try:
+    # python 2
+    from itertools import izip
+except:
+    # python3
+    pass
 
 
 class MILPTrain(object):
@@ -340,8 +345,8 @@ class MILPTrain(object):
     def get_rxn_solution(self):
         """Get which reactions are part of the optimized network.
 
-        :return: dictionary with reaction names as keys and 1 or 0 as value indicating if the reaction is present in the
-        optimized network or not.
+        :return: dictionary with reaction names as keys and 1 or 0 as value i
+            indicating if the reaction is present in the optimized network or not.
         """
         rxn_sol = dict.fromkeys(self.rxn_raw, 0)
         for i, i_raw in izip(self.rxn, self.rxn_raw):
