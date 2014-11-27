@@ -25,7 +25,7 @@ metainfo = {
     'keywords' : ['CellNOpt', 'CellNOptR', 'CNO', 'Logical model', 'SBML', 'SIF',
         'Boolean', 'ODE', 'Fuzzy', 'Optimisation', 'Protein Network'],
     'classifiers' : [
-          'Development Status :: 1 - Planning',
+          'Development Status :: 4 - Beta',
           'Intended Audience :: Developers',
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: BSD License',
