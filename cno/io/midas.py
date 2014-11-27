@@ -14,7 +14,7 @@
 #
 ##############################################################################
 from __future__ import print_function
-from __future__ import unicode_literals
+#from __future__ import unicode_literals
 import types
 
 import pylab
@@ -229,7 +229,6 @@ class MIDASReader(MIDAS):
         """Builds the dataframe"""
         # select only data that matches the cell line choice made by the user.
         cellLine = 'TR:%s:CellLine' % self.cellLine
-
         # select data for the cell line provided by the user.
         _data = self._data[self._data[cellLine] == 1]
 
@@ -243,7 +242,6 @@ class MIDASReader(MIDAS):
         df_tr = _data[[this for this in _data.columns if this.startswith("TR")]]
         df_da = _data[[this for this in _data.columns if this.startswith("DA")]]
         df_dv = _data[[this for this in _data.columns if this.startswith("DV")]]
-
         # let us gather experiments and replace empty fields with zeros ??
         # FIXME filling NA with zero is it correct ?
         value_experiments = _data[df_tr.columns].copy()
@@ -260,7 +258,8 @@ class MIDASReader(MIDAS):
 
         # FIXME: already done above ...seemed required for time0_to_duplicate test
         self._experiments.replace("NaN", 0, inplace=True)
-
+        self.logging.debug("init22")
+        # FIXME this part is slow (for loop)
         # build the tuples that will be used by the MultiIndex dataframe
         tuples = []
         # make sure to read each row in the original data using .shape
@@ -281,13 +280,11 @@ class MIDASReader(MIDAS):
             assert len(time) == 1
             time = list(time)[0]
             tuples.append((self.cellLine, exp_name, time))
-
         # replace empty strings with 0
         # note that ,,, is interpreted as ,NaN,NaN,NaN
         # but , , , is interpreted as ," "," "," ",
         self._experiments = self._experiments.applymap(lambda x: 0
             if isinstance(x, str) and x.isspace() else x)
-
         # must convert read data into numeric value.
         self._experiments = self._experiments.convert_objects(convert_numeric=True,
                                                               copy=True)
@@ -317,7 +314,6 @@ class MIDASReader(MIDAS):
             else:
                 cues.append(c)
         self._experiments.columns = cues
-
         inh = [x for x in self._experiments.columns if x.endswith(":i") is True]
         stim = [x for x in self._experiments.columns if x.endswith(":i") is False]
 
@@ -348,10 +344,6 @@ class MIDASReader(MIDAS):
                     S = 1
                 else:
                     S = 0
-                #exp0 = df.index.values[0][1]
-                #S = self.experiments.xs((exp0)).sum()
-                # if there is only 1 control, then S = 0 (case 2)
-
 
             if S > 0:
                 self.logging.debug("Duplicating time zero based on inhibitors")
@@ -411,24 +403,19 @@ class MIDASReader(MIDAS):
         experiments = list(self.experiments.index)
 
         for i, this_exp in enumerate(experiments):
-            print("\n",this_exp)
             try:
                 # first experiment (control) was dropped.
                 # If there is no time1, this should fail
-                print("A")
                 times = list(self.df.xs((self.cellLine, this_exp)).index)
-                print(times)
             except:
                 # in which case, the exp shoudl be dropped as well
                 self.experiments.drop(this_exp, inplace=True)
                 continue
             if 0 in times:
-                print("B")
                 times.remove(0)
                 if len(times) == 0:
                     self.experiments.drop(this_exp, inplace=True)
                 continue
-            #newdata = self.df.xs((self.cellLine, this_exp))
             newrow = df.copy()
             # let us add some index information that is now missing
             newrow[self._levels[0]] = self.cellLine
@@ -954,6 +941,16 @@ class XMIDAS(MIDASReader):
         self.reset_index()
         self.df.replace({self._levels[0]: to_replace}, inplace=True)
         self.set_index()
+        #self._cellLines = []
+        for k,v in to_replace.items():
+            old = 'TR:' + k + ':CellLine'
+            if old in self._data.columns:
+                new = 'TR:' + v + ':CellLine'
+                self._data.columns = [x.replace(old, new) for x in self._data.columns]
+
+        if self.cellLine in to_replace.keys():
+            self._cellLine = to_replace[self.cellLine]
+
 
     def rename_time(self, to_replace):
         """Rename time indices
