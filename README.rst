@@ -19,6 +19,10 @@ cellnopt
 .. image:: https://badge.waffle.io/cellnopt/cellnopt.png?label=ready&title=Ready 
    :target: https://waffle.io/cellnopt/cellnopt
 
+:Note: Cellnopt is tested under Python2.7 and portage to Python3 is on the way
+:Contributions: Please join `github project <https://github.com/cellnopt/cellnopt>`_ and share your notebooks
+                on `github project  <https://github.com/cellnopt/cellnopt/notebooks>`_
+:Issues: Please use `github project <https://github.com/cellnopt/cellnopt/issues>`_
 
 This is a stable version that contains datasets and tools to manipulate
 models and data sets used in CellNOpt project. The sub-package cno.io is ready and 
@@ -28,14 +32,8 @@ cno.datasets sub-package is a replacement for `cellnopt.core <https://pypi.pytho
 As for the formalism, the boolean implementation is available and more are
 coming. Please, have a look at 
 
-- www.cellnopt.org for the context and those notebooks for more information:
-
-- https://github.com/cellnopt/cellnopt/tree/master/notebooks
-- https://github.com/cokelaer/euroscipy_proceedings/blob/master/papers/cokelaer/cokelaer.rst
+:See also: http://www.cellnopt.org for the context.
 
 
-Contributions
----------------
-Please join our `githuh project <https://github.com/cellnopt/cellnopt>`_
 
 
