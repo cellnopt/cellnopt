@@ -133,7 +133,7 @@ class MIDASReader(MIDAS):
         self.logging.debug(" - Data loaded")
 
     def _filtering_raw_data(self):
-        # problably not the most efficient:
+        # problably not the most efficient but does the job:
         for key, value in self.exclude_rows.items():
             self._data = self._data[self._data[key] != value]
 
@@ -328,9 +328,9 @@ class MIDASReader(MIDAS):
                         index= self._experiments.index)
 
         self._experiments.sortlevel(axis=1, inplace=True)
+        #self.df = self.df.sort_index(axis=1)
 
         self._set_missing_time_zero()
-
         if self._missing_time_zero == True:
             # 3 cases:
             # - no time zero provided
@@ -344,7 +344,7 @@ class MIDASReader(MIDAS):
             else:
                 # if S == 0, we may still be in case where there are
                 # other control for different inhibitors, so we need t check that
-                if len(df.reset_index()['experiment'])>1:
+                if len(set(df.reset_index()['experiment']))>1:
                     S = 1
                 else:
                     S = 0
@@ -352,7 +352,6 @@ class MIDASReader(MIDAS):
                 #S = self.experiments.xs((exp0)).sum()
                 # if there is only 1 control, then S = 0 (case 2)
 
-            print(S)
 
             if S > 0:
                 self.logging.debug("Duplicating time zero based on inhibitors")
@@ -366,9 +365,9 @@ class MIDASReader(MIDAS):
 
                 # drop the time 0, which has no data in principle
 
-            #self._set_missing_time_zero()
-            #if self._missing_time_zero is True:
-            #    raise CNOError("Issue with missing time zero ")
+        #self._set_missing_time_zero()
+        #if self._missing_time_zero is True:
+        #    raise CNOError("Issue with missing time zero ")
 
         if self.df.shape[0] > len(self.times) * self.experiments.shape[0]:
             self.logging.warning("You may have duplicated experiments. " +
@@ -392,6 +391,7 @@ class MIDASReader(MIDAS):
         df = pd.concat([self.df, tobeadded])
         #df = df.set_index(self._levels)
         df = df.sortlevel([self._levels[1], self._levels[2]]) # experiment
+        #df = df.sort_index(axis=1)
         self.df = df.copy()
 
     def _duplicate_time_zero(self):
@@ -400,17 +400,34 @@ class MIDASReader(MIDAS):
         # Let us identify the data for the time0
         df = self.df.query('time==0')
         # true if only one cell line
-        assert len(df.reset_index()['experiment']) == 1
+        assert len(set(df.reset_index()['experiment'])) == 1
         exp0 = df.reset_index()['experiment'][0]
         df = self.df.query("time==0 and experiment==@exp0")
 
         # now, let us get rid of all time 0
         self.df = self.df.query('time!=0')
 
-        # and add it back for each experiment
+        #
         experiments = list(self.experiments.index)
 
         for i, this_exp in enumerate(experiments):
+            print("\n",this_exp)
+            try:
+                # first experiment (control) was dropped.
+                # If there is no time1, this should fail
+                print("A")
+                times = list(self.df.xs((self.cellLine, this_exp)).index)
+                print(times)
+            except:
+                # in which case, the exp shoudl be dropped as well
+                self.experiments.drop(this_exp, inplace=True)
+                continue
+            if 0 in times:
+                print("B")
+                times.remove(0)
+                if len(times) == 0:
+                    self.experiments.drop(this_exp, inplace=True)
+                continue
             #newdata = self.df.xs((self.cellLine, this_exp))
             newrow = df.copy()
             # let us add some index information that is now missing
@@ -426,9 +443,6 @@ class MIDASReader(MIDAS):
         df = df.set_index(self._levels)
         df = df.sortlevel([self._levels[1]]) # experiment
         self.df = df.copy()
-
-    def _drop_orphan_experiments(self):
-        """rename experiment accordingly"""
         self._reset_experiment_names()
 
     def _reset_experiment_names(self):
@@ -441,6 +455,8 @@ class MIDASReader(MIDAS):
         self.df.reset_index(inplace=True)
         self.df['experiment'] = [mapping[x] for x in self.df['experiment']]
         self.df.set_index(self._levels, inplace=True)
+        self.df = self.df.sort_index()
+
 
     def _duplicate_time_zero_using_inhibitors_only(self):
         """
@@ -456,7 +472,7 @@ class MIDASReader(MIDAS):
         experiments = list(self.experiments.index)
 
         # FIXME: this is slow
-        tobeadded = None
+        tobeadded = pd.DataFrame()
         for i, this_exp in enumerate(experiments):
             times = self.df.ix[self.cellLine].ix[experiments[i]].index
             if 0 not in times:
@@ -482,11 +498,7 @@ class MIDASReader(MIDAS):
                 newrow[self._levels[1]] = this_exp
                 newrow[self._levels[2]] = 0
 
-                # we can now merge with the full data set
-                if types.NoneType == type(tobeadded):
-                    tobeadded = newrow.copy()
-                else:
-                    tobeadded = pd.concat([tobeadded, newrow])
+                tobeadded = pd.concat([tobeadded, newrow])
         # finally concatenate all the rows with the dataframe df
         df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
         df = df.set_index(self._levels)
