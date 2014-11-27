@@ -14,12 +14,12 @@ class Models(object):
     For each reaction, we can then obtain the average paramters for a reaction.
     In a boolean case, a Model stores a value made of 0/1
 
-    No scores are stored. No sizes are stored. Sizes could be extracted easily 
+    No scores are stored. No sizes are stored. Sizes could be extracted easily
     as sum over rows.
 
     ::
 
-        >>> import models
+        >>> from cno.misc import models
         >>> m = models.Models()
         >>> m.plot() # average model, whcih can be obtained with  m.get_average_model()
         >>> m.plot(model_number=0)  # indices are m.df.index
@@ -41,9 +41,9 @@ class Models(object):
         if you have a first column, whihc is not a reaction, set index_col to 0
 
         .. todo:: values are 0/1 since we have bit strings but could be anything in other
-        formalisms (e.g., ODE) how to handle those cases ?
+            formalisms (e.g., ODE) how to handle those cases ?
 
-        :param dta: a filename with columns as the reacitons and rowss as 
+        :param dta: a filename with columns as the reacitons and rowss as
             parameters for each reactions. Each row is therefore a model.
         """
         # FIXME interpret the first columns automatically ?
@@ -58,6 +58,7 @@ class Models(object):
         elif isinstance(data, Models):
             self.df = data.df.copy()
         else:
+            from cno import CNOError
             raise CNOError("input data not understood. Could be a filename, a dataframe or a Models instance")
 
         # TODO: In a reaction from cnograph, they should be not ORs, just simple
@@ -118,11 +119,11 @@ class Models(object):
             M = float(model.max())
             self.cnograph.edge[edge[0]][edge[1]]["penwidth"] = precision(value, 2) * 5/M
 
-    def plot(self, model_number=None, cmap='gist_heat_r', 
+    def plot(self, model_number=None, cmap='gist_heat_r',
             colorbar=True, *args, **kargs):
         """Plot the average model"""
         self.compute_average(model_number=model_number)
-        self.cnograph.plot(edge_attribute="average", cmap=cmap, 
+        self.cnograph.plot(edge_attribute="average", cmap=cmap,
                 colorbar=colorbar,**kargs)
 
     def to_csv(self, filename):
@@ -131,10 +132,11 @@ class Models(object):
     def to_sif(self, filename=None):
         """Exports 2 SIF using the "and" convention
 
-        can read the results with CellNOptR for instance
+        can read the results with CellNOptR for instance::
 
-            >>> library(CellNOptR)
-            >>> plotModel(readSIF("test.sif"))
+            library(CellNOptR)
+            plotModel(readSIF("test.sif"))
+
         """
         return self.cnograph.to_sif(filename)
 
@@ -157,12 +159,7 @@ class Models(object):
     def heatmap(self, num=1, transpose=False, cmap='gist_heat_r', heatmap_attr={}):
         """
 
-        .. plot::
-            :include-source:
 
-            from corda import *
-            m = Models(fit=0, factor=1)
-            m.heatmap()
         """
         #df = self.get_average_models()
         from biokit.viz.heatmap import Heatmap

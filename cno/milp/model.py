@@ -25,8 +25,8 @@ from cno.core.base import CNOBase
 class MILPTrain(CNOBase):
     """Mixed Integer Linear Program (MILP) model for training boolean signalling networks.
 
-    This class builds an optimization model from a given prior knowledge n
-    etwork (pkn) and data in midas format. The aim is to select a subset of
+    This class builds an optimization model from a given prior knowledge
+    network (pkn) and data in midas format. The aim is to select a subset of
     interactions from the given pkn that are able to explain the observed data
     under a boolean network framework.
 

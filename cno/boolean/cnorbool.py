@@ -38,6 +38,7 @@ class CNORbool(CNOBase):
         c = pipeline.CNObool("PKN-test.sif", "MD-test.csv")
         c.optimise(compression=True, expansion=True, reltol=.15)
 
+
     Results are stored in :attr:`results`. Information stored are various.
     The errors corresponding to the best models can be visualised with :meth:`plot_errors`
     and models within the tolerance are stored in :attr:`models.
