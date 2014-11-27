@@ -1,3 +1,21 @@
+# -*- python -*-
+#
+#  This file is part of the cellnopt package
+#
+#  Copyright (c) 2014 - EMBL-EBI
+#
+#  File author(s): Luis Tobalina
+#    Thomas Cokelaer (cokelaer@ebi.ac.uk)
+#
+#  Distributed under the GLPv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: www.cellnopt.org
+#
+##############################################################################
+
+
 import pulp
 from numpy import isnan
 from cno.io import Reaction

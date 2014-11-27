@@ -1,8 +1,8 @@
 # -*- python -*-
 #
-#  This file is part of the cinapps.tcell package
+#  This file is part of the cellnopt package
 #
-#  Copyright (c) 2012-2013 - EMBL-EBI
+#  Copyright (c) 2014 - EMBL-EBI
 #
 #  File author(s): Thomas Cokelaer (cokelaer@ebi.ac.uk)
 #
