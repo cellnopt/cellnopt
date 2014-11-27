@@ -1,23 +1,24 @@
 import pulp
 from numpy import isnan
 from cno.io import Reaction
-    
+from cno.core.base import CNOBase
 
 
-class MILPTrain(object):
+class MILPTrain(CNOBase):
     """Mixed Integer Linear Program (MILP) model for training boolean signalling networks.
 
-    This class builds an optimization model from a given prior knowledge network (pkn) and data in midas format.
-    The aim is to select a subset of interactions from the given pkn that are able to explain the observed data under a
-    boolean network framework.
+    This class builds an optimization model from a given prior knowledge n
+    etwork (pkn) and data in midas format. The aim is to select a subset of
+    interactions from the given pkn that are able to explain the observed data
+    under a boolean network framework.
 
-    The problem is solved in two steps. First, the algorithm searches for a network with the best possible fit. Second,
-    the algorithm searches for the smallest possible network that returns the best fit found.
+    The problem is solved in two steps. First, the algorithm searches for a
+    network with the best possible fit. Second,the algorithm searches for
+    the smallest possible network that returns the best fit found.
 
     Example::
 
-        >>> from cno import cnodata
-        >>> from cno.io import CNOGraph, XMIDAS
+        >>> from cno import cnodata, CNOGraph, XMIDAS
         >>> import cno.milp.model
 
         >>> filename_pkn = cnodata("PKN-ToyMMB.sif")
@@ -32,29 +33,35 @@ class MILPTrain(object):
         >>> model.train()
         >>> #model.get_rxn_solution()
 
-    The problem is implemented using PuLP, a linear programming toolkit for python than can interface with different
-    linear programming solvers, both commercial (e.g. CPLEX, Gurobi) and open-source (e.g. CBC). The pulp.LpProblem()
-    instance is stored in MILPTrain.model attribute. The user can select a different solver by using the setSolver()
-    method provided in the pulp.LpProblem() instance. For more details, see the PuLP documentation.
+    The problem is implemented using PuLP, a linear programming toolkit
+    for python than can interface with different linear programming solvers,
+    both commercial (e.g. CPLEX, Gurobi) and open-source (e.g. CBC).
+    The pulp.LpProblem() instance is stored in MILPTrain.model attribute.
+    The user can select a different solver by using the setSolver()
+    method provided in the pulp.LpProblem() instance. For more details,
+    see the PuLP documentation.
 
     For details about the approach see:
-    Mitsos A, Melas IN, Siminelakis P, Chairakaki AD, Saez-Rodriguez J, Alexopoulos LG. (2009) Identifying Drug Effects
-    via Pathway Alterations using an Integer Linear Programming Optimization Formulation on Phosphoproteomic Data.
-    PLoS Comput Biol 5(12): e1000591. doi:10.1371/journal.pcbi.1000591
 
-    Note: the constraint explained in equation number 2 in the paper is not included in this implementation. This
-    constraint would allow the modeller to limit the combinations of connectivities considered. It is thus not essential
-    for solving the main problem.
+    * Mitsos A, Melas IN, Siminelakis P, Chairakaki AD, Saez-Rodriguez J,
+      Alexopoulos LG. (2009) Identifying Drug Effects via Pathway Alterations
+      using an Integer Linear Programming Optimization Formulation on
+      Phosphoproteomic Data. PLoS Comput Biol 5(12): e1000591.
+      doi:10.1371/journal.pcbi.1000591
+
+    .. note:: the constraint explained in equation number 2 in the paper is
+        not included in this implementation. This constraint would allow the
+        modeller to limit the combinations of connectivities considered. It
+        is thus not essential for solving the main problem.
     """
 
-    def __init__(self, pkn, midas):
+    def __init__(self, pkn, midas, verbose=False):
         """Initialization function.
 
-        :param CNOGraph pkn: prior knowledge network.
-        :param XMIDAS midas: experimental data.
+        :param CNOGraph pkn: prior knowledge network. see :class:`~cno.io.cnograph.CNOGraph`
+        :param XMIDAS midas: experimental data. See :class:`~cno.io.midas.XMIDAS`
         """
-        self._pkn = pkn
-        self._midas = midas
+        super(MILPTrain, self).__init__(pkn, midas, verbose=verbose)
 
         self.rxn_raw, self.rxn, self.node, self.experiment = self.initialize_indexing_variables()
         self.R, self.I, self.P = self.initialize_grouping_variables()
@@ -62,25 +69,22 @@ class MILPTrain(object):
         self.model = pulp.LpProblem(name="BoolNetTrain")
         self.y_var, self.z_var, self.x_var = self.define_decision_variables()
 
-    @property
-    def pkn(self):
-        return self._pkn
-
-    @pkn.setter
-    def pkn(self, new_pkn):
-        self._pkn = new_pkn
+    def _get_pknmodel(self):
+        return self._pknmodel
+    def _set_pknmodel(self, new_pkn):
+        self._pknmodel = new_pkn
         self._reset_class_attributes()
         self._reset_problem()
+    pknmodel = property(_get_pknmodel, _set_pknmodel,
+                        doc="getter/setter to the model")
 
-    @property
-    def midas(self):
-        return self._midas
-
-    @midas.setter
-    def midas(self, new_midas):
-        self._midas = new_midas
+    def _get_midas(self):
+        return self._data
+    def _set_midas(self, new_midas):
+        self._data = new_midas
         self._reset_class_attributes()
         self._reset_problem()
+    midas = property(_get_midas, _set_midas, doc="getter/setter to the data")
 
     def change_pkn_and_midas(self, new_pkn, new_midas):
         """Change information about the stored pkn and midas.
@@ -91,16 +95,18 @@ class MILPTrain(object):
         :param XMIDAS new_midas: new experimental data.
         :return:
         """
-        self._pkn = new_pkn
+        self._pknmodel = new_pkn
         self._midas = new_midas
         self._reset_class_attributes()
         self._reset_problem()
 
     def _reset_class_attributes(self):
-        """Reset class attributes.
+        r"""Reset class attributes.
 
-        This function recalculates rxn_raw, rxn, node, experiment, R, I, P, y_var, z_var and x_var.
-        It is designed to be called when either pkn or midas are changed by the user.
+        This function recalculates rxn_raw, rxn, node, experiment, R, I, P,
+        :math:`y_var`, :math:`z_var` and :math:`x_var`.
+        It is designed to be called when either pkn or midas are
+        changed by the user.
         """
         self.rxn_raw, self.rxn, self.node, self.experiment = self.initialize_indexing_variables()
         self.R, self.I, self.P = self.initialize_grouping_variables()
@@ -110,15 +116,16 @@ class MILPTrain(object):
     def _reset_problem(self):
         """Reset the optimization problem to an empty problem.
 
-        This function removes all the variables and constraints, as well as the objective function, from the
-        pulp.LpProblem() instance.
+        This function removes all the variables and constraints, as well as
+        the objective function, from the  pulp.LpProblem() instance.
         """
         # remove objective function
         self.model.objective = None
         # remove constraints
         self.model.constraints.clear()
         # remove variables
-        # Note: I cannot find any method in the pulp.LpProblem() class to remove the attached variables. This two lines
+        # Note: I cannot find any method in the pulp.LpProblem() class to
+        # remove the attached variables. This two lines
         # make the trick, but may not be optimal.
         self.model._variable_ids.clear()
         self.model._variables = []
@@ -126,8 +133,9 @@ class MILPTrain(object):
     def train(self):
         """Initialize and solve the optimization problem.
 
-        The problem is solved in two steps. First, the algorithm searches for a network with the best possible fit.
-        Second, the algorithm searches for the smallest possible network that returns the best fit found.
+        The problem is solved in two steps. First, the algorithm searches for
+        a network with the best possible fit. Second, the algorithm searches
+        for the smallest possible network that returns the best fit found.
         """
         # reset constraint set
         self.model.constraints.clear()
@@ -154,10 +162,10 @@ class MILPTrain(object):
     def initialize_indexing_variables(self):
         """Initialize indexing variables used in the formulation of the model."""
         # helper indexing variables
-        rxn_raw = self.pkn.reactions
+        rxn_raw = self.pknmodel.reactions
         # replace special characters in reaction names to avoid name interpretation problems in the MILP formulation
         rxn = [rxn.replace("^", "_and_").replace("!", "not_").replace("=", "_eq_") for rxn in rxn_raw]
-        node = self.pkn.species
+        node = self.pknmodel.species
         experiment = [k for k in range(self.midas.nExps)]
         return rxn_raw, rxn, node, experiment
 
@@ -202,9 +210,11 @@ class MILPTrain(object):
     def add_problem_constraints(self):
         """Add modelling constraints to the optimization problem.
 
-        This function adds constraints described in equations (3) to (10) of the paper
-        Mitsos A, Melas IN, Siminelakis P, Chairakaki AD, Saez-Rodriguez J, Alexopoulos LG. (2009) Identifying Drug
-        Effects via Pathway Alterations using an Integer Linear Programming Optimization Formulation on Phosphoproteomic
+        This function adds constraints described in equations (3) to (10) of
+        the paper Mitsos A, Melas IN, Siminelakis P, Chairakaki AD,
+        Saez-Rodriguez J, Alexopoulos LG. (2009) Identifying Drug Effects via
+        Pathway Alterations using an Integer Linear Programming Optimization
+        Formulation on Phosphoproteomic
         Data. PLoS Comput Biol 5(12): e1000591. doi:10.1371/journal.pcbi.1000591
         """
 
