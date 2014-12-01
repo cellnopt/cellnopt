@@ -60,3 +60,35 @@ class CNOBase(object):
         self._pknmodel.preprocessing(expansion, compression, cutnonc,
                 maxInputsPerGate=maxInputsPerGate)
 
+    def plot_pknmodel(self):
+        """Plot the original PKN model
+
+        .. plot::
+            :include-source:
+            :width: 80%
+
+            from cellnopt.pipeline.cnobase import CNObase
+            from cellnopt.data import cnodata
+            o = CNOBase(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"), 
+                formalism="base")
+            o.plot_midas(xkcd=True)   # use xkcd for fun
+                                                                                                                    .. seealso:: full documentation about MIDAS in cellnopt.core.cnograph
+        """
+        self._pknmodel.plot()
+
+    def plot_midas(self, xkcd = False):
+        """Plot the MIDAS data
+
+        .. seealso:: full documentation about MIDAS in :meth:`cellnopt.core.midas.plot`
+        """
+        if xkcd:
+            from pylab import xkcd, gcf
+            with xkcd():
+                self.midas.plot()
+                f = gcf()
+                f.set_facecolor("white")
+        else:
+            self.midas.plot()
+
+
+

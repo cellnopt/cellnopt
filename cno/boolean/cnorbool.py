@@ -19,6 +19,7 @@ from easydev import Logging, AttrDict
 from cno.io.multigraph import CNOGraphMultiEdges
 from cno import CNOGraph, XMIDAS
 from cno.core import CNOBase
+from cno.misc.results import BooleanResults
 
 import pandas as pd
 import pylab
@@ -55,7 +56,6 @@ class CNORbool(CNOBase):
     """
     def __init__(self, model, data, verbose=True, verboseR=False):
         super(CNORbool, self).__init__(model, data, verbose=verbose)
-
 
         # this code could be moved to CNOBase
         self._verboseR = verboseR
@@ -106,8 +106,7 @@ class CNORbool(CNOBase):
         inhibitors = as.data.frame(cnolist@inhibitors)
         species = colnames(cnolist@signals[[1]])
         """
-        self.results = {}
-        self.results['cnorbool'] = {}
+        self._results = {}
 
         script = script_template % {
                 'pkn': self.pknmodel.filename,
@@ -138,11 +137,7 @@ class CNORbool(CNOBase):
         models.cnograph.midas = self.data.copy()
         models.scores = self.session.all_scores
 
-        from cno.misc.results import BooleanResults
-        results = BooleanResults()
-
-
-        self.results['cnorbool'] = {
+        results = {
                 'best_score': self.session.best_score,
                 'best_bitstring': self.session.best_bitstring,
                 'all_scores': self.session.all_scores,
@@ -157,15 +152,17 @@ class CNORbool(CNOBase):
                 'species':self.session.species,
                 'tag': tag
         }
-        self.results['pkn'] = self.pknmodel
-        self.results['midas'] = self.data
-        self.results = AttrDict(**self.results)
-        self.results['cnorbool'] = AttrDict(**self.results['cnorbool'])
+        results['pkn'] = self.pknmodel
+        results['midas'] = self.data
+        self.results = BooleanResults()
+        self.results.add_results(results)
+        self.results.add_models(models)
+
 
     def plot_errors(self, close=False):
 
-        results = self.results['cnorbool']
-        midas = self.results['midas']
+        results = self.results.results
+        midas = results.midas
 
         t0 = results['sim_results']['simResults'][0]['t0']
         t1 = results['sim_results']['simResults'][0]['t1']
@@ -202,11 +199,6 @@ class CNORbool(CNOBase):
         try:midas.plot(mode="mse")
         except:pass
 
-        #midas.plotSim()
-        #pylab.savefig("Error-{0}.png".format(tag), dpi=200)
-        #pylab.savefig("Error-{0}.svg".format(tag), dpi=200)
-        #if close:
-        #    pylab.close()
         return midas
 
     def simulate(self, bs=None, compression=True, expansion=True):
@@ -224,7 +216,7 @@ class CNORbool(CNOBase):
 
         """
         if bs == None:
-            bs = ",".join([str(x) for x in self.results.cnorbool.best_bitstring])
+            bs = ",".join([str(x) for x in self.results.best_bitstring])
         else:
             bs = ",".join([str(x) for x in bs])
 
@@ -250,7 +242,7 @@ class CNORbool(CNOBase):
         return self.session.mse
 
     def _get_models(self):
-        return self.results.cnorbool.models
+        return self.results.models
     models = property(_get_models)
 
 
