@@ -62,3 +62,11 @@ except Exception as err:
 
 #MINLP
 from .milp import *
+
+
+#ODE
+from .ode import CNORode
+
+#fuzzy
+from .fuzzy import CNORfuzzy
+

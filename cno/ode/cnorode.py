@@ -45,115 +45,6 @@ class ODEParameters(Parameters):
                            "The elitism number (should be 10% of the popsize)")
    
    
-class R(object):   
-    def __init__(self):
-        pass
-        """params = self.ssm_params    
-        self.config.add_section("SSM")
-        self.config.add_option("SSM", "maxtime", params["maxtime"])
-        self.config.add_option("SSM", "n-diverse", params["ndiverse"])
-        self.config.add_option("SSM", "dim-ref-set", params["dim_refset"])
-        self.config.add_option("SSM", "verbose", True)"""
-
-
-    def create_report_images(self):
-        self._pknmodel.plot(filename=self._make_filename("pknmodel.png"), show=False)
-        self.cnograph.plot(filename=self._make_filename("expmodel.png"), show=False)
-        self._plot_ode_parameters_k(filename=self._make_filename("ode_parameters_k.png"), show=False)
-        self._plot_ode_parameters_n(filename=self._make_filename("ode_parameters_n.png"), show=False)
-        self.plot_errors(show=False)
-        self.midas.plot()
-        self.savefig("midas.png")
-        pylab.close()
-        self.plot_fitness(show=False, save=True)
-
-    def report(self, filename="index.html", directory="report", browse=True):
-        """Creates the boolean report
-        
-        Should not create any image here only the report
-        """
-        self.directory = self._init_report()
-        self.create_report_images()
-            
-        report = HTMLReportODE(self)        
-        # complete the report
-        self._report(report)
-        if browse:
-            from browse import browse as bs
-            bs(report.directory + os.sep + filename)
-        self.save_config_file()
-
-    def _report(self, report):
-        directory = self._init_report()
-        
-        # Save filenames and report in a section
-        fname = directory + os.sep + "PKN-pipeline.sif"
-        self.cnograph.export2sif(fname)        
-        fname = directory + os.sep + "MD-pipeline.csv"
-        self.midas.save2midas(fname)
-
-        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'        
-        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
-        txt += '<li><a href="config.ini">Config file</a></li>'
-        txt += '<li><a href="rerun.py">Script</a></li></ul>'
-        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
-        
-        report.add_section(txt, "Input data files")
-         
-        report.add_section(
-        """       
-         <div class="section" id="Script_used">
-         <object height=120 width=300 type='text/x-scriptlet' border=1
-         data="description.html"></object>
-         </div>""", "Description")
-
-        txt = """<pre class="literal-block">\n"""
-        txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
-        txt += "o.report()\n</pre>\n"
-        report.add_section(txt, "Script used")
-        
-        txt = """<a href="http://www.cellnopt.org/">
-            <object data="pknmodel.svg" type="image/svg+xml">
-            <span>Your browser doesn't support SVG images</span> </object></a>"""
-        txt += """<a class="reference external image-reference" href="scripts/exercice_3.py">
-<img alt="MIDAS" class="align-right" src="midas.png" /></a>"""
-        
-        report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
-                                                                                            
-        report.add_section('<img src="expmodel.png">', "Expanded before optimisation")
-        report.add_section( """
-        <img src="expmodel.png">'
-        <img src="ode_parameters_k.png">
-        <img src="ode_parameters_n.png">
-        """, "Optimised model")
-        
-        report.add_section('<img src="errors.png">', "Errors")
-
-        report.add_section(self.get_html_reproduce(), "Reproducibility")
-        fh = open(self.report_directory + os.sep + "rerun.py", 'w')
-        fh.write("from cellnopt.pipeline import *\n")
-        fh.write("CNOode(config=config.ini)\n")
-        fh.write("c.optimise()\n")
-        fh.write("c.report()\n")
-        fh.close()
-
-        # some stats
-        stats = self._get_stats()
-        txt = "<table>"
-        for k,v in stats.iteritems():
-            txt += "<tr><td>%s</td><td>%s</td></tr>" % (k,v)
-        txt += "</table>"
-        txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
-        report.add_section(txt, "stats")
-
-        # dependencies
-        #table = self.get_table_dependencies()
-        #fh.write(table.to_html())
-
-        report.write(self.report_directory, "index.html")
-
-
-
 
 
 
@@ -383,6 +274,114 @@ class CNORode(CNOBase):
         # cleanup the label
         for e in self.cnograph.edges():
             del self.cnograph.edge[e[0]][e[1]]["label"]
+
+    def _update_config(self):
+        self.config.add_section("SSM")
+        self.config.add_option("SSM", "maxtime", params["maxtime"])
+        self.config.add_option("SSM", "n-diverse", params["ndiverse"])
+        self.config.add_option("SSM", "dim-ref-set", params["dim_refset"])
+        self.config.add_option("SSM", "verbose", True)
+
+    def create_report_images(self):
+        self._pknmodel.plot(filename=self._make_filename("pknmodel.png"), show=False)
+        self.cnograph.plot(filename=self._make_filename("expmodel.png"), show=False)
+        self._plot_ode_parameters_k(filename=self._make_filename("ode_parameters_k.png"), show=False)
+        self._plot_ode_parameters_n(filename=self._make_filename("ode_parameters_n.png"), show=False)
+        self.plot_errors(show=False)
+        self.midas.plot()
+        self.savefig("midas.png")
+        pylab.close()
+        self.plot_fitness(show=False, save=True)
+
+    def report(self, filename="index.html", directory="report", browse=True):
+        """Creates the boolean report
+        
+        Should not create any image here only the report
+        """
+        self.directory = self._init_report()
+        self.create_report_images()
+            
+        report = HTMLReportODE(self)        
+        # complete the report
+        self._report(report)
+        if browse:
+            from browse import browse as bs
+            bs(report.directory + os.sep + filename)
+        self.save_config_file()
+
+    def _report(self, report):
+        directory = self._init_report()
+        
+        # Save filenames and report in a section
+        fname = directory + os.sep + "PKN-pipeline.sif"
+        self.cnograph.export2sif(fname)        
+        fname = directory + os.sep + "MD-pipeline.csv"
+        self.midas.save2midas(fname)
+
+        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'        
+        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
+        txt += '<li><a href="config.ini">Config file</a></li>'
+        txt += '<li><a href="rerun.py">Script</a></li></ul>'
+        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
+        
+        report.add_section(txt, "Input data files")
+        report.add_section(
+        """       
+         <div class="section" id="Script_used">
+         <object height=120 width=300 type='text/x-scriptlet' border=1
+         data="description.html"></object>
+         </div>""", "Description")
+
+        txt = """<pre class="literal-block">\n"""
+        txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
+        txt += "o.report()\n</pre>\n"
+        report.add_section(txt, "Script used")
+        
+        txt = """<a href="http://www.cellnopt.org/">
+            <object data="pknmodel.svg" type="image/svg+xml">
+            <span>Your browser doesn't support SVG images</span> </object></a>"""
+        txt += """<a class="reference external image-reference" href="scripts/exercice_3.py">
+<img alt="MIDAS" class="align-right" src="midas.png" /></a>"""
+        
+        report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
+                                                                                            
+        report.add_section('<img src="expmodel.png">', "Expanded before optimisation")
+        report.add_section( """
+        <img src="expmodel.png">'
+        <img src="ode_parameters_k.png">
+        <img src="ode_parameters_n.png">
+        """, "Optimised model")
+        
+        report.add_section('<img src="errors.png">', "Errors")
+
+        report.add_section(self.get_html_reproduce(), "Reproducibility")
+        fh = open(self.report_directory + os.sep + "rerun.py", 'w')
+        fh.write("from cellnopt.pipeline import *\n")
+        fh.write("CNOode(config=config.ini)\n")
+        fh.write("c.optimise()\n")
+        fh.write("c.report()\n")
+        fh.close()
+
+        # some stats
+        stats = self._get_stats()
+        txt = "<table>"
+        for k,v in stats.iteritems():
+            txt += "<tr><td>%s</td><td>%s</td></tr>" % (k,v)
+        txt += "</table>"
+        txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
+        report.add_section(txt, "stats")
+
+        # dependencies
+        #table = self.get_table_dependencies()
+        #fh.write(table.to_html())
+
+        report.write(self.report_directory, "index.html")
+
+
+
+
+
+
 
 
 

@@ -20,6 +20,7 @@ from cno.io.multigraph import CNOGraphMultiEdges
 from cno import CNOGraph, XMIDAS
 from cno.core import CNOBase
 from cno.misc.results import BooleanResults
+from cno.core import ReportBool
 
 import pandas as pd
 import pylab
@@ -62,6 +63,8 @@ class CNORbool(CNOBase):
 
         self.session = RSession(verbose=self.verboseR)
         self.parameters = {} # fill with GA binary parameters
+
+        self.report = ReportBool()
 
     def _get_verboseR(self):
         return self._verboseR

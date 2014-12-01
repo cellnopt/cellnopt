@@ -1,1 +1,1 @@
-
+from .cnorfuzzy import CNORfuzzy

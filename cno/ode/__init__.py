@@ -14,3 +14,5 @@ def install_dependencies_ode():
         pm.install_packages("http://www.cellnopt.org/downloads/MEIGOR_0.99.6_svn3222.tar.gz",
             type="source")
 
+
+from .cnorode import CNORode
