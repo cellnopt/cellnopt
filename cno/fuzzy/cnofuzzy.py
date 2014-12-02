@@ -13,7 +13,7 @@ import pylab
 from cno.boolean import CNOBool   # fuzzy is similar to bool in many aspects
 
 
-__all__ = ["CNOfuzzy"]
+__all__ = ["CNORfuzzy"]
 
 
 
@@ -25,7 +25,7 @@ class FuzzyParameters(BooleanParameters):
     
 
 
-class CNOfuzzy(CNObool): 
+class CNORfuzzy(CNObool): 
     """
 
 
@@ -43,7 +43,7 @@ class CNOfuzzy(CNObool):
         """.. rubric:: constructor
 
         """
-        super(CNOfuzzy, self).__init__(pknmodel, data, config, formalism="fuzzy",
+        super(CNORfuzzy, self).__init__(pknmodel, data, config, formalism="fuzzy",
             verbose=verbose, **kargs)
         
         self.Rdependencies = ["CNORfuzzy"]

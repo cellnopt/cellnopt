@@ -5,22 +5,25 @@ import pandas as pd
 import numpy as np
 import pylab
 
-
+from biokit.rtools import RSession
 #from cnobool import BooleanParameters
 #from htmltools import HTMLReportFuzzy
 from cno.core import CNOBase
 #from cno.boolean import CNOBool   # fuzzy is similar to bool in many aspects
 from cno.core.report import ReportFuzzy
+from cno.core.params import BooleanParameters
+from biokit.rtools import bool2R
+
 
 __all__ = ["CNOfuzzy"]
 
 
 
-#class FuzzyParameters(BooleanParameters):
-#    # THe keys used here have the same caps as in the R code.
-#    def __init__(self):        
-#        super(FuzzyParameters, self).__init__()
-#        self.init_gabinary_t1()        
+class FuzzyParameters(BooleanParameters):
+    # THe keys used here have the same caps as in the R code.
+    def __init__(self):        
+        super(FuzzyParameters, self).__init__()
+        self.init_gabinary_t1()        
     
 
 class CNORfuzzy(CNOBase): 
@@ -35,7 +38,7 @@ class CNORfuzzy(CNOBase):
         """.. rubric:: constructor
 
         """
-        super(CNOfuzzy, self).__init__(pknmodel, data, verbose=verbose)
+        super(CNORfuzzy, self).__init__(model, data, verbose=verbose)
         self._verboseR = verboseR
         
         
@@ -48,32 +51,25 @@ class CNORfuzzy(CNOBase):
             0.006, 0.007, 0.008, 0.009, 0.01, 0.013, 0.015, 0.017, 0.02, 0.025, 0.03, 0.05,
             0.1, 0.2, 0.3, 0.5]
  
+
+    def _get_verboseR(self):
+        return self._verboseR
+    def _set_verboseR(self, value):
+        self._verboseR = value
+        self.session.dump_stdout = value
+    verboseR = property(_get_verboseR, _set_verboseR)
+
+
     def reset(self):
         self.results = {
             'gaBinaryT1': []        
         }
             
-    def optimise(self, **kargs):
-        """alias to :meth:`gaBinaryT1` method"""
-        pass
-        #self.gaBinaryT1(**kargs)      
-        #self._optimised = True
                         
-    def gaBinaryT1(self, N=2, **kargs):
-        fh2.close()
-
-        fh_species = self.get_tempfile(suffix=".csv")
-        fh_reac = self.get_tempfile(suffix=".csv")
-        fh_results = self.get_tempfile()
-
-        params = {
-                'pknmodel': fh1.name,
-                'midas': fh2.name,
-                'fh_species': fh_species.name,
-                'fh_reac': fh_reac.name,
-                'fh_results': fh_results.name,
-                'N':N
-                }
+    def optimise(self, tag="cnorfuzzy", N=2,
+            popsize=50,reltol=0.1, maxtime=300, expansion=True, maxgens=150, 
+            stallgenmax=100, compression=True):
+            
 
         # update config with uesr parameters if provided; keys are user parameter
         # values are internal names used in the config file
@@ -91,27 +87,31 @@ class CNORfuzzy(CNOBase):
             'timeindex': "time-index",
             "verbose": "verbose"
         }
-        for x in mapping.keys():
-            # update config data structure only if user parameter provided
-            if x in kargs.keys():
-                self.config.GA[mapping[x]] = kargs[x]
-            params[x] = self.config.GA[mapping[x]]
+        #for x in mapping.keys():
+        #    # update config data structure only if user parameter provided
+        #    if x in kargs.keys():
+        #        self.config.GA[mapping[x]] = kargs[x]
+        #    params[x] = self.config.GA[mapping[x]]
 
         # create the bistring made of ones
-        params['bitstring'] =  ",".join(["1" for x in self.cnograph.reacID])
-        if params['verbose']==True:
-            params['verbose']= "T"
-        else:
-            params['verbose']= "F"
+        #params['bitstring'] =  ",".join(["1" for x in self.cnograph.reacID])
+        #if params['verbose']==True:
+        #    params['verbose']= "T"
+        #else:
+        #    params['verbose']= "F"
 
 
-        script = """
+        # 
+        #    elitism=%(elitism)s, pMutation=%(pmutation)s,
+        #    NAFac=%(nafac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefac)s,
+        #    stallGenMax=%(stallgenmax)s)
+        script_template = """
         library(CNORfuzzy)
-        pknmodel = readSIF("%(pknmodel)s")
+        pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
-        #write.csv(list(reacID=pknmodel$reacID), "%(fh_reac)s")
-        #write.csv(list(species=pknmodel$namesSpecies), "%(fh_species)s")
-
+        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
+            expansion=%(expansion)s, maxInputsPerGate=3)
+            
         paramsList = defaultParametersFuzzy(cnolist, pknmodel)
         paramsList$popSize = %(popsize)s
         paramsList$maxTime = %(maxtime)s
@@ -119,12 +119,7 @@ class CNORfuzzy(CNOBase):
         paramsList$stallGenMax = %(stallgenmax)s
         paramsList$optimisation$maxtime = 60*5
 
-        res = CNORwrapFuzzy(cnolist, pknmodel, paramsList=paramsList)
-        # 
-        #    elitism=%(elitism)s, pMutation=%(pmutation)s,
-        #    NAFac=%(nafac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefac)s,
-        #    stallGenMax=%(stallgenmax)s)
-
+        #res = CNORwrapFuzzy(cnolist, pknmodel, paramsList=paramsList)
 
         N = %(N)s
         allRes = list()
@@ -134,21 +129,24 @@ class CNORfuzzy(CNOBase):
             allRes[[i]] = Res
         }
         summary = compileMultiRes(allRes,show=FALSE)
-
         #sim = plotMeanFuzzyFit(0.01, summary$allFinalMSEs, allRes)
+        """
+        script = script_template % {
+                'pkn': self.pknmodel.filename,
+                'midas': self.data.filename,
+                'tag': tag,
+                'N':N,
+                'popsize':popsize,
+                'maxgens': maxgens,
+                'maxtime': maxtime,
+                'stallgenmax': stallgenmax,
+                'reltol': reltol,
+                'compression': bool2R(compression),
+                'expansion': bool2R(expansion)
+                }
+        self.session.run(script)
 
-        """ 
-        script = script % params
-        self._script_optim = script
-        self.runRscript(script)
-
-        # for book-keeping, we replace params with actual path (we do not need params anymore)
-        params['model'] = 'PKN-pipeline.sif'
-        params['midas'] = 'MD-pipeline.csv'
-        self._script_optim = script % params
-
-        #reading the saved data
-        
+        """#reading the saved data
         for i in range(1,N+1):
             df = pd.read_csv(fh_results.name + "_" + str(i) + ".csv")
             self.results['gaBinaryT1'].append(df)
@@ -166,10 +164,7 @@ class CNORfuzzy(CNOBase):
         self.best_bitstring =  df.ix[df.index[-1]]
         self.best_bitstring =  [int(x) for x in self.best_bitstring.split(",")]
 
-        self._cleanup()
-        self._optimised = True
-        self.optimised_bitstring = {}
-        self.optimised_bitstring['T1'] = self.best_bitstring[:]
+        """
        
 
     def __create_report_images(self):
@@ -372,9 +367,4 @@ class __OptionFuzzy(object):
             group.add_argument(param.name , help=""+help, **kargs)
         
 
-if __name__ == "__main__":
-    """Used by setup.py as an entry point to :func:`standalone`
-
-    """
-    standalone(sys.argv)
 
