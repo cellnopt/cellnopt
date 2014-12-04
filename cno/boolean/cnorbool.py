@@ -161,7 +161,6 @@ class CNORbool(CNOBase):
         self.results.add_results(results)
         self.results.add_models(models)
 
-
     def plot_errors(self, close=False):
 
         results = self.results.results

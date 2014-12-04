@@ -9,6 +9,10 @@ import pandas as pd
 from easydev import Logging, AttrDict
 
 
+__all__ = ['BooleanResults', 'FuzzyResults', 'ODEResults']
+
+
+
 class Results(object):
     """
 

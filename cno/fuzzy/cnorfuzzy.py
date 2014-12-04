@@ -6,10 +6,8 @@ import numpy as np
 import pylab
 
 from biokit.rtools import RSession
-#from cnobool import BooleanParameters
-#from htmltools import HTMLReportFuzzy
 from cno.core import CNOBase
-#from cno.boolean import CNOBool   # fuzzy is similar to bool in many aspects
+from cno.misc.results import FuzzyResults
 from cno.core.report import ReportFuzzy
 from cno.core.params import BooleanParameters
 from biokit.rtools import bool2R
@@ -17,7 +15,27 @@ from biokit.rtools import bool2R
 
 __all__ = ["CNOfuzzy"]
 
+"""
+$redThresh  0e+00 1e-04 5e-04 1e-03 3e-03 5e-03 1e-02
+$doRefinement  TRUE
+$sizeFac  1e-04
+$NAFac  1
+$popSize  50
+$pMutation  0.5
+$maxTime  180
+$maxGens  500
+$stallGenMax  100
+$selPress  1.2
+$elitism  5
+$relTol  0.1
+$verbose  TRUE
+$optimisation
+    $optimisation$algorithm "NLOPT_LN_SBPLX"
+    $optimisation$xtol_abs  0.001
+    $optimisation$maxEval  10000
+    $optimisation$maxTime  300
 
+"""
 
 class FuzzyParameters(BooleanParameters):
     # THe keys used here have the same caps as in the R code.
@@ -50,7 +68,7 @@ class CNORfuzzy(CNOBase):
         self.thresholds = [0.0001, 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005,
             0.006, 0.007, 0.008, 0.009, 0.01, 0.013, 0.015, 0.017, 0.02, 0.025, 0.03, 0.05,
             0.1, 0.2, 0.3, 0.5]
- 
+
 
     def _get_verboseR(self):
         return self._verboseR
@@ -59,15 +77,13 @@ class CNORfuzzy(CNOBase):
         self.session.dump_stdout = value
     verboseR = property(_get_verboseR, _set_verboseR)
 
-
     def reset(self):
         self.results = {
             'gaBinaryT1': []        
         }
-            
                         
     def optimise(self, tag="cnorfuzzy", N=2,
-            popsize=50,reltol=0.1, maxtime=300, expansion=True, maxgens=150, 
+            popsize=50,reltol=0.1, maxtime=180, expansion=True, maxgens=150, 
             stallgenmax=100, compression=True):
             
 
@@ -92,15 +108,6 @@ class CNORfuzzy(CNOBase):
         #    if x in kargs.keys():
         #        self.config.GA[mapping[x]] = kargs[x]
         #    params[x] = self.config.GA[mapping[x]]
-
-        # create the bistring made of ones
-        #params['bitstring'] =  ",".join(["1" for x in self.cnograph.reacID])
-        #if params['verbose']==True:
-        #    params['verbose']= "T"
-        #else:
-        #    params['verbose']= "F"
-
-
         # 
         #    elitism=%(elitism)s, pMutation=%(pmutation)s,
         #    NAFac=%(nafac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefac)s,
@@ -119,8 +126,6 @@ class CNORfuzzy(CNOBase):
         paramsList$stallGenMax = %(stallgenmax)s
         paramsList$optimisation$maxtime = 60*5
 
-        #res = CNORwrapFuzzy(cnolist, pknmodel, paramsList=paramsList)
-
         N = %(N)s
         allRes = list()
         paramsList$verbose=TRUE
@@ -129,14 +134,15 @@ class CNORfuzzy(CNOBase):
             allRes[[i]] = Res
         }
         summary = compileMultiRes(allRes,show=FALSE)
+        summary = compileMultiRes(allRes,show=T)
         #sim = plotMeanFuzzyFit(0.01, summary$allFinalMSEs, allRes)
         """
         script = script_template % {
                 'pkn': self.pknmodel.filename,
                 'midas': self.data.filename,
                 'tag': tag,
-                'N':N,
-                'popsize':popsize,
+                'N': N,
+                'popsize': popsize,
                 'maxgens': maxgens,
                 'maxtime': maxtime,
                 'stallgenmax': stallgenmax,
@@ -145,27 +151,116 @@ class CNORfuzzy(CNOBase):
                 'expansion': bool2R(expansion)
                 }
         self.session.run(script)
+        allRes = self.session.allRes
+        # The contents of allRes is a list of N Res structures
+        # Each Res structure is itself made of 9 structures with those keys:
+        # 't1opt': ['stringsTol', 'bScore', 'results', 'currBest', 'bString', 'stringsTolScores']
+        # 'paramsList': parameters used in particular GA params, optim params, inputs
+        # 'unRef': 
+        # 'processedModel': 
+        # 'currBestDiscrete': best score
+        # 'bit'
+        # 'intString'
+        # 'redRef'
+        # 'cutBit'
 
-        """#reading the saved data
-        for i in range(1,N+1):
-            df = pd.read_csv(fh_results.name + "_" + str(i) + ".csv")
-            self.results['gaBinaryT1'].append(df)
-        self.reacID = list(pd.read_csv(fh_reac.name).reacID)
-        self.species = list(pd.read_csv(fh_species.name).species)
-        self.results['reacID'] = self.reacID[:]
-        self.results['species'] = self.species[:]
-        
-        # getting results from the first run only
-        index = 1
-        self.best_score = self.results['gaBinaryT1'][index].Best_score.min()
-        self.total_time = self.results['gaBinaryT1'][index].Iter_time.sum()
-        
-        df = self.results['gaBinaryT1'][1].Best_bitString
-        self.best_bitstring =  df.ix[df.index[-1]]
-        self.best_bitstring =  [int(x) for x in self.best_bitstring.split(",")]
+        res1 = allRes[0] # same for all indices
+        #reactions = res1['paramsList']['model']['reacID']
+        species = res1['paramsList']['model']['namesSpecies']
 
+        scores = res1['t1opt']['stringsTolScores']
+        # res1['t1opt']['stringsTol']
+
+        reactions = res1['processedModel']['reacID']
+        bScore = res1['currBestDiscrete']
+        bString = res1['intString']
+
+        # redRef contains a MSE for each threshold
+        res1['redRef'][8]['MSE']
+
+        self.results = FuzzyResults()
+        self.species = species
+        self.reactions = reactions
+        self.bScore = bScore
+        self.bString = bString
+
+        # transforms the results into dataframes
+        for i, res in enumerate(allRes):
+            df = pd.DataFrame(res['t1opt']['results'], 
+                columns=("Generation","Best_score","Best_bitString","Stall_Generation", 
+                "Avg_Score_Gen","Best_score_Gen","Best_bit_Gen","Iter_time"))
+            allRes[i]['t1opt']['results'] = df
+
+        self.results.allRes = allRes
+        #self.results.add_results(allRes)
+
+        #self.results.add_models(models)
+
+    def _compute_mean_mses(self):
+        """plot MSEs using interpolation of the results provided by the Fuzzy Analysis"""
+
+        allFinalNumParams = self.session.summary['allFinalNumParams']
+        dimRow = allFinalNumParams.shape[0]
+
+        thresholds = self.thresholds[:]
+        N = len(thresholds)
+        allFinalMSEs = self.session.summary['allFinalMSEs']
+
+        catExplore = np.zeros((dimRow, N))
+        AbsNumParams = np.zeros((dimRow, N))
+        AbsMSEs = np.zeros((dimRow, N))
+
+        # interpolation
+        for i in range(0, N):
+            for j in range(0, dimRow):
+                currIX = np.where(allFinalMSEs[j,] - allFinalMSEs[j,1] <= thresholds[i])[0]
+                catExplore[j,i] = np.max(currIX)
+
+        self.catExplore = catExplore
+
+        for i in range(0,dimRow):
+            for j in range(0, N):
+                AbsNumParams[i,j] = allFinalNumParams[i, catExplore[i,j]]
+                AbsMSEs[i,j] = allFinalMSEs[i, catExplore[i,j]]
+
+        self.AbsMSEs = AbsMSEs
+        self.AbsNumParams = AbsNumParams
+
+        # final mean MSEs and number of parameters
+        self.meanMSEs = np.mean(AbsMSEs, axis=0)
+        self.meanNPs = np.mean(AbsNumParams, axis=0)
+
+    def plotMSE(self, fontsize=20, **kwargs):
         """
-       
+
+        .. todo:: fix the yaxis and legend
+        """
+        self._compute_mean_mses()
+
+        fig1 = pylab.figure()
+        ax1 = fig1.add_subplot(111)
+
+        line1 = ax1.semilogx(self.thresholds, self.meanMSEs, 'b-o', **kwargs)
+
+        pylab.ylabel("MSEs", fontsize=fontsize)
+        pylab.xticks(fontsize=16)
+        pylab.yticks(fontsize=16)
+
+        pylab.axis([self.thresholds[0], self.thresholds[-1],
+        min(self.meanMSEs),max(self.meanMSEs)])
+
+        ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
+        line2 = ax2.plot(self.thresholds, self.meanNPs, 'r-o')
+        ax2.yaxis.tick_right()
+        ax2.yaxis.set_label_position("right")
+        pylab.ylabel("Number of Parameters", fontsize=fontsize)
+
+        pylab.plot([], 'b-o', label="mean MSEs",)
+        pylab.plot([], 'r-o', label="mean Number of Parameters")
+        pylab.legend(loc="best", prop={'size':13})
+        pylab.grid()
+        pylab.xticks(fontsize=16)
+        pylab.yticks(fontsize=16)
 
     def __create_report_images(self):
         if self._optimised == False:
@@ -185,12 +280,29 @@ class CNORfuzzy(CNOBase):
 
         self.plot_fitness(show=False, save=True)
 
-    def _plot_fitness(self):
-        res = self.results['gaBinaryT1']
-        pd.concat([this.Best_score for this in res], axis=1).plot(legend=False)
-        pylab.xlabel("Generation")
+    def plot_fitness(self):
+        df = pd.DataFrame([res['t1opt']['results']['Best_score'].values 
+            for res in self.results.allRes])
 
-    
+        df = df.astype(float)
+
+        pylab.clf()
+        for res in self.results.allRes:
+            pylab.plot(res['t1opt']['results']['Best_score'], '--', color='grey')
+        pylab.grid()
+        pylab.xlabel("Generation")
+        pylab.ylabel("Score")
+        #pylab.plot(df.mean().values, 'kx--', lw=3, label='Mean Score')
+
+        y = df.mean().values
+        x = range(0, len(y))
+        yerr = df.std().values
+        pylab.errorbar(x, y, yerr=yerr, xerr=None, fmt='-', label='Mean Score',
+                color='k', lw=3)
+        pylab.legend()
+
+
+
     def __report(self, filename="index.html", browse=True, force=False,
                skip_create_images=False):
        
@@ -208,103 +320,78 @@ class CNORfuzzy(CNOBase):
             
         self.save_config_file()
         
-    def __set_simulation(self):
-        self.simulate()
-        self.midas.create_random_simulation()
-        
-        t0 = np.array(self.sim[[x for x in self.sim.columns if x.startswith("t0")]])
-        t0 = pd.DataFrame(t0, columns=self.midas.df.columns)
-        t0['experiment'] = self.midas.experiments.index
-        t0['time'] = self.midas.times[0]
-        t0['cellLine'] = self.midas.cellLines[0]
-          
-        t1 = np.array(self.sim[[x for x in self.sim.columns if x.startswith("t1")]])
-        t1 = pd.DataFrame(t1, columns=self.midas.df.columns)
-        t1['experiment'] = self.midas.experiments.index
-        t1['time'] = self.midas.times[1]
-        t1['cellLine'] = self.midas.cellLines[0]
 
-        df = pd.concat([t0,t1]).set_index(['cellLine', 'experiment', 'time'])
+    def plot_errors(self, threshold=0.01):
+        
+        # First, we need to compute the simulation
+        script = """simulation = plotMeanFuzzyFit(%(threshold)s, 
+        summary$allFinalMSEs, allRes)""" % {'threshold': threshold}
+        self.session.run(script)
+        self.simulated = self.session.simulation['simResults'] 
+        
+        species = self.data.species
+        midas = self.data.copy()
+
+        t0 = self.simulated['t0']
+        t0 = pd.DataFrame(t0, columns=species)
+        t0['experiment'] = midas.experiments.index
+        t0['time'] = midas.times[0]
+        t0['cell'] = midas.cellLines[0]
+
+        t1 = self.simulated['t1']
+        t1 = pd.DataFrame(t1, columns=species)
+        t1['experiment'] = midas.experiments.index
+        t1['time'] = midas.times[1]
+        t1['cell'] = midas.cellLines[0]
+
+        df = pd.concat([t0,t1]).set_index(['cell', 'experiment', 'time'])
         df.sortlevel(1, inplace=True)
-        
-        self.midas.sim = df.copy()
- 
-    def __simulate(self, threshold=0.01, plotPDF=True):
-        """
-        using plotMeanFuzzyFit
-        """
-        # given the best bitstring, simulate the data and plot the fit.
+
+        midas.sim = df.copy()
+        midas.cmap_scale = 1   # same a CellNOptR
+        # need to cut the times
+
+        valid_times = midas.sim.index.levels[2].values
+        midas.remove_times([x for x in midas.times if x not in valid_times])
+        try:midas.plot(mode="mse")
+        except:pass
+
+        return midas
+
+
+    def simulate(self):
         script = """
-        library(CNORfuzzy)
-        load("allRes.RData") #summary
-        load("summary.RData") # allres
-        sim = plotMeanFuzzyFit(%(threshold)s, summary$allFinalMSEs, allRes)
-        write.csv(sim$simResults, "sim.csv")
-        """ % {'threshold': threshold}
-        
-        self.runRscript(script)
-        
-        self.sim = pd.read_csv("sim.csv")
-        os.remove("sim.csv")
-        self._cleanup()
- 
-    #def compileMultiRes(self, results=None):
-    #    self.summary = wrapper_fuzzy.compileMultiRes(self.allRes)
+            
+            
+            
+        score = computeScoreFuzzy(self.cnolist, self.processed, self.indexlist,
+                self.simlist_fuzzy, self.params_fuzzy,
+                bstring, sizeFac=self.sizeFac, NAFac=self.NAFac)
 
 
-    def __plotMSE(self, **kwargs):
-        """plot MSEs using interpolation of the results provided by the Fuzzy Analysis"""
-        import numpy
-        dimRow = self.summary.allFinalMSEs.dim[0]
-        allFinalMSEs = numpy.matrix(self.summary.allFinalMSEs)
-        allFinalNumParams = numpy.matrix(self.summary.allFinalNumParams)
-        catExplore = numpy.zeros((dimRow, len(self.thresholds)))
-        AbsNumParams = numpy.zeros((dimRow, len(self.thresholds)))
-        AbsMSEs = numpy.zeros((dimRow, len(self.thresholds)))
 
-        # interpolation
-        for i in range(0,len(self.thresholds)):
-            for j in range(0, dimRow):
-                currIX = numpy.where(allFinalMSEs[j,]-allFinalMSEs[j,1]<=self.thresholds[i])[1]
-                catExplore[j,i] = numpy.max(currIX)
+        """
 
-        for i in range(0,dimRow):
-            for j in range(0, len(self.thresholds)):
-                AbsNumParams[i,j] = allFinalNumParams[i, catExplore[i,j]]
-                AbsMSEs[i,j] = allFinalMSEs[i, catExplore[i,j]]
 
-        # final mean MSEs and number of parameters
-        self.meanMSEs = numpy.mean(AbsMSEs, axis=0)
-        self.meanNPs = numpy.mean(AbsNumParams, axis=0)
 
-        try:
+"""
+     bstring = [5, 1, 5, 4, 3, 4, 5, 5, 1, 3, 5, 4, 5, 2, 6, 6, 2, 2,6]))
 
-            fontsize = 20
-            fig1 = pylab.figure()
-            ax1 = fig1.add_subplot(111)
-            line1 = ax1.semilogx(self.thresholds, self.meanMSEs, 'b-o', **kwargs)
-            pylab.ylabel("MSEs", fontsize=fontsize)
-            pylab.xticks(fontsize=16)
-            pylab.yticks(fontsize=16)
+            #self.params_fuzzy.rx2['sizeFac'] = 0
+            #self.params_fuzzy.rx2['NAFac'] = 0
+            score = computeScoreFuzzy(self.cnolist, self.processed, self.indexlist,
+                self.simlist_fuzzy, self.params_fuzzy,
+                bstring, sizeFac=self.sizeFac, NAFac=self.NAFac)
 
-            pylab.axis([self.thresholds[0], self.thresholds[-1],
-                min(self.meanMSEs)/1.01,max(self.meanMSEs)*1.01])
+            params_fuzzy = defaultParametersFuzzy(self.cnolist, self.model, self.nTF)
 
-            ax2 = fig1.add_subplot(111, sharex=ax1, frameon=False)
-            line2 = ax2.plot(self.thresholds, self.meanNPs, 'r-o')
-            ax2.yaxis.tick_right()
-            ax2.yaxis.set_label_position("right")
-            pylab.ylabel("Number of Parameters", fontsize=fontsize)
+            simlist_fuzzy = prep4simFuzzy(self.processed, self.params_fuzzy)
+"""
 
-            pylab.legend((line1, line2), ("mean MSEs", "mean Number of Parameters"),
-                loc="center left", prop={'size':13})
-            pylab.grid()
-            pylab.xticks(fontsize=16)
-            pylab.yticks(fontsize=16)
-        except ImportError, e:
-            print(e)
-            print("install pylab to use this function")
-        #show()
+
+
+
+
 
 
 
