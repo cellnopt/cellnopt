@@ -13,7 +13,7 @@ from cno.core.params import BooleanParameters
 from biokit.rtools import bool2R
 
 
-__all__ = ["CNOfuzzy"]
+__all__ = ["CNORfuzzy"]
 
 """
 $redThresh  0e+00 1e-04 5e-04 1e-03 3e-03 5e-03 1e-02
@@ -39,12 +39,12 @@ $optimisation
 
 class FuzzyParameters(BooleanParameters):
     # THe keys used here have the same caps as in the R code.
-    def __init__(self):        
+    def __init__(self):
         super(FuzzyParameters, self).__init__()
-        self.init_gabinary_t1()        
-    
+        self.init_gabinary_t1()
 
-class CNORfuzzy(CNOBase): 
+
+class CNORfuzzy(CNOBase):
     """
 
     Optimise first time point in the cnolist and produces a report.
@@ -58,8 +58,7 @@ class CNORfuzzy(CNOBase):
         """
         super(CNORfuzzy, self).__init__(model, data, verbose=verbose)
         self._verboseR = verboseR
-        
-        
+
         self.session = RSession(verbose=self.verboseR)
         self.parameters = {} # fill with GA binary parameters
 
@@ -68,7 +67,6 @@ class CNORfuzzy(CNOBase):
         self.thresholds = [0.0001, 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005,
             0.006, 0.007, 0.008, 0.009, 0.01, 0.013, 0.015, 0.017, 0.02, 0.025, 0.03, 0.05,
             0.1, 0.2, 0.3, 0.5]
-
 
     def _get_verboseR(self):
         return self._verboseR
@@ -79,13 +77,13 @@ class CNORfuzzy(CNOBase):
 
     def reset(self):
         self.results = {
-            'gaBinaryT1': []        
+            'gaBinaryT1': []
         }
-                        
+
     def optimise(self, tag="cnorfuzzy", N=2,
-            popsize=50,reltol=0.1, maxtime=180, expansion=True, maxgens=150, 
+            popsize=50,reltol=0.1, maxtime=180, expansion=True, maxgens=150,
             stallgenmax=100, compression=True):
-            
+
 
         # update config with uesr parameters if provided; keys are user parameter
         # values are internal names used in the config file
@@ -108,7 +106,7 @@ class CNORfuzzy(CNOBase):
         #    if x in kargs.keys():
         #        self.config.GA[mapping[x]] = kargs[x]
         #    params[x] = self.config.GA[mapping[x]]
-        # 
+        #
         #    elitism=%(elitism)s, pMutation=%(pmutation)s,
         #    NAFac=%(nafac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefac)s,
         #    stallGenMax=%(stallgenmax)s)
@@ -116,9 +114,14 @@ class CNORfuzzy(CNOBase):
         library(CNORfuzzy)
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
-        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
-            expansion=%(expansion)s, maxInputsPerGate=3)
-            
+        # pknmodel is processed internally. Need to change the R API
+        #model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
+        #    expansion=%(expansion)s, maxInputsPerGate=3)
+
+        # which one to use ?? pknmodel or model
+        # looks like CNORwrap overwrite paramsList$model
+        # with the processed one
+        # $model not used in the function so one can provide anything
         paramsList = defaultParametersFuzzy(cnolist, pknmodel)
         paramsList$popSize = %(popsize)s
         paramsList$maxTime = %(maxtime)s
@@ -135,6 +138,8 @@ class CNORfuzzy(CNOBase):
         }
         summary = compileMultiRes(allRes,show=FALSE)
         summary = compileMultiRes(allRes,show=T)
+        # signals order is not sorted in CellNOptR
+        signals = colnames(cnolist@signals[[1]])
         #sim = plotMeanFuzzyFit(0.01, summary$allFinalMSEs, allRes)
         """
         script = script_template % {
@@ -156,8 +161,8 @@ class CNORfuzzy(CNOBase):
         # Each Res structure is itself made of 9 structures with those keys:
         # 't1opt': ['stringsTol', 'bScore', 'results', 'currBest', 'bString', 'stringsTolScores']
         # 'paramsList': parameters used in particular GA params, optim params, inputs
-        # 'unRef': 
-        # 'processedModel': 
+        # 'unRef':
+        # 'processedModel':
         # 'currBestDiscrete': best score
         # 'bit'
         # 'intString'
@@ -168,12 +173,14 @@ class CNORfuzzy(CNOBase):
         #reactions = res1['paramsList']['model']['reacID']
         species = res1['paramsList']['model']['namesSpecies']
 
-        scores = res1['t1opt']['stringsTolScores']
+        #scores = res1['t1opt']['stringsTolScores']
         # res1['t1opt']['stringsTol']
 
         reactions = res1['processedModel']['reacID']
         bScore = res1['currBestDiscrete']
         bString = res1['intString']
+
+        # TODO: find best MSE/bitstring amongst the N runs
 
         # redRef contains a MSE for each threshold
         res1['redRef'][8]['MSE']
@@ -183,18 +190,17 @@ class CNORfuzzy(CNOBase):
         self.reactions = reactions
         self.bScore = bScore
         self.bString = bString
+        self.signals = self.session.signals
 
         # transforms the results into dataframes
         for i, res in enumerate(allRes):
-            df = pd.DataFrame(res['t1opt']['results'], 
-                columns=("Generation","Best_score","Best_bitString","Stall_Generation", 
+            df = pd.DataFrame(res['t1opt']['results'],
+                columns=("Generation","Best_score","Best_bitString","Stall_Generation",
                 "Avg_Score_Gen","Best_score_Gen","Best_bit_Gen","Iter_time"))
             allRes[i]['t1opt']['results'] = df
 
         self.results.allRes = allRes
-        #self.results.add_results(allRes)
 
-        #self.results.add_models(models)
 
     def _compute_mean_mses(self):
         """plot MSEs using interpolation of the results provided by the Fuzzy Analysis"""
@@ -263,15 +269,13 @@ class CNORfuzzy(CNOBase):
         pylab.yticks(fontsize=16)
 
     def __create_report_images(self):
-        if self._optimised == False:
-            raise ValueError("You must run the optimise method first")
 
-        
+
         self._pknmodel.plotdot(filename=self._make_filename("pknmodel.svg"), show=False)
         self.cnograph.plotdot(filename=self._make_filename("expmodel.png"), show=False)
-        self.plot_optimised_model(filename=self._make_filename("optimised_model.png"), 
+        self.plot_optimised_model(filename=self._make_filename("optimised_model.png"),
                                   show=False)
- 
+
         self.plot_errors(show=False)
 
         self.midas.plot()
@@ -281,7 +285,7 @@ class CNORfuzzy(CNOBase):
         self.plot_fitness(show=False, save=True)
 
     def plot_fitness(self):
-        df = pd.DataFrame([res['t1opt']['results']['Best_score'].values 
+        df = pd.DataFrame([res['t1opt']['results']['Best_score'].values
             for res in self.results.allRes])
 
         df = df.astype(float)
@@ -301,45 +305,44 @@ class CNORfuzzy(CNOBase):
                 color='k', lw=3)
         pylab.legend()
 
-
-
     def __report(self, filename="index.html", browse=True, force=False,
                skip_create_images=False):
-       
-        self.directory = self._init_report()
-        
+
+        self.report = self._init_report()
+
         if skip_create_images == False:
             self.create_report_images()
 
-        report = HTMLReportFuzzy(self)
+
         self._report(report)
 
         if browse:
             from browse import browse as bs
             bs(report.directory + os.sep + report.filename)
-            
+
         self.save_config_file()
-        
+
 
     def plot_errors(self, threshold=0.01):
-        
+
         # First, we need to compute the simulation
-        script = """simulation = plotMeanFuzzyFit(%(threshold)s, 
+        script = """simulation = plotMeanFuzzyFit(%(threshold)s,
         summary$allFinalMSEs, allRes)""" % {'threshold': threshold}
         self.session.run(script)
-        self.simulated = self.session.simulation['simResults'] 
-        
-        species = self.data.species
+        self.simulated = self.session.simulation['simResults']
+
         midas = self.data.copy()
 
         t0 = self.simulated['t0']
-        t0 = pd.DataFrame(t0, columns=species)
+        t0 = pd.DataFrame(t0, columns=self.signals)
+        t0.sort_index(axis=1, inplace=True)
         t0['experiment'] = midas.experiments.index
         t0['time'] = midas.times[0]
         t0['cell'] = midas.cellLines[0]
 
         t1 = self.simulated['t1']
-        t1 = pd.DataFrame(t1, columns=species)
+        t1 = pd.DataFrame(t1, columns=self.signals)
+        t1.sort_index(axis=1, inplace=True)
         t1['experiment'] = midas.experiments.index
         t1['time'] = midas.times[1]
         t1['cell'] = midas.cellLines[0]
@@ -358,43 +361,31 @@ class CNORfuzzy(CNOBase):
 
         return midas
 
+    def _check_parameters(self, bs):
+        assert len(bs) == len(self.bString)
 
-    def simulate(self):
+    def simulate(self, bstring, NAFac=1, sizeFac=0.0001):
+        self._check_parameters(bstring)
+
+        # MMB case
+        #0.02547957
+        # [ 3, 3, 3, 0, 4, 5, 0, 4, 5, 5, 6, 5, 2, 7, 6, 5, 0, 1, 0]
+
+        self.session.bstring = bstring
+
+        params = {'NAFac':NAFac, 'sizeFac':sizeFac}
         script = """
-            
-            
-            
-        score = computeScoreFuzzy(self.cnolist, self.processed, self.indexlist,
-                self.simlist_fuzzy, self.params_fuzzy,
-                bstring, sizeFac=self.sizeFac, NAFac=self.NAFac)
-
-
-
-        """
-
-
-
-"""
-     bstring = [5, 1, 5, 4, 3, 4, 5, 5, 1, 3, 5, 4, 5, 2, 6, 6, 2, 2,6]))
-
-            #self.params_fuzzy.rx2['sizeFac'] = 0
-            #self.params_fuzzy.rx2['NAFac'] = 0
-            score = computeScoreFuzzy(self.cnolist, self.processed, self.indexlist,
-                self.simlist_fuzzy, self.params_fuzzy,
-                bstring, sizeFac=self.sizeFac, NAFac=self.NAFac)
-
-            params_fuzzy = defaultParametersFuzzy(self.cnolist, self.model, self.nTF)
-
-            simlist_fuzzy = prep4simFuzzy(self.processed, self.params_fuzzy)
-"""
-
-
-
-
-
-
-
-
+        model = preprocessing(cnolist, pknmodel)
+        indexlist = indexFinder(cnolist, model)
+        params_fuzzy = defaultParametersFuzzy(cnolist, model)
+        # model and cnolist reset internally if params provided
+        simlist_fuzzy = prep4simFuzzy(model, params_fuzzy)
+        score = computeScoreFuzzy(cnolist, model, simlist_fuzzy,
+                indexlist, params_fuzzy,
+                bstring, sizeFac=%(sizeFac)s, NAFac=%(NAFac)s)
+        """ % params
+        self.session.run(script)
+        return self.session.score
 
 
 def __standalone(args=None):
@@ -439,19 +430,19 @@ class __OptionFuzzy(object):
         the ini file is overwritten in :class:`apps.Apps`.
         """
         params = FuzzyParameters()
-        group = self.add_argument_group("Genetic Algorithm", 
+        group = self.add_argument_group("Genetic Algorithm",
                     """This section gathers the parameters of the Genetic Algorithm
                     """)
         keys = params.get_keys_from_section("GA")
-        
+
         for key in  keys:
             param = params.parameters[key]
-            
+
             kargs = param._get_kargs()
             help = str(kargs['help'])
             del kargs["help"]
             print(help)
             group.add_argument(param.name , help=""+help, **kargs)
-        
+
 
 
