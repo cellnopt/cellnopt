@@ -268,6 +268,12 @@ class CNORfuzzy(CNOBase):
         pylab.xticks(fontsize=16)
         pylab.yticks(fontsize=16)
 
+
+    def todo(self):
+        from cno.core.models import Models
+        res = self.results.allResp[0]
+        Models( pd.DataFrame(res.t1opt['stringsTol'], columns=list(self.reactions)))
+
     def __create_report_images(self):
 
 

@@ -6,8 +6,6 @@ Created on Wed Oct  8 09:09:46 2014
 """
 
 
-
-
 class Fitness(object):
     """Not to be used
 

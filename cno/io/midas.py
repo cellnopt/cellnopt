@@ -28,7 +28,7 @@ from cno.io.measurements import Measurement
 from cno.io import midas_normalisation as normalisation
 
 
-from cno.core import DevTools
+from easydev import DevTools
 from cno.misc import CNOError
 
 
@@ -236,6 +236,7 @@ class MIDASReader(MIDAS):
         _data = _data[ [col for col in _data.columns if "CellLine" not in col]]
 
         #drop ID columns if any
+        self._data_raw = _data.copy()
         _data = _data[ [col for col in _data.columns if col.startswith("ID")==False]]
 
         # figure out the treatments, times and measurements

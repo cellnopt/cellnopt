@@ -149,10 +149,6 @@ class Measurements(list):
             self.add_measurements(measurements)
 
     def add_measurements(self, measurements):
-        #from cno.core import devtools
-        #print(measurements)
-        #measurements = devtools.DevTools().tolist(measurements)
-        #print(measurements)
         if isinstance(measurements, list) is False:
             measurements = [measurements]
         for exp in measurements:

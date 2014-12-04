@@ -31,14 +31,13 @@ import pylab
 import networkx as nx
 import pygraphviz as gv
 import numpy as np
-from easydev import Logging, AttrDict, TempFile
+from easydev import Logging, AttrDict, TempFile, DevTools
 
 # cellnopt modules
 from cno.io.sif import SIF
 from cno.io.midas import XMIDAS
 from cno.io.reactions import Reaction
 from cno.misc import CNOError
-from cno.core import DevTools
 import colormap
 
 __all__ = ["CNOGraph", "CNOGraphAttributes"]
