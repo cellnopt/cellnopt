@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 import pylab
 
-from biokit.rtools import RSession
-from cno.core import CNOBase
+from cno.core import CNOBase, OptionBase
+from cno.core import CNORBase
 from cno.misc.results import FuzzyResults
 from cno.core.report import ReportFuzzy
 from cno.core.params import BooleanParameters
@@ -37,48 +37,46 @@ $optimisation
 
 """
 
+
 class FuzzyParameters(BooleanParameters):
     # THe keys used here have the same caps as in the R code.
     def __init__(self):
         super(FuzzyParameters, self).__init__()
         self.init_gabinary_t1()
 
+        self.nTF = 7
 
-class CNORfuzzy(CNOBase):
+
+class CNORfuzzy(CNOBase, CNORBase):
     """
 
     Optimise first time point in the cnolist and produces a report.
 
     """
-    #gaBinaryT1_params = FuzzyParameters.gaBinaryT1_params
-
     def __init__(self, model=None, data=None, verbose=True, verboseR=False):
-        """.. rubric:: constructor
+        """.. rubric:: constructor"""
+        #super(CNORfuzzy, self).__init__(model, data, verbose=verbose)
+        CNOBase.__init__(self,model, data, verbose=verbose)
+        CNORBase.__init__(self, verboseR=verboseR)
 
-        """
-        super(CNORfuzzy, self).__init__(model, data, verbose=verbose)
-        self._verboseR = verboseR
+        self.parameters = FuzzyParameters()
 
-        self.session = RSession(verbose=self.verboseR)
-        self.parameters = {} # fill with GA binary parameters
-
-        self.report = ReportFuzzy()
+        self._report = ReportFuzzy()
+        self._report._init_report()
 
         self.thresholds = [0.0001, 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005,
             0.006, 0.007, 0.008, 0.009, 0.01, 0.013, 0.015, 0.017, 0.02, 0.025, 0.03, 0.05,
             0.1, 0.2, 0.3, 0.5]
 
-    def _get_verboseR(self):
-        return self._verboseR
-    def _set_verboseR(self, value):
-        self._verboseR = value
-        self.session.dump_stdout = value
-    verboseR = property(_get_verboseR, _set_verboseR)
-
-    def reset(self):
-        self.results = {
-            'gaBinaryT1': []
-        }
+    def _load_cnolist(self):
+        script_template = """
+        library(CNORfuzzy)
+        pknmodel = readSIF("%(pkn)s")
+        cnolist = CNOlist("%(midas)s")"""
+        script = script_template % {
+                'pkn': self.pknmodel.filename,
+                'midas': self.data.filename}
+        self.session.run(script)
 
     def optimise(self, tag="cnorfuzzy", N=2,
             popsize=50,reltol=0.1, maxtime=180, expansion=True, maxgens=150,
@@ -112,8 +110,9 @@ class CNORfuzzy(CNOBase):
         #    stallGenMax=%(stallgenmax)s)
         script_template = """
         library(CNORfuzzy)
-        pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
+        pknmodel = readSIF("%(pkn)s")
+
         # pknmodel is processed internally. Need to change the R API
         #model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
         #    expansion=%(expansion)s, maxInputsPerGate=3)
@@ -157,6 +156,7 @@ class CNORfuzzy(CNOBase):
                 }
         self.session.run(script)
         allRes = self.session.allRes
+
         # The contents of allRes is a list of N Res structures
         # Each Res structure is itself made of 9 structures with those keys:
         # 't1opt': ['stringsTol', 'bScore', 'results', 'currBest', 'bString', 'stringsTolScores']
@@ -201,7 +201,6 @@ class CNORfuzzy(CNOBase):
 
         self.results.allRes = allRes
 
-
     def _compute_mean_mses(self):
         """plot MSEs using interpolation of the results provided by the Fuzzy Analysis"""
 
@@ -236,7 +235,7 @@ class CNORfuzzy(CNOBase):
         self.meanMSEs = np.mean(AbsMSEs, axis=0)
         self.meanNPs = np.mean(AbsNumParams, axis=0)
 
-    def plotMSE(self, fontsize=20, **kwargs):
+    def plot_mses(self, fontsize=20, **kwargs):
         """
 
         .. todo:: fix the yaxis and legend
@@ -268,29 +267,35 @@ class CNORfuzzy(CNOBase):
         pylab.xticks(fontsize=16)
         pylab.yticks(fontsize=16)
 
-
     def todo(self):
         from cno.core.models import Models
         res = self.results.allResp[0]
         Models( pd.DataFrame(res.t1opt['stringsTol'], columns=list(self.reactions)))
 
-    def __create_report_images(self):
+    def create_report_images(self):
 
+        model = self.cnograph.copy()
 
-        self._pknmodel.plotdot(filename=self._make_filename("pknmodel.svg"), show=False)
-        self.cnograph.plotdot(filename=self._make_filename("expmodel.png"), show=False)
-        self.plot_optimised_model(filename=self._make_filename("optimised_model.png"),
-                                  show=False)
-
+        model.plot(filename=self._report._make_filename("pknmodel.svg"), show=False)
+        model.preprocessing()
+        model.plot(filename=self._report._make_filename("expmodel.png"), show=False)
+        #self.plot_optimised_model(filename=self._make_filename("optimised_model.png"),
+        #                          show=False)
         self.plot_errors(show=False)
+        self._report.savefig("Errors.png")
+        pylab.close()
+
+        self.plot_mses(0.01)
+        self._report.savefig("mse_vs_size.png")
+        pylab.close()
 
         self.midas.plot()
-        self.savefig("midas.png")
+        self._report.savefig("midas.png")
         pylab.close()
 
         self.plot_fitness(show=False, save=True)
 
-    def plot_fitness(self):
+    def plot_fitness(self, show=True, save=False):
         df = pd.DataFrame([res['t1opt']['results']['Best_score'].values
             for res in self.results.allRes])
 
@@ -311,25 +316,13 @@ class CNORfuzzy(CNOBase):
                 color='k', lw=3)
         pylab.legend()
 
-    def __report(self, filename="index.html", browse=True, force=False,
-               skip_create_images=False):
+        if save is True:
+            self._report.savefig("fitness.png")
 
-        self.report = self._init_report()
+        if show is False:
+            pylab.close()
 
-        if skip_create_images == False:
-            self.create_report_images()
-
-
-        self._report(report)
-
-        if browse:
-            from browse import browse as bs
-            bs(report.directory + os.sep + report.filename)
-
-        self.save_config_file()
-
-
-    def plot_errors(self, threshold=0.01):
+    def plot_errors(self, threshold=0.01, show=False):
 
         # First, we need to compute the simulation
         script = """simulation = plotMeanFuzzyFit(%(threshold)s,
@@ -362,24 +355,126 @@ class CNORfuzzy(CNOBase):
 
         valid_times = midas.sim.index.levels[2].values
         midas.remove_times([x for x in midas.times if x not in valid_times])
-        try:midas.plot(mode="mse")
-        except:pass
+        try:
+            midas.plot(mode="mse")
+        except:
+            pass
 
         return midas
 
+    def _create_report(self):
+        self._report._init_report()
+
+        self._report.directory = self._report.report_directory
+        # Save filenames and report in a section
+        fname = self._report.directory + os.sep + "PKN-pipeline.sif"
+        self.cnograph.to_sif(fname)
+
+        fname = self._report.directory + os.sep + "MD-pipeline.csv"
+        self.midas.to_midas(fname)
+
+        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'
+        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
+        txt += '<li><a href="config.ini">Config file</a></li>'
+        txt += '<li><a href="rerun.py">Script</a></li></ul>'
+        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
+        self._report.add_section(txt, "Input data files")
+        self._report.add_section(
+        """
+         <div class="section" id="Script_used">
+         <object height=120 width=300 type='text/x-scriptlet' border=1
+         data="description.html"></object>
+         </div>""", "Description")
+        txt = """<pre class="literal-block">\n"""
+        #txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
+        txt += "todo\n"
+        txt += "o.report()\n</pre>\n"
+        self._report.add_section(txt, "Script used")
+
+        txt = """<a href="http://www.cellnopt.org/">
+            <object data="pknmodel.svg" type="image/svg+xml">
+            <span>Your browser doesn't support SVG images</span> </object></a>"""
+        txt += """<a class="reference external image-reference" href="scripts/exercice_3.py">
+<img alt="MIDAS" class="align-right" src="midas.png" /></a>"""
+
+        self._report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
+
+        self._report.add_section('<img src="expmodel.png">', "Expanded before optimisation")
+        self._report.add_section( """<img src="optimised_model.png">""", "Optimised model")
+
+        self._report.add_section('<img src="mse_vs_size.png">', "MSE vs Size")
+        self._report.add_section('<img src="fitness.png">', "Fitness")
+        self._report.add_section('<img src="Errors.png">', "Errors")
+
+        self._report.add_section(self.get_html_reproduce(), "Reproducibility")
+        fh = open(self._report.directory + os.sep + "rerun.py", 'w')
+        fh.write("from cno import CNORfuzzy\n")
+        fh.write("CNORfuzzy(config=config.ini)\n")
+        fh.write("c.optimise()\n")
+        fh.write("c.report()\n")
+        fh.close()
+
+        # some stats
+        stats = self._get_stats()
+        txt = "<table>\n"
+        for k,v in stats.iteritems():
+            txt += "<tr><td>%s</td><td>%s</td></tr>\n" % (k,v)
+        txt += "</table>\n"
+        txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
+        self._report.add_section(txt, "stats")
+        # dependencies
+        self._report.write(self._report.directory, "index.html")
+
+    def _get_stats(self):
+        res = {}
+        #res['Computation time'] = self.total_time
+        try:
+            res['Best Score'] = self.bScore
+        except:
+            pass
+        return res
+
     def _check_parameters(self, bs):
-        assert len(bs) == len(self.bString)
+        if 'blength' not in self.__dict__:
+            self._update()
+        assert len(bs) == self.blength
+
+    def _update(self):
+
+        script = """
+        library(CNORfuzzy)
+        model = preprocessing(cnolist, pknmodel)
+        indexlist = indexFinder(cnolist, model)
+        params_fuzzy = defaultParametersFuzzy(cnolist, model)
+        # model and cnolist reset internally if params provided
+        simlist_fuzzy = prep4simFuzzy(model, params_fuzzy)"""
+        self.session.run(script)
+
+        simlist = self.session.simlist_fuzzy
+        self.numType2 = simlist['numType2']
+        self.numType1 = simlist['numType1']
+
+        # numType1 are the number of edges from stimuli
+        # numtype2 are the other edges 
+        # includes the AND gate edges.
+        self.blength = simlist['numType2'] + simlist['numType1']
+
+        params = self.session.params_fuzzy
+        self.nTF = params['type1Funs'].shape[0]
+
+    def create_random_parameters(self, update=True):
+        import random
+        if update is True:
+            self._update()
+        bs = [random.randint(0,self.nTF+1) for x in range(0,self.blength)]
+        return bs
 
     def simulate(self, bstring, NAFac=1, sizeFac=0.0001):
         self._check_parameters(bstring)
 
-        # MMB case
-        #0.02547957
-        # [ 3, 3, 3, 0, 4, 5, 0, 4, 5, 5, 6, 5, 2, 7, 6, 5, 0, 1, 0]
-
         self.session.bstring = bstring
 
-        params = {'NAFac':NAFac, 'sizeFac':sizeFac}
+        params = {'NAFac': NAFac, 'sizeFac': sizeFac}
         script = """
         model = preprocessing(cnolist, pknmodel)
         indexlist = indexFinder(cnolist, model)
@@ -394,18 +489,18 @@ class CNORfuzzy(CNOBase):
         return self.session.score
 
 
-def __standalone(args=None):
+def standalone(args=None):
     """This function is used by the standalone application called cellnopt_boolean
 
     ::
 
-        cellnopt_boolean --help
+        cno_fuzzy --help
 
     """
     if args == None:
         args = sys.argv[:]
 
-    user_options = OptionFuzzy(prog="cellnopt_fuzzy")
+    user_options = OptionFuzzy(prog="cno_fuzzy")
 
     if len(args) == 1:
         user_options.parse_args(["prog", "--help"])
@@ -421,8 +516,7 @@ def __standalone(args=None):
         print("No report request (use --report)")
 
 
-#class __OptionFuzzy(OptionBase):
-class __OptionFuzzy(object):
+class OptionFuzzy(OptionBase):
 
     def  __init__(self, version="1.0", prog=None):
         usage = """usage: python %s --data ToyModelMMB.csv --model ToyModelMMB.sif""" % prog

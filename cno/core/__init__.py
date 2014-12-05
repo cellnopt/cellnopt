@@ -1,2 +1,2 @@
-from .base import CNOBase
+from .base import CNOBase, OptionBase, CNORBase
 from .report import ReportBool

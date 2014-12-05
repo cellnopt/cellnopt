@@ -68,5 +68,5 @@ from .milp import *
 from .ode import CNORode
 
 #fuzzy
-from .fuzzy import CNORfuzzy
+from .fuzzy import cnorfuzzy, CNORfuzzy
 

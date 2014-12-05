@@ -2,86 +2,71 @@ import os
 import pylab
 import easydev
 import shutil
-from easydev import gsf
+from easydev import gsf, Logging
+import pandas as pd
+from biokit.rtools import RPackageManager
+
 
 __all__ = ["Report", "ReportBool", "ReportODE", "ReportFuzzy" ]
 
 
 
-
-class HTML(object):
-    def close_body(self):
-        return "</body>"
-    def close_html(self):
-        return "</html>"
-    def get_footer(self):
-        return self.close_body() + "\n" + self.close_html()
-
-
-
-
-
-
 class HTMLTable(object):
-    def __init__(self, df, name):
+    def __init__(self, df, name, **kargs):
         self.df = df
         self.name = name
-    def open_xml_table(self):
-        s = """<Table Name="%s:table">\n""" % self.name
-        return s
-    def close_xml_table(self):
-        s = """</Table>\n"""
-        return s
-    def write_xml_data(self, d):
-        delimiter = self.delimiter + " "
-        s = "        " + delimiter.join(['"%s"' % str(x) for x in d]) + "\n"
-        return s
-    def to_xml(self):
-        s = self.open_xml_table()
-        s += self.create_xml_columns()
-        s += self.open_xml_stream()
-        for d in self.data:
-            s += self.write_xml_data(d)
-        s += self.close_xml_stream()
-        s += self.close_xml_table()
-        return s
-    def create_xml_columns(self):
-        s = ""
-        for t, c in zip(self._coltypes, self._columns):
-            s += """    <Column Name="%s:%s" Type="%s"/>\n""" % (self.name, c, t)
-        return s
-
-    def close_xml_stream(self):
-        if len(self.data):
-            s = """    </Stream>\n"""
-        else:
-            s = """\n    </Stream>\n"""
-        return s
-
-    def open_xml_stream(self):
-        s = """    <Stream Name="%s:table" Delimiter="%s">\n""" % (self.name,
-                                                                   self.delimiter)
-        return s
-
-
+        self.kargs = kargs.copy()
 
     def to_html(self):
-        return self.df.to_html()
+        pd.set_option('display.max_colwidth', -1)
+        kargs = self.kargs.copy()
+        kargs['index'] = False
+        kargs['bold_rows'] = True
+        table = self.df.to_html(**kargs)
+        pd.set_option('display.max_colwidth', 50)
+        return table
 
 
+class Report(easydev.Logging):
 
-
-class Report(object):
-
-    def __init__(self, formalism):
+    def __init__(self, formalism, tag=None, filename="index.html", overwrite=True, verbose=True):
+        super(Report, self).__init__(verbose)
         self.formalism = formalism
         from cno import version
         self.version = version
+        self.tag = tag
+
+        if self.tag==None:
+            self.report_directory = "_".join(["report", self.formalism])
+        else:
+            self.report_directory = "_".join(["report", self.formalism, self.tag])
+        self._overwrite_report = overwrite
+
+        self.sections = []
+        self.section_names = []
+        self.filename = filename
+        self._rpm = RPackageManager()
+        self.Rdependencies = []
+
+    def show(self):
+        from browse import browse as bs
+        bs(self.directory + os.sep + self.filename)
+
+    def close_body(self):
+        return "</body>"
+
+    def close_html(self):
+        return "</html>"
+
+    def get_footer(self):
+        return self.close_body() + "\n" + self.close_html()
 
     def _make_filename(self, filename):
         return self.report_directory + os.sep + filename
+
     def savefig(self, filename):
         pylab.savefig(self._make_filename(filename))
+
     def _get_report_directory(self, directory=None):
         if directory==None:
             directory = self.report_directory
@@ -89,6 +74,8 @@ class Report(object):
 
     def _init_report(self, directory=None):
         """create the report directroy and return the directory name"""
+        self.sections = []
+        self.section_names = []
         directory = self._get_report_directory(directory)
         try:
             os.mkdir(directory)
@@ -96,12 +83,12 @@ class Report(object):
             txt = "Existing directory {}. Files may be overwritten".format(self.report_directory)
 
         if self._overwrite_report == True:
-            self.warning(txt)
+            self.warning("Overwriting report")
         else:
             raise IOError(txt)
 
         for filename in ["dana.css", "reset.css", "tools.js"]:
-            filename = gsf("cno", "data", filename)
+            filename = gsf("cno", "", filename)
             shutil.copy(filename, directory)
         return directory
 
@@ -114,7 +101,7 @@ class Report(object):
  <html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
      <head>
      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-     <title>CellNOpt pipeline report</title>
+     <title>CNO report</title>
      <link rel="stylesheet" href="dana.css" type="text/css" />
      <script type='text/javascript' src='tools.js'></script>
  </head>
@@ -123,7 +110,7 @@ class Report(object):
   <div class="document" id="unset">
 
      <h1 class="title">CNO%(formalism)s analysis summary</h1>
-     <h2 class="subtitle", id="unset2">Report created with cellnopt.pipeline.cno%(formalism)s.CNO%(formalism)s (version %(version)s)</h2>
+     <h2 class="subtitle", id="unset2">Report created with cno.%(formalism)s.CNO%(formalism)s (version %(version)s)</h2>
      <p>See <a href="https://www.cellnopt.org">cellnopt homepage</a> for downloads and documentation.</p>""" % params
         return str_
 
@@ -135,7 +122,7 @@ class Report(object):
         </p>
 
         <pre>
-        from cellnopt.pipeline import *
+        from cno import CNObool
         c = CNObool(config=config.ini)
         c.gaBinaryT1()
         c.report()
@@ -166,7 +153,6 @@ class Report(object):
         if show == False:
             pylab.close()
 
-
     def get_time_now(self):
         import datetime
         username = os.environ["USERNAME"]
@@ -181,38 +167,141 @@ class Report(object):
         additionally, r dependencies added in :attr:`dependencies` are also added.
 
         """
-        table = HTMLTable(name="dependencies")
-        table.add_columns(["software", "revision"], ['str', 'str'])
-        for x in easydev.get_dependencies("cellnopt.pipeline"):
-            table.add_data([x.project_name, x.version])
-        for dep in self.Rdependencies:
-            try:
-                import rtools
-                version = rtools.RPackage(dep).version
-                table.add_data([dep, version])
-            except:
-                table.add_data([dep, "unknown. could not use Rtools/rpy2"])
-                #logging.warning("Could not find version of %s" % dep)
+
+        dependencies = easydev.get_dependencies('cno')
+        names = [x.project_name for x in dependencies]
+        versions = [x.version for x in dependencies]
+        links = ["""https://pypi.python.org/pypi/%s"""%p for p in names]
+
+        for package in self.Rdependencies:
+            names.append(package)
+            versions.append(self._rpm.get_package_version(package))
+            links.append("http://www.cellnopt.org")
+
+        df = pd.DataFrame({
+            'package': ["""<a href="%s">%s</a>"""%(links[i],p) for i,p in enumerate(names)], 
+            'version':versions})
+
+        table = HTMLTable(df, name="dependencies", escape=False)
         return table
+
+
+    def add_section(self, content, title, references=[], position=None):
+
+        reftxt = self._create_references(references)
+        section = """<div class="section" id="%(id)s">
+        <h2> <a class="toc-backref" href="#id%(index)s">%(title)s</a></h2>
+        
+        %(references)s\n
+        %(content)s
+    </div>    
+        """ % {'title':title, 'references':reftxt,'content':content,
+               'id': title.replace(" ", "_"), 'index':len(self.sections)+1}
+        # check that it is correct
+        if position is not None:
+            self.sections.insert(position, section)
+            self.section_names.insert(position, title)
+        else:
+            self.sections.append(section)
+            self.section_names.append(title)
+
+    def get_toc(self):
+        """
+        """
+        toc = """<div class="contents local topic" id="contents">
+        <ul class="simple">"""
+        for i, name in enumerate(self.section_names):
+            toc += """<li> 
+%(i)s - <a class="reference internal" href="%(href)s" id="%(id)s">  %(name)s</a>
+</li>""" % {'i':i+1, 'name':name, 'href':"#"+name.replace(" ", "_"), 'id':'id%s' % str(i+1)}
+        toc += """</ul>\n</div>"""
+        return toc
+
+    def _create_references(self, references):
+        if len(references) == 0:
+            return ""
+            
+        txt = """
+        <div class="admonition-documentation admonition">
+            <p class="first admonition-title">Documentation</p>
+            <ul class="last simple">
+            <li>"""
+        
+        for ref in references:
+            txt += """      <a class="reference external" href=%(url)s>%(title)s</a>""" %  {'url':ref[0],'title':ref[1]}
+        txt += """
+            </li>
+            </ul>
+        </div>"""
+        return txt
+
+    def write(self, directory, filename):
+        fh =  open(directory + os.sep + filename, "w")
+
+        contents = self.get_header()
+        #contents += self.get_toc()
+
+        # Get toc should be done here and no more sections should be added
+        self.add_section(self.get_toc(), "Contents", position=0)
+        for i, section in enumerate(self.sections):
+            if i==0:
+                contents += section
+            else:
+                contents += section.replace("<h2>", "<h2> %s - " %i, 1)
+
+        contents += self.get_table_dependencies().to_html()
+        contents += "<hr>" + self.get_time_now()
+        contents += self.get_footer()
+
+        import bs4
+        contents = bs4.BeautifulSoup(contents).prettify()
+        fh.write(contents)
+        fh.close()
+
+    def _make_filename(self, filename):
+        return self.report_directory + os.sep + filename
+
+    def savefig(self, filename):
+        pylab.savefig(self._make_filename(filename))
+
+    def report(self, browse=True):
+        self._create_report()
+        try:
+            self.create_report_images()
+        except:
+            pass
+        if browse:
+            self._report.show()
+
+    def _create_report(self):
+        raise NotImplementedError
+
+    def _create_report_images(self):
+        raise NotImplementedError
 
 
 class ReportBool(Report):
     def __init__(self):
         super(ReportBool, self).__init__('bool')
+        self.Rdependencies.append('CellNOptR')
+
 
 class ReportODE(Report):
     def __init__(self):
         super(ReportODE, self).__init__('ode')
+        self.Rdependencies.append('CNORode')
 
 
 class ReportFuzzy(Report):
     def __init__(self):
         super(ReportFuzzy, self).__init__('fuzzy')
+        self.Rdependencies.append('CNORfuzzy')
 
 
 class ReportDT(Report):
     def __init__(self):
         super(ReportDT, self).__init__('dt')
+        self.Rdependencies.append('CNORdt')
 
 
 class ReportASP(Report):

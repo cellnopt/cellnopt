@@ -13,11 +13,33 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-__all__ = ["CNOBase"]
+import argparse
+from biokit.rtools import RSession
+
+
+__all__ = ["CNOBase", "CNORBase", "OptionBase"]
+
+
+class CNORBase(object):
+    def __init__(self, verboseR):
+        assert verboseR in [True, False]
+        self._verboseR = verboseR
+        self.session = RSession(verbose=self.verboseR)
+
+    def _get_verboseR(self):
+        return self._verboseR
+    def _set_verboseR(self, value):
+        assert value in [True, False]
+        self._verboseR = value
+        self.session.dump_stdout = value
+    verboseR = property(_get_verboseR, _set_verboseR)
+
+
 
 
 class CNOBase(object):
     """Alias to CNOGraph and common class to all simulators"""
+
     def __init__(self, pknmodel, data, verbose=False):
         # TODO: check that files do exist and raise an error otherwise
         self._pknmodel = None
@@ -90,5 +112,113 @@ class CNOBase(object):
         else:
             self.midas.plot()
 
+    def get_html_reproduce(self):
+        text = """
+        <p>In a shell, go to the report directory (where is contained this report)
+        and either execute the file called rerun.py or typoe these commands in 
+        a python shell 
+        </p>
+        
+        <pre>
+        from cellnopt.pipeline import *
+        c = CNObool(config=config.ini)
+        c.gaBinaryT1()
+        c.report()
+        </pre>
+        
+        <p>You will need the configuration file that was used in the report 
+        (<a href="config.ini">config.ini</a>) </p>
+        
+        <p>New results will be put in a sub directory so that your current 
+        report is not overwritten</p>
+        """
+        return text
+
+    def load_config(self, filename):
+        import easydev.config_tools
+        self.config = easydev.config_tools.DynamicConfigParser()
+        self.config.load_ini(filename)
+
+    def init_config(self, force=False):
+        if "config" in self.__dict__.keys():
+            if force == False:
+                raise ValueError("""Your config already exists and will be erased. 
+If you really want to re-initialise the config attribute, use force=True 
+parameter.""" )
+
+        self.config = easydev.config_tools.DynamicConfigParser()
+        self.config.add_section("General")
+        self.config.add_option("General", "pknmodel", self._pknmodel_filename)
+        self.config.add_option("General", "data", self._data_filename)
+        self.config.add_option("General", "formalism", self.formalism)
+        self.config.add_option("General", "use_cnodata", self._use_cnodata)
+        self.config.add_option("General", "tag", self.tag)
+        self.config.add_option("General", "overwrite_report", self._overwrite_report)
+        self.config.add_option("General", "Rexecutable", self.Rexecutable)
+        #self.config.add_option("General", "verbose", self.verbose)
+        self.config.add_option("General", "report_directory", self.report_directory)
+
+    def save_config_file(self, filename=None):
+        if filename==None:
+            filename = self.report_directory + os.sep + "config.ini"
+        self.config.save(filename)
+
+
+class OptionBase(argparse.ArgumentParser):
+
+    def  __init__(self, version="1.0", prog=None, usage=""):
+        super(OptionBase, self).__init__(usage=usage, version=version, prog=prog)
+        self.add_general_options()
+
+    def add_general_options(self):
+        """The input oiptions.
+
+        Default is None. Keep it that way because otherwise, the contents of
+        the ini file is overwritten in :class:`apps.Apps`.
+        """
+
+        group = self.add_argument_group("General",
+                    """This section allows to provide path and file names of the input data.
+                    If path is provided, it will be used to prefix the midas and sif filenames.
+                        --path /usr/share/data --sif test.sif --midas test.csv
+                    means that the sif file is located in /usr/share/data.
+                    """)
+
+        group.add_argument("--model", dest='model',
+                         default=None, type=str, # at most 1 model expected
+                         help="Path to model (SIF format).")
+        group.add_argument("--data", dest='data', # a least one data file expected
+                         default=None, type=str,
+                         help="Name of the data files")
+        group.add_argument("--config", dest='config', # a least one data file expected
+                         default=None, type=str,
+                         help="Name of configuration file")
+        group.add_argument("--verbose", dest='verbose',
+                         action="store_true",
+                         help="verbose option.")
+        group.add_argument("--no-expansion", dest='no_expansion',
+                         action="store_true",
+                         help="do not expand and gates.")
+        group.add_argument("--no-compression", dest='no_compression',
+                         action="store_true",
+                         help="compression option.")
+        group.add_argument("--no-cutnonc", dest='no_cutnonc',
+                         action="store_true",
+                         help="nonc option.")
+        group.add_argument("--report", dest='report',
+                         action="store_true",
+                         help="report option.")
+        group.add_argument("--use-cnodata", dest='use_cnodata',
+                         action="store_true",
+                         help="user cnodata to fetch file from cellnopt.data (local or web version).")
+        group.add_argument("--overwrite-report", dest='overwrite_report',
+                         action="store_false",
+                         help="overwrite existing directory.")
+        group.add_argument("--tag", dest='tag', # a least one data file expected
+                         default=None, type=str,
+                         help="tag to append to the report directory name")
+        group.add_argument("--config-file", dest='config', # a least one data file expected
+                         default=None, type=str,
+                         help="a configuration file")
 
 

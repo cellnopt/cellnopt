@@ -775,7 +775,7 @@ class XMIDAS(MIDASReader):
             m.remove_species(["p38"])
 
         """
-        labels = self._dev.tolist(labels)
+        labels = self._dev.to_list(labels)
         columns = self.df.columns[:]
         for label in labels:
             if label not in columns:
@@ -826,7 +826,7 @@ class XMIDAS(MIDASReader):
         This is a bit complicated but looks like the proper way
 
         """
-        labels = self._dev.tolist(labels)
+        labels = self._dev.to_list(labels)
         if level == "experiment":
             labels = [x if "experiment" in str(x) else "experiment_"+str(x)
                     for x in labels]
@@ -864,7 +864,7 @@ class XMIDAS(MIDASReader):
             valid_names = self.names_inhibitors
         elif level == 'Stimuli':
             valid_names = self.names_stimuli
-        labels = self._dev.tolist(labels)
+        labels = self._dev.to_list(labels)
         for label in labels:
             # m.experiments.columns.levels[1] contains all names even those that
             # are removed so need to use names_inhibitors instead
