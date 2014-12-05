@@ -18,7 +18,7 @@ from easydev import Logging, AttrDict
 
 from cno.io.multigraph import CNOGraphMultiEdges
 from cno import CNOGraph, XMIDAS
-from cno.core import CNOBase
+from cno.core import CNOBase, CNORBase
 from cno.misc.results import BooleanResults
 from cno.core import ReportBool
 
@@ -27,11 +27,10 @@ import pylab
 
 __all__ = ["CNORbool"]
 
-from biokit.rtools.session import RSession
 from biokit.rtools import bool2R
 
 
-class CNORbool(CNOBase):
+class CNORbool(CNOBase, CNORBase):
     """Access to CellNOptR R package to run boolean analysis
 
 
@@ -56,22 +55,10 @@ class CNORbool(CNOBase):
 
     """
     def __init__(self, model, data, verbose=True, verboseR=False):
-        super(CNORbool, self).__init__(model, data, verbose=verbose)
-
-        # this code could be moved to CNOBase
-        self._verboseR = verboseR
-
-        self.session = RSession(verbose=self.verboseR)
+        CNOBase.__init__(self,model, data, verbose=verbose)
+        CNORBase.__init__(self, verboseR)
         self.parameters = {} # fill with GA binary parameters
-
         self.report = ReportBool()
-
-    def _get_verboseR(self):
-        return self._verboseR
-    def _set_verboseR(self, value):
-        self._verboseR = value
-        self.session.dump_stdout = value
-    verboseR = property(_get_verboseR, _set_verboseR)
 
     def optimise(self, tag="cnorbool", reltol=0.1,
             expansion=True, maxgens=150, stallgenmax=100, compression=True):
@@ -246,5 +233,95 @@ class CNORbool(CNOBase):
     def _get_models(self):
         return self.results.models
     models = property(_get_models)
+
+    def create_report_images(self):
+
+        if self._optimised == False:
+            raise ValueError("You must run the optimise method first")
+
+        # ust a simple example of settinh the uniprot url
+        # should be part of cellnopt.core
+        for node in self._pknmodel.nodes():
+            self._pknmodel.node[node]['URL'] = "http://www.uniprot.org/uniprot/?query=Ras&sort=score"
+
+        self._pknmodel.plotdot(filename=self._make_filename("pknmodel.svg"), show=False)
+        self.cnograph.plotdot(filename=self._make_filename("expmodel.png"), show=False)
+        self.plot_optimised_model(filename=self._make_filename("optimised_model.png"),
+                                  show=False)
+
+        #c3 = self.get_mapback_model()
+        #c3.plot(filename=self._make_filename("optimised_model_mapback.png"),
+        #                          show=False)
+        c3 = self.get_mapback_model2()
+        c3.plot(filename=self._make_filename("optimised_model_mapback.png"),
+                edge_attribute="mycolor", cmap="gray_r")
+
+        self.plot_errors(show=False)
+
+        self.midas.plot()
+        self.savefig("midas.png")
+
+        pylab.close()
+
+        self.plot_fitness(show=False, save=True)
+
+    def _create_report(self, report):
+        # Save filenames and report in a section
+        fname = report.directory + os.sep + "PKN-pipeline.sif"
+        self.cnograph.export2sif(fname)
+        fname = report.directory + os.sep + "MD-pipeline.csv"
+        self.midas.save2midas(fname)
+        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'
+        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
+        txt += '<li><a href="config.ini">Config file</a></li>'
+        txt += '<li><a href="rerun.py">Script</a></li></ul>'
+        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
+        report.add_section(txt, "Input data files")
+        report.add_section(
+        """
+         <div class="section" id="Script_used">
+         <object height=120 width=300 type='text/x-scriptlet' border=1
+         data="description.html"></object>
+         </div>""", "Description")
+        txt = """<pre class="literal-block">\n"""
+        txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
+        txt += "o.report()\n</pre>\n"
+        report.add_section(txt, "Script used")
+
+        txt = """<a href="http://www.cellnopt.org/">
+            <object data="pknmodel.svg" type="image/svg+xml">
+            <span>Your browser doesn't support SVG images</span> </object></a>"""
+        txt += """<a class="reference external image-reference" href="scripts/exercice_3.py">
+<img alt="MIDAS" class="align-right" src="midas.png" /></a>"""
+
+        report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
+
+        report.add_section('<img src="expmodel.png">', "Expanded before optimisation")
+        report.add_section( """
+        <img src="optimised_model.png">
+        <img src="optimised_model_mapback.png">
+
+        """, "Optimised model")
+        report.add_section('<img src="errors.png">', "Errors")
+
+        report.add_section(self.get_html_reproduce(), "Reproducibility")
+        fh = open(self.report_directory + os.sep + "rerun.py", 'w')
+        fh.write("from cellnopt.pipeline import *\n")
+        fh.write("CNObool(config=config.ini)\n")
+        fh.write("c.gaBinaryT1()\n")
+        fh.write("c.report()\n")
+        fh.close()
+
+        # some stats
+        stats = self._get_stats()
+        txt = "<table>\n"
+        for k,v in stats.iteritems():
+            txt += "<tr><td>%s</td><td>%s</td></tr>\n" % (k,v)
+        txt += "</table>\n"
+        txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
+        report.add_section(txt, "stats")
+        # dependencies
+        report.write(self.report_directory, "index.html")
+
 
 
