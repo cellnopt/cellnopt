@@ -7,7 +7,7 @@ import pandas as pd
 from biokit.rtools import RPackageManager
 
 
-__all__ = ["Report", "ReportBool", "ReportODE", "ReportFuzzy" ]
+__all__ = ["Report", "ReportBool", "ReportODE", "ReportFuzzy", "ReportDT"]
 
 
 

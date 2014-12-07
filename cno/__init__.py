@@ -46,27 +46,19 @@ from .testing import getdata
 from .core import *
 
 #Boolean package
-from .boolean import *
+from .boolean import cnorbool, CNORbool
 
 # FEEDER package
 from .feeder import Feeder
 
-# SIMIULATOR
-try:
-    from .boolean import CNORbool
+# ODE
+from .ode import cnorode, CNORode
 
-except Exception as err:
-    print(err.message)
-    print("Issue in boolean package. Please report the issue to github/cellnopt/cellnopt")
+# fuzzy
+from .fuzzy import cnorfuzzy, CNORfuzzy
 
+# discrete time
+from .boolean import cnordt, CNORdt
 
 #MINLP
 from .milp import *
-
-
-#ODE
-from .ode import CNORode
-
-#fuzzy
-from .fuzzy import cnorfuzzy, CNORfuzzy
-

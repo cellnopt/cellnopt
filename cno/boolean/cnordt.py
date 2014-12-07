@@ -15,118 +15,195 @@
 ##############################################################################
 import os
 
-import sys
-
 from easydev import Logging, AttrDict
-
-from cno.io.multigraph import CNOGraphMultiEdges
-from cno import CNOGraph, XMIDAS
-from cno.core import CNOBase, CNORBase
-from cno.misc.results import BooleanResults
-from cno.core import ReportBool
 
 import pandas as pd
 import pylab
+import numpy as np
 
-__all__ = ["CNORbool"]
-
+#from cnobool import CNObool, BooleanParameters
+from cno.core.params import BooleanParameters
+from cno import CNOGraph, XMIDAS
+from cno.misc.results import DTResults
+from cno.core.report import ReportDT
+from cno.core import CNORBase, CNOBase
 from biokit.rtools import bool2R
 
-
-class CNORbool(CNOBase, CNORBase):
-    """Access to CellNOptR R package to run boolean analysis
+__all__ = ["CNORdt"]
 
 
-    ::
-
-        c = pipeline.CNObool("PKN-test.sif", "MD-test.csv")
-        c.optimise(compression=True, expansion=True, reltol=.15)
 
 
-    Results are stored in :attr:`results`. Information stored are various.
-    The errors corresponding to the best models can be visualised with :meth:`plot_errors`
-    and models within the tolerance are stored in :attr:`models.
+class DTParameters(BooleanParameters):
+    # THe keys used here have the same caps as in the R code.
+    defaults = {
+        'boolupdates': 10,
+        'lowerB': 0.8,
+        'upperB': 10}
+            
+    def __init__(self):        
+        super(DTParameters, self).__init__()
+        self.init_gabinary_t1()
+        self.init_dt()
 
-    .. plot::
-        :include-source:
+    def init_dt(self):
 
-        from cno import cnodata, CNORbool
-        c = CNORbool(cnodata("PKN-ToyMMB.sif"),
-            cnodata("MD-ToyMMB.csv"))
-        c.optimise()
-        c.plot_errors()
-
+        self.add_parameter("DT", "--bool-updates", "boolupdates", self.defaults['boolupdates'],
+                           "TODO")
+        self.add_parameter("DT", "--lowerB", "lowerB", self.defaults['lowerB'],
+                           "TODO")
+        self.add_parameter("DT", "--upperB", "upperB", self.defaults['upperB'],
+                           "TODO")
+                           
+    
+class CNORdt(CNORBase, CNOBase):
     """
+
+    Optimise PKN against data using Discrete Time formalism.
+
+
+    .. todo:: one difficulty is that boolUpdates
+        if different from number of time points. 
+        will return a simulation, which size is different from
+        the midas file: In cnordt, the data is interpolated
+        and replaced but in cellnopt.core, this is 
+        more tricky. So, we set boolupdates to be of same size as
+        the time points. 
+        
+    .. warning:: boolUpdates must be same as len(times)
+  
+
+    """    
+    dt_params = DTParameters.defaults
     def __init__(self, model, data, verbose=True, verboseR=False):
+
+        """.. rubric:: constructor
+
+        """
         CNOBase.__init__(self,model, data, verbose=verbose)
         CNORBase.__init__(self, verboseR)
         self.parameters = {} # fill with GA binary parameters
-        self._report = ReportBool()
+        self._report = ReportDT()
         self._report._init_report()
 
+        self._optimised = False
+        
+        params = self.dt_params    
+        self.config.add_section("DT")
+        self.config.add_option("DT", "boolupdates", params["boolupdates"])
+        self.config.add_option("DT", "lowerB", params["lowerB"])
+        self.config.add_option("DT", "upperB", params["upperB"])
+        
+    def optimise(self, boolUpdates, lowerB, upperB, **kargs):
+        """
 
-    def optimise(self, tag="cnorbool", reltol=0.1,
-            expansion=True, maxgens=150, stallgenmax=100, compression=True):
+        :param lowerB:
+        :param upperB:
+        :param boolUpdates:
 
-        script_template = """
-        library(CellNOptR)
+        """
+        params = {
+                'boolUpdates': boolUpdates,
+                'upperB': upperB,
+                'lowerB': lowerB
+                }
+        self.config.DT.boolupdates  = boolUpdates
+        self.config.DT.lowerb  = lowerB
+        self.config.DT.upperb  = upperB
+        
+        mapping = {
+            "selpress": "selection-pressure",
+            'reltol': "relative-tolerance",
+            'maxtime': "max-time",
+            'sizefac': "size-factor",
+            'nafac': "na-factor",
+            "elitism": 'elitism',
+            'popsize': "population-size",
+            'stallgenmax': "max-stall-generation",
+            'maxgens': "max-generation",
+            'pmutation': "probability-mutation",
+            'timeindex': "time-index",
+            "verbose": "verbose"
+        }
+        #for x in mapping.keys():
+        #    # update config data structure only if user parameter provided
+        #    if x in kargs.keys():
+        #        self.config.GA[mapping[x]] = kargs[x]
+        #    params[x] = self.config.GA[mapping[x]]
+        
+           
+        script = """
+        library(CNORdt)
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
+
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
             expansion=%(expansion)s, maxInputsPerGate=3)
 
-        res = gaBinaryT1(cnolist, model, relTol=%(reltol)s,
-            stallGenMax=%(stallgenmax)s, maxGens=%(maxgens)s)
-        sim_results = cutAndPlot(cnolist, model, list(res$bString),
-                                 plotParams=list(maxrow = 80, cex=0.5),
-                                 plotPDF=T, tag="%(tag)s")
+        optbs = NULL
 
-        signals = colnames(cnolist@signals$`0`)
-        colnames(sim_results$mse) = signals
-        for (i in seq_along(sim_results$simResults[[1]])){
-            colnames(sim_results$simResults[[1]][[i]]) = signals
-        }
+        res = gaBinaryDT(CNOlist=cnolist, model=model,
+          initBstring=optbs, boolUpdates=%(boolUpdates)s, maxTime=%(maxtime)s, 
+                  lowerB=%(lowerB)s,
+                  upperB=%(upperB)s, stallGenMax=%(stallgenmax)s, elitism=%(elitism)s, 
+                  popSize=%(popsize)s, sizeFac=1e-4)
 
-        #plotModel(model, cnolist, bString=res$bString,
-        #          filename="Model-CNO-%(tag)s", output="PDF")
-
-        # to be retrieved inside Python code
         best_bitstring = res$bString
         best_score = res$bScore
         all_scores = res$stringsTolScores
         all_bitstrings = res$stringsTol
-        reactions = model$reacID
         results = as.data.frame(res$results)
+
+        reactions = model$reacID
         stimuli = as.data.frame(cnolist@stimuli)
         inhibitors = as.data.frame(cnolist@inhibitors)
         species = colnames(cnolist@signals[[1]])
+
         """
+        params['maxtime'] =  10
+        params['elitism'] = 5 
+        params['popsize'] = 30 
+        params['stallgenmax'] = 100
+        params['pkn'] = self.pknmodel.filename
+        params['midas'] = self.data.filename
+        #params['tag'] = self.data.filenam
+        # FIXME should be generic
+        compression = True
+        expansion = True
+        params['compression'] = bool2R(compression)
+        params['expansion'] = bool2R(expansion)
+        
         self._results = {}
-        script = script_template % {
-                'pkn': self.pknmodel.filename,
-                'midas': self.data.filename,
-                'tag':tag,
-                'maxgens':maxgens,
-                'stallgenmax':stallgenmax,
-                'reltol':reltol,
-                'compression': bool2R(compression),
-                'expansion': bool2R(expansion)
-                }
-        self.session.run(script)
+        self.session.run(script % params)
 
-        # need to change type of some columns, which are all string
         results = self.session.results
-
         columns_int = ['Generation', 'Stall_Generation']
         columns_float = ['Best_score', 'Avg_Score_Gen', 'Best_score_Gen', 'Iter_time']
         results[columns_int] = results[columns_int].astype(int)
         results[columns_float] = results[columns_float].astype(float)
 
-        # cnograph created automatically from the reactions
-        from cno.misc.models import BooleanModels
+
+        # for book-keeping, we replace params with actual path (we do not need params anymore)
+        #params['model'] = 'PKN-pipeline.sif'
+        #params['midas'] = 'MD-pipeline.csv'
+        #self._script_optim = script % params
+        
+        # getting results
+        #index = 0
+        #self.best_score = self.results['gaBinaryT1'][index].Best_score.min()
+        #self.total_time = self.results['gaBinaryT1'][index].Iter_time.sum()
+        
+        #df = self.results['gaBinaryT1'][index].Best_bitString
+        #self.best_bitstring = df.ix[df.index[-1]]
+        #self.best_bitstring =  [int(x) for x in self.best_bitstring.split(",")]
+        
+        #self.optimised_bitstring = {}
+        #self.optimised_bitstring['T1'] = self.best_bitstring[:]
+
+        from cno.misc.models import DTModels
         df = pd.DataFrame(self.session.all_bitstrings,
-                              columns=self.session.reactions)
-        models = BooleanModels(df)
+                              columns=list(self.session.reactions))
+        models = DTModels(df)
         models.scores = self.session.all_scores
         models.cnograph.midas = self.data.copy()
 
@@ -136,19 +213,18 @@ class CNORbool(CNOBase, CNORBase):
                 'all_scores': self.session.all_scores,
                 'all_bitstrings': self.session.all_bitstrings,
                 'reactions': self.session.reactions,
-                'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
                 'reactions': self.session.reactions,
                 'results': results,
                 'models':models,
                 'stimuli':self.session.stimuli.copy(),
                 'inhibitors':self.session.inhibitors.copy(),
                 'species':self.session.species,
-                'tag': tag
+                #'tag': tag
         }
         results['pkn'] = self.pknmodel
         results['midas'] = self.data
 
-        self.results = BooleanResults()
+        self.results = DTResults()
         self.results.results = results
         self.results.models = models
 
@@ -196,49 +272,25 @@ class CNORbool(CNOBase, CNORBase):
 
         return midas
 
-    def simulate(self, bs=None, compression=True, expansion=True):
-        """
-
-        input could be a bitstring with correct length and same order
-        OR a model
 
 
-        c.results.cnorbool.best_bitstring
-        c.results.cnorbool.reactions
-        array([1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0])
-        c.results.cnorbool.reactions
 
 
-        """
-        if bs == None:
-            bs = ",".join([str(x) for x in self.results.best_bitstring])
-        else:
-            bs = ",".join([str(x) for x in bs])
 
 
-        script_template = """
-        library(CellNOptR)
-        pknmodel = readSIF("%(pkn)s")
-        cnolist = CNOlist("%(midas)s")
-        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
-            expansion=%(expansion)s, maxInputsPerGate=3)
-        mse = computeScoreT1(cnolist, model, %(bs)s)
-        """
 
-        script = script_template % {
-                'pkn': self.pknmodel.filename,
-                'midas': self.data.filename,
-                'compression': bool2R(compression),
-                'expansion': bool2R(expansion),
-                'bs': "c(" + bs + ")"
-                }
 
-        self.session.run(script)
-        return self.session.mse
 
-    def _get_models(self):
-        return self.results.models
-    models = property(_get_models)
+
+
+
+
+
+
+
+    def info(self):
+        str_ = "Best bitstring: %s (rmse=%s) " % (self.best_bitstring,self.best_score)
+        print(str_)
 
     def create_report_images(self):
 
@@ -349,7 +401,6 @@ class CNORbool(CNOBase, CNORBase):
         # dependencies
         self._report.write(self._report.report_directory, "index.html")
 
-
     def _get_stats(self):
         res = {}
         #res['Computation time'] = self.total_time
@@ -358,4 +409,67 @@ class CNORbool(CNOBase, CNORBase):
         except:
             pass
         return res
+       
+    def _set_simulation(self):
+        self.simulate()
+        self.midas.create_random_simulation()
+        
+        Ntimes = self.config.DT.boolupdates
+        Nspecies = len(self.midas.df.columns)
+        Nexp = len(self.midas.experiments.index)
+        print Ntimes, Nspecies, Nexp
+        #N = Ntimes * Nexp
+        sim = np.array(self.sim).transpose().reshape(Ntimes,Nexp, Nspecies)
+
+        # FIXME Ntimes and Nexp may need to be swapped
+        #sim = numpy.array(sim).reshape(Ntimes,Nexp,Nspecies)
+        self.df = pd.concat([pd.DataFrame(x) for x in sim])
+        self.df.reset_index(inplace=True, drop=True)
+        self.df['experiment'] = list(self.midas.experiments.index) * Ntimes
+        self.df['time'] = [time for time in self.midas.times for x in range(0, Nexp)]
+        self.df['cellLine'] = [self.midas.cellLines[0]] * Nexp * Ntimes
+        
+        self.df.set_index(['cellLine', 'experiment', 'time'], inplace=True)
+        self.df.sortlevel(1, inplace=True)
+        #self.df.columns =
+
+        self.midas.sim = self.df.copy()
+        self.midas.sim.columns = self.midas.df.columns
+        
+    def simulate(self):
+        """
+        
+        .. todo:: lowerB, boolupdates should be user parameters as well
+        
+        
+        """
+        # given the best bitstring, simulate the data and plot the fit.
+
+        script = """
+        library(CNORdt)
+        #pknmodel = readSIF("%(pknmodel)s")
+        #cnolist = CNOlist("%(midas)s")
+        output = cutAndPlotResultsDT(model, %(bs)s, NULL, cnolist, NULL, plotPDF=F,
+            boolUpdates=%(boolUpdates)s, lowerB=%(lowerB)s, upperB=%(upperB)s,
+            ,sizeFac = 1e-04, NAFac = 1)
+
+        signals = colnames(cnolist@signals[[1]])
+        
+        #for (i in seq_along(output$simResults[[1]])){
+        #    colnames(output$simResults[[1]][[i]]) = signals
+        #}
+
+        
+        """
+        
+        params = {
+                'boolUpdates': self.config.DT.boolupdates,
+                'lowerB': self.config.DT.lowerb,
+                'upperB': self.config.DT.upperb,
+                'bs': "c(%s)" % ",".join([str(x) for x in self.best_bitstring])}
+
+        script = script % params
+        self.session.run(script)
+        
+
 

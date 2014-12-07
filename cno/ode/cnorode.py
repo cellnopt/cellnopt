@@ -8,15 +8,13 @@ from easydev import Logging, AttrDict
 
 from cno.io.multigraph import CNOGraphMultiEdges
 from cno import CNOGraph, XMIDAS
-from cno.core import CNOBase
+from cno.core import CNOBase, CNORBase
 
-#from htmltools import HTMLReportODE
 #from cnobase import CNObase, OptionBase
 
 from cno.core.params import Parameters
 from cno.misc.results import ODEResults
-
-from biokit.rtools.session import RSession
+from cno.core import ReportODE
 from biokit.rtools import bool2R
 
 
@@ -74,7 +72,7 @@ class SimulateODE(object):
 
 
 
-class CNORode(CNOBase):
+class CNORode(CNOBase, CNORBase):
     """Access to CellNOptR R package to run boolean analysis
 
     ::
@@ -98,12 +96,11 @@ class CNORode(CNOBase):
 
     """
     def __init__(self, model, data, verbose=True, verboseR=False):
-        super(CNORode, self).__init__(model, data, verbose=verbose)
-
-        # this code could be moved to CNOBase
-        self._verboseR = verboseR
-
-        self.session = RSession(verbose=self.verboseR)
+        CNOBase.__init__(self,model, data, verbose=verbose)
+        CNORBase.__init__(self, verboseR)
+        self.parameters = {} # fill with GA binary parameters
+        self._report = ReportODE()
+        self._report._init_report()
 
         self.ssm_params = {
             "maxtime": 60,
@@ -111,12 +108,21 @@ class CNORode(CNOBase):
             "dim_refset": 10,
             "transfer_function": 3}
 
-    def _get_verboseR(self):
-        return self._verboseR
-    def _set_verboseR(self, value):
-        self._verboseR = value
-        self.session.dump_stdout = value
-    verboseR = property(_get_verboseR, _set_verboseR)
+        self._init()
+
+    def _init(self):
+        script_template = """
+        library(CNORode)
+        pknmodel = readSIF("%(pknmodel)s")
+        cnolist = CNOlist("%(midas)s")
+        reactions = pknmodel$reacID
+        species = colnames(cnolist@signals[[1]])"""
+        params = {
+                'pknmodel': self.pknmodel.filename,
+                'midas': self.data.filename,
+                }
+        self.session.run(script_template % params)
+        self.species = self.session.species
 
     def optimise(self, tag="cnorode", 
             expansion=True, compression=True):
@@ -138,7 +144,8 @@ class CNORode(CNOBase):
         pknmodel = readSIF("%(pknmodel)s")
         cnolist = CNOlist("%(midas)s")
         reactions = pknmodel$reacID
-        
+        species = colnames(cnolist@signals[[1]])
+
         ode_params = createLBodeContPars(pknmodel)
         ode_params = parEstimationLBodeSSm(cnolist, pknmodel, 
             maxtime=%(maxtime)s, dim_refset=%(dim_refset)s, 
@@ -160,25 +167,26 @@ class CNORode(CNOBase):
         #results = self.session.results
 
         ssm_results = self.session.ode_params['ssm_results'].copy()
-        self._results = {
+        results = {
                 'best_score': ssm_results['fbest'],
                 'all_scores': ssm_results['f'],
                 'reactions': self.session.reactions[:],
                 'tag': tag,
         }
         for k,v in self.session.ode_params.items():
-            self._results[k] = v.copy()
+            results[k] = v.copy()
 
         self.results = ODEResults()
-        self.results.add_results(self._results)
+        self.results.results = results
+        self.species = self.session.species
 
     def plot_errors(self, show=False):
         self._set_simulation()
         self.midas.plot(mode="mse") 
-        self.midas.plotSim()
-        self.savefig("errors.png")
-        if show == False:
+        #self.midas.plotSim()
+        if show is False:
             pylab.close()
+
 
     def simulate(self, bs=None, compression=True, expansion=True):
         """
@@ -210,13 +218,16 @@ class CNORode(CNOBase):
         script = script_template % params
         self.session.run(script)
         # FIXME what about species/experiments
-        self.sim = pd.dataFrame(self.session.sim_data)
-        return self.session.sim_data
+
+        sim_data = self.session.sim_data
+        self.sim = pd.concat([pd.DataFrame(x, columns=self.species) 
+            for x in sim_data])
+
+        #return self.session.sim_data
 
     def _get_models(self):
         return self.results.cnorbool.models
     models = property(_get_models)
-
 
     def _set_simulation(self):
         self.simulate()
@@ -283,40 +294,55 @@ class CNORode(CNOBase):
         self.config.add_option("SSM", "verbose", True)
 
     def create_report_images(self):
-        self._pknmodel.plot(filename=self._make_filename("pknmodel.png"), show=False)
-        self.cnograph.plot(filename=self._make_filename("expmodel.png"), show=False)
-        self._plot_ode_parameters_k(filename=self._make_filename("ode_parameters_k.png"), show=False)
-        self._plot_ode_parameters_n(filename=self._make_filename("ode_parameters_n.png"), show=False)
-        self.plot_errors(show=False)
-        self.midas.plot()
-        self.savefig("midas.png")
-        pylab.close()
-        self.plot_fitness(show=False, save=True)
+        model = self.cnograph.copy()
+        model.plot(filename=self._report._make_filename("pknmodel.svg"), show=False)
+        model.preprocessing()
+        model.plot(filename=self._report._make_filename("expmodel.png"), show=False)
+        self._plot_ode_parameters_k(filename=self._report._make_filename("ode_parameters_k.png"), 
+                show=False)
+        self._plot_ode_parameters_n(filename=self._report._make_filename("ode_parameters_n.png"), 
+                show=False)
 
-    def report(self, filename="index.html", directory="report", browse=True):
+        self.plot_errors(show=True)
+        self._report.savefig("Errors.png")
+        
+        self.midas.plot()
+        self._report.savefig("midas.png")
+
+        pylab.close()
+        self.plot_fitness(show=True, save=False)
+        self._report.savefig("fitness.png")
+
+    def plot_fitness(self, show=False, save=True):
+        # TODO show and save parameters
+        self.results.plot_fit()
+
+        if save is True:
+            self._report.savefig("fitness.png")
+
+        if show is False:
+            pylab.close()
+
+    def create_report(self, filename='index.html', browse=True):
         """Creates the boolean report
         
         Should not create any image here only the report
         """
-        self.directory = self._init_report()
-        self.create_report_images()
-            
-        report = HTMLReportODE(self)        
         # complete the report
-        self._report(report)
+        self._create_report()
         if browse:
             from browse import browse as bs
-            bs(report.directory + os.sep + filename)
-        self.save_config_file()
+            bs(self._report.report_directory + os.sep + filename)
 
-    def _report(self, report):
-        directory = self._init_report()
-        
+    def _create_report(self ):
+        self._report._init_report()
+        self._report.directory = self._report.report_directory
         # Save filenames and report in a section
-        fname = directory + os.sep + "PKN-pipeline.sif"
-        self.cnograph.export2sif(fname)        
-        fname = directory + os.sep + "MD-pipeline.csv"
-        self.midas.save2midas(fname)
+        fname = self._report.directory + os.sep + "PKN-pipeline.sif"
+        self.cnograph.to_sif(fname)        
+
+        fname = self._report.directory + os.sep + "MD-pipeline.csv"
+        self.midas.to_midas(fname)
 
         txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'        
         txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
@@ -324,8 +350,8 @@ class CNORode(CNOBase):
         txt += '<li><a href="rerun.py">Script</a></li></ul>'
         txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
         
-        report.add_section(txt, "Input data files")
-        report.add_section(
+        self._report.add_section(txt, "Input data files")
+        self._report.add_section(
         """       
          <div class="section" id="Script_used">
          <object height=120 width=300 type='text/x-scriptlet' border=1
@@ -333,9 +359,9 @@ class CNORode(CNOBase):
          </div>""", "Description")
 
         txt = """<pre class="literal-block">\n"""
-        txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
+        #txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
         txt += "o.report()\n</pre>\n"
-        report.add_section(txt, "Script used")
+        self._report.add_section(txt, "Script used")
         
         txt = """<a href="http://www.cellnopt.org/">
             <object data="pknmodel.svg" type="image/svg+xml">
@@ -343,19 +369,20 @@ class CNORode(CNOBase):
         txt += """<a class="reference external image-reference" href="scripts/exercice_3.py">
 <img alt="MIDAS" class="align-right" src="midas.png" /></a>"""
         
-        report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
+        self._report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
                                                                                             
-        report.add_section('<img src="expmodel.png">', "Expanded before optimisation")
-        report.add_section( """
+        self._report.add_section('<img src="expmodel.png">', "Expanded before optimisation")
+        self._report.add_section( """
         <img src="expmodel.png">'
         <img src="ode_parameters_k.png">
         <img src="ode_parameters_n.png">
         """, "Optimised model")
-        
-        report.add_section('<img src="errors.png">', "Errors")
+               
+        self._report.add_section('<img src="fitness.png">', "Fitness")
+        self._report.add_section('<img src="Errors.png">', "Errors")
 
-        report.add_section(self.get_html_reproduce(), "Reproducibility")
-        fh = open(self.report_directory + os.sep + "rerun.py", 'w')
+        self._report.add_section(self.get_html_reproduce(), "Reproducibility")
+        fh = open(self._report.report_directory + os.sep + "rerun.py", 'w')
         fh.write("from cellnopt.pipeline import *\n")
         fh.write("CNOode(config=config.ini)\n")
         fh.write("c.optimise()\n")
@@ -369,16 +396,22 @@ class CNORode(CNOBase):
             txt += "<tr><td>%s</td><td>%s</td></tr>" % (k,v)
         txt += "</table>"
         txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
-        report.add_section(txt, "stats")
+        self._report.add_section(txt, "stats")
 
         # dependencies
         #table = self.get_table_dependencies()
         #fh.write(table.to_html())
 
-        report.write(self.report_directory, "index.html")
+        self._report.write(self._report.report_directory, "index.html")
 
-
-
+    def _get_stats(self):
+        res = {}
+        #res['Computation time'] = self.total_time
+        try:
+            res['Best Score'] = self.results.results['best_score']
+        except:
+            pass
+        return res
 
 
 

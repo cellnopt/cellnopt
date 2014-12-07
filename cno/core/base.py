@@ -15,7 +15,7 @@
 ##############################################################################
 import argparse
 from biokit.rtools import RSession
-
+import easydev
 
 __all__ = ["CNOBase", "CNORBase", "OptionBase"]
 
@@ -40,7 +40,7 @@ class CNORBase(object):
 class CNOBase(object):
     """Alias to CNOGraph and common class to all simulators"""
 
-    def __init__(self, pknmodel, data, verbose=False):
+    def __init__(self, pknmodel, data, verbose=False, config=None):
         # TODO: check that files do exist and raise an error otherwise
         self._pknmodel = None
         self._data = None
@@ -54,7 +54,30 @@ class CNOBase(object):
         self._pknmodel = CNOGraph(pknmodel)
         self._pknmodel.midas = self._data
 
+        self._model = CNOGraph(pknmodel)
+        self._model.midas = self._data
+        self._model.preprocessing()
+
         self._cnograph = CNOGraph(pknmodel, data)
+
+        if config:
+            self.load_config(config)
+        else:
+            # if use_cnodata, let us search files using cnodata if not found locally
+            """if use_cnodata:
+                if os.path.exists(pknmodel) == False:
+                    pknmodel = cnodata(pknmodel)
+                    if os.path.exists(data) == False:
+                        data = cnodata(data)
+                                                                                                                    if pknmodel == None or data == None:
+                txt = "Input %s not a valid file" % pknmodel
+                txt += "Or %s not a valid file" % data
+                raise ValueError(txt)
+                                                                                                                    self._pknmodel_filename = pknmodel
+            self._data_filename = data"""
+            # keep track of all configuration parameters
+            self.init_config()
+
 
     def _get_verbose(self):
         return self._verbose
@@ -97,6 +120,9 @@ class CNOBase(object):
                                                                                                                     .. seealso:: full documentation about MIDAS in cellnopt.core.cnograph
         """
         self._pknmodel.plot()
+
+    def plot_model(self):
+        self._model.plot()
 
     def plot_midas(self, xkcd = False):
         """Plot the MIDAS data
@@ -148,15 +174,15 @@ parameter.""" )
 
         self.config = easydev.config_tools.DynamicConfigParser()
         self.config.add_section("General")
-        self.config.add_option("General", "pknmodel", self._pknmodel_filename)
-        self.config.add_option("General", "data", self._data_filename)
-        self.config.add_option("General", "formalism", self.formalism)
-        self.config.add_option("General", "use_cnodata", self._use_cnodata)
-        self.config.add_option("General", "tag", self.tag)
-        self.config.add_option("General", "overwrite_report", self._overwrite_report)
-        self.config.add_option("General", "Rexecutable", self.Rexecutable)
+        #self.config.add_option("General", "pknmodel", self._pknmodel_filename)
+        #self.config.add_option("General", "data", self._data_filename)
+        #self.config.add_option("General", "formalism", self.formalism)
+        #self.config.add_option("General", "use_cnodata", self._use_cnodata)
+        #self.config.add_option("General", "tag", self.tag)
+        #self.config.add_option("General", "overwrite_report", self._overwrite_report)
+        #self.config.add_option("General", "Rexecutable", self.Rexecutable)
         #self.config.add_option("General", "verbose", self.verbose)
-        self.config.add_option("General", "report_directory", self.report_directory)
+        #self.config.add_option("General", "report_directory", self.report_directory)
 
     def save_config_file(self, filename=None):
         if filename==None:

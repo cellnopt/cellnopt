@@ -37,13 +37,11 @@ $optimisation
 
 """
 
-
 class FuzzyParameters(BooleanParameters):
     # THe keys used here have the same caps as in the R code.
     def __init__(self):
         super(FuzzyParameters, self).__init__()
         self.init_gabinary_t1()
-
         self.nTF = 7
 
 
@@ -185,7 +183,23 @@ class CNORfuzzy(CNOBase, CNORBase):
         # redRef contains a MSE for each threshold
         res1['redRef'][8]['MSE']
 
-        self.results = FuzzyResults()
+        # !! several runs; should be gathered together
+        from cno.misc.models import FuzzyModels
+
+        strings = self.session.allRes[0]['t1opt']['stringsTol']
+        scores = self.session.allRes[0]['t1opt']['stringsTolScores']
+
+        # ! reactions here is different. it should include the
+        # AND edges as well
+        print(len(reactions), len(strings[0]))
+        fuzreactions = ['a=' + str(i) for i in range(0, len(strings[0]))] 
+        for i, reac in enumerate(reactions):
+            fuzreactions[i] = reac
+        df = pd.DataFrame(strings, columns=fuzreactions)
+        models = FuzzyModels(df)
+        models.scores = scores
+        models.cnograph.midas = self.data.copy()
+
         self.species = species
         self.reactions = reactions
         self.bScore = bScore
@@ -199,7 +213,15 @@ class CNORfuzzy(CNOBase, CNORBase):
                 "Avg_Score_Gen","Best_score_Gen","Best_bit_Gen","Iter_time"))
             allRes[i]['t1opt']['results'] = df
 
+        results = {}
+        results['species'] = species
+        results['bScore'] = bScore
+
+        self.results = FuzzyResults()
+        self.results.results = results
+        self.results.models = models
         self.results.allRes = allRes
+
 
     def _compute_mean_mses(self):
         """plot MSEs using interpolation of the results provided by the Fuzzy Analysis"""
@@ -460,7 +482,7 @@ class CNORfuzzy(CNOBase, CNORBase):
         self.blength = simlist['numType2'] + simlist['numType1']
 
         params = self.session.params_fuzzy
-        self.nTF = params['type1Funs'].shape[0]
+        self.nTF = params['type1Funs'].shape[0]  # ==>seems to be type2Funs in computeScoreT1
 
     def create_random_parameters(self, update=True):
         import random
@@ -468,6 +490,13 @@ class CNORfuzzy(CNOBase, CNORBase):
             self._update()
         bs = [random.randint(0,self.nTF+1) for x in range(0,self.blength)]
         return bs
+
+
+        #
+        #  intString <- (sample.int(dim(paramsList$type2Funs)[1],
+        #         (simList$numType1+simList$numType2),replace=TRUE)) - 1
+        #i d'abord numtype1
+
 
     def simulate(self, bstring, NAFac=1, sizeFac=0.0001):
         self._check_parameters(bstring)

@@ -5,8 +5,69 @@ from easydev import precision
 and_symbol = "^"
 
 
+__all = ["Models", "BooleanModels", "DTModels", "FuzzyModels"]
+
 
 class Models(object):
+    def __init__(self, data, reacID=None, index_col=None):
+        # FIXME interpret the first columns automatically ?
+        if isinstance(data, str):
+            self.filename = data
+            self.df = pd.read_csv(self.filename, index_col=index_col)
+            if reacID:
+                reacID = pd.read_csv(reacID)
+                self.df.columns = reacID.ix[:,0]
+        elif isinstance(data, pd.DataFrame):
+            self.df = data.copy()
+        elif isinstance(data, Models):
+            self.df = data.df.copy()
+        else:
+            from cno import CNOError
+            raise CNOError("input data not understood. Could be a filename, a dataframe or a Models instance")
+
+        if hasattr(data, 'scores'):
+            self.scores = getattr(data, 'scores')
+
+        # TODO: In a reaction from cnograph, they should be not ORs, just simple
+        # reactions and ANDS (e.g., A^B=C). If "A+B=C" is found, this is coming
+        # from CellNOptR, ,which has a different conventions. So, we replace
+        # all + by "^" !! Do we want a warning ?
+        self.df.columns = [x.replace("+", "^") for x in self.df.columns]
+
+        # keep this import here to avoid cycling imports
+        from cno.io.cnograph import CNOGraph
+        self.cnograph = CNOGraph()
+        for this in self.df.columns:
+            self.cnograph.add_reaction(this)
+
+    def get_average_model(self):
+        """Returns the average model (on each reaction)"""
+        return self.df.mean(axis=0)
+
+    def to_csv(self, filename):
+        self.df.to_csv(filename)
+
+    def to_sif(self, filename=None):
+        """Exports 2 SIF using the "and" convention
+
+        can read the results with CellNOptR for instance::
+
+            library(CellNOptR)
+            plotModel(readSIF("test.sif"))
+
+        """
+        return self.cnograph.to_sif(filename)
+
+
+class FuzzyModels(Models):
+    def __init__(self, data, reacID=None, index_col=None):
+        super(FuzzyModels, self).__init__(data, reacID, index_col)
+
+    def copy(self):
+        return FuzzyModels(self)
+
+
+class BooleanModels(Models):
     """Class to read and plot models as exported by CASPO or CellNOptR
 
 
@@ -14,7 +75,7 @@ class Models(object):
     For each reaction, we can then obtain the average paramters for a reaction.
     In a boolean case, a Model stores a value made of 0/1
 
-    No scores are stored. No sizes are stored. Sizes could be extracted easily
+    scores may be available. No sizes are stored. Sizes could be extracted easily
     as sum over rows.
 
     ::
@@ -46,36 +107,8 @@ class Models(object):
         :param dta: a filename with columns as the reacitons and rowss as
             parameters for each reactions. Each row is therefore a model.
         """
-        # FIXME interpret the first columns automatically ?
-        if isinstance(data, str):
-            self.filename = data
-            self.df = pd.read_csv(self.filename, index_col=index_col)
-            if reacID:
-                reacID = pd.read_csv(reacID)
-                self.df.columns = reacID.ix[:,0]
-        elif isinstance(data, pd.DataFrame):
-            self.df = data.copy()
-        elif isinstance(data, Models):
-            self.df = data.df.copy()
-        else:
-            from cno import CNOError
-            raise CNOError("input data not understood. Could be a filename, a dataframe or a Models instance")
+        super(BooleanModels, self).__init__(data, reacID, index_col)
 
-        # TODO: In a reaction from cnograph, they should be not ORs, just simple
-        # reactions and ANDS (e.g., A^B=C). If "A+B=C" is found, this is coming
-        # from CellNOptR, ,which has a different conventions. So, we replace
-        # all + by "^" !! Do we want a warning ?
-        self.df.columns = [x.replace("+", "^") for x in self.df.columns]
-
-        # keep this import here to avoid cycling imports
-        from cno.io.cnograph import CNOGraph
-        self.cnograph = CNOGraph()
-        for this in self.df.columns:
-            self.cnograph.add_reaction(this)
-
-    def get_average_model(self):
-        """Returns the average model (on each reaction)"""
-        return self.df.mean(axis=0)
 
     def get_cv_model(self):
         """Returns the average coefficient of variation on each reaction"""
@@ -126,19 +159,6 @@ class Models(object):
         self.cnograph.plot(edge_attribute="average", cmap=cmap,
                 colorbar=colorbar,**kargs)
 
-    def to_csv(self, filename):
-        self.df.to_csv(filename)
-
-    def to_sif(self, filename=None):
-        """Exports 2 SIF using the "and" convention
-
-        can read the results with CellNOptR for instance::
-
-            library(CellNOptR)
-            plotModel(readSIF("test.sif"))
-
-        """
-        return self.cnograph.to_sif(filename)
 
     def errorbar(self):
         """Plot the average presence of reactions over all models"""
@@ -157,10 +177,7 @@ class Models(object):
         pylab.tight_layout()
 
     def heatmap(self, num=1, transpose=False, cmap='gist_heat_r', heatmap_attr={}):
-        """
-
-
-        """
+        """    """
         #df = self.get_average_models()
         from biokit.viz.heatmap import Heatmap
         if transpose:
@@ -196,5 +213,20 @@ class Models(object):
         return txt
 
     def copy(self):
-        return Models(self)
+        return BooleanModels(self)
+
+    def _get_sizes(self):
+        return self.df.sum(axis=1)    
+    sizes = property(_get_sizes)
+
+
+
+
+class DTModels(BooleanModels):
+    def __init__(self, data, reacID=None, index_col=None):
+        super(DTModels, self).__init__(data, reacID, index_col)
+
+    def copy(self):
+        return DTModels(self)
+
 

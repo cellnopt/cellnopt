@@ -5,12 +5,10 @@ from biokit import viz
 import pylab
 import pandas as pd
 
-
 from easydev import Logging, AttrDict
 
 
-__all__ = ['BooleanResults', 'FuzzyResults', 'ODEResults']
-
+__all__ = ['BooleanResults', 'FuzzyResults', 'ODEResults', 'DTResults']
 
 
 class Results(object):
@@ -24,22 +22,29 @@ class Results(object):
 
     For instance, histogram of the scores.
     """
-    def __init__(self, models):
-        self.models = models.copy()
+    def __init__(self):
+        self._models = None
+        self._results = None
 
-    def add_results(self, results):
-         self.results = AttrDict(**results)
-         #self.results[name] = AttrDict(**self.results[name])
+    def _get_models(self):
+        return self._models
+    def _set_models(self, models):
+        self._models = models.copy()
+    models = property(_get_models, _set_models)
 
-    def add_models(self, models):
-        pass
+    def _get_results(self):
+        return self._results
+    def _set_results(self, results):
+        self._results = AttrDict(**results)
+    results = property(_get_results, _set_results)
 
     def _get_scores(self):
-        return self.models['score']
+        return self.models.scores
     scores = property(_get_scores)
 
-
-
+    def _get_sizes(self):
+        return self.models.sizes
+    sizes = property(_get_sizes)
 
 
 class BooleanResults(Results):
@@ -56,18 +61,18 @@ class BooleanResults(Results):
     def _get_scores_vs_model_size_df(self):
         df = pd.DataFrame()
         df['score'] = self.scores
-        df['size'] = self.size
+        df['size'] = self.sizes
         return df
 
     def hist2d_scores_vs_model_size(self, bins=None, cmap='gist_heat_r', 
-            fontsize=16):
+            fontsize=16, contour=False, Nlevels=10):
         df = self._get_scores_vs_model_size_df()
         h = viz.Hist2d(df)
         if bins == None:
             scores_range = 20
             size_range = df.size.max() - df.size.min() + 1
             bins = (scores_range, size_range)
-        h.plot(bins=bins, Nlevels=10, cmap=cmap)
+        h.plot(bins=bins, Nlevels=Nlevels, cmap=cmap, contour=contour)
         pylab.xlabel("Score", fontsize=fontsize)
         pylab.ylabel("Model size", fontsize=fontsize)
 
@@ -106,6 +111,11 @@ class BooleanResults(Results):
 class FuzzyResults(Results):
     def __init__(self):
         pass
+
+
+class DTResults(BooleanResults):
+    def __init__(self):
+        super(DTResults, self).__init__()
 
 
 class ODEResults(Results):
