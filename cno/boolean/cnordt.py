@@ -182,7 +182,6 @@ class CNORdt(CNORBase, CNOBase):
         results[columns_int] = results[columns_int].astype(int)
         results[columns_float] = results[columns_float].astype(float)
 
-
         # for book-keeping, we replace params with actual path (we do not need params anymore)
         #params['model'] = 'PKN-pipeline.sif'
         #params['midas'] = 'MD-pipeline.csv'
@@ -207,6 +206,9 @@ class CNORdt(CNORBase, CNOBase):
         models.scores = self.session.all_scores
         models.cnograph.midas = self.data.copy()
 
+        self.best_bitstring = self.session.best_bitstring
+        self.species = self.session.species
+
         results = {
                 'best_score': self.session.best_score,
                 'best_bitstring': self.session.best_bitstring,
@@ -215,10 +217,10 @@ class CNORdt(CNORBase, CNOBase):
                 'reactions': self.session.reactions,
                 'reactions': self.session.reactions,
                 'results': results,
-                'models':models,
-                'stimuli':self.session.stimuli.copy(),
-                'inhibitors':self.session.inhibitors.copy(),
-                'species':self.session.species,
+                'models': models,
+                'stimuli': self.session.stimuli.copy(),
+                'inhibitors': self.session.inhibitors.copy(),
+                'species': self.session.species,
                 #'tag': tag
         }
         results['pkn'] = self.pknmodel
@@ -271,20 +273,6 @@ class CNORdt(CNORBase, CNOBase):
         except:pass
 
         return midas
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -436,7 +424,7 @@ class CNORdt(CNORBase, CNOBase):
         self.midas.sim = self.df.copy()
         self.midas.sim.columns = self.midas.df.columns
         
-    def simulate(self):
+    def _simulate(self):
         """
         
         .. todo:: lowerB, boolupdates should be user parameters as well
@@ -454,22 +442,33 @@ class CNORdt(CNORBase, CNOBase):
             ,sizeFac = 1e-04, NAFac = 1)
 
         signals = colnames(cnolist@signals[[1]])
-        
-        #for (i in seq_along(output$simResults[[1]])){
-        #    colnames(output$simResults[[1]][[i]]) = signals
-        #}
+       
+        sim_data = output$simResults
 
         
         """
         
         params = {
+                'pknmodel': self.pknmodel.filename,
+                'midas': self.data.filename,
                 'boolUpdates': self.config.DT.boolupdates,
+                #'tag':tag
                 'lowerB': self.config.DT.lowerb,
                 'upperB': self.config.DT.upperb,
                 'bs': "c(%s)" % ",".join([str(x) for x in self.best_bitstring])}
 
         script = script % params
         self.session.run(script)
+
+        # FIXME what about species/experiments
+
+        sim_data = self.session.sim_data
+        self.sim = pd.concat([pd.DataFrame(x, columns=self.species)
+            for x in sim_data])
+
+
+
+
         
 
 
