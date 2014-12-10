@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of the cellnopt package
+#  This file is part of the CNO package
 #
 #  Copyright (c) 2014 - EMBL-EBI
 #
@@ -13,9 +13,11 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
+import os
 import argparse
 from biokit.rtools import RSession
 import easydev
+
 
 __all__ = ["CNOBase", "CNORBase", "OptionBase"]
 
@@ -35,8 +37,6 @@ class CNORBase(object):
     verboseR = property(_get_verboseR, _set_verboseR)
 
 
-
-
 class CNOBase(object):
     """Alias to CNOGraph and common class to all simulators"""
 
@@ -51,12 +51,13 @@ class CNOBase(object):
         from cno.io import XMIDAS
         #
         self._data = XMIDAS(data)
+
         self._pknmodel = CNOGraph(pknmodel)
         self._pknmodel.midas = self._data
 
         self._model = CNOGraph(pknmodel)
         self._model.midas = self._data
-        self._model.preprocessing()
+        self._model.preprocessing() #FIXME what if one decides to preprocess differently
 
         self._cnograph = CNOGraph(pknmodel, data)
 
@@ -78,7 +79,6 @@ class CNOBase(object):
             # keep track of all configuration parameters
             self.init_config()
 
-
     def _get_verbose(self):
         return self._verbose
     def _set_verbose(self, verbose):
@@ -86,9 +86,9 @@ class CNOBase(object):
         self._verbose = verbose
     verbose = property(_get_verbose, _set_verbose)
 
-    def _get_model(self):
+    def _get_pknmodel(self):
         return self._pknmodel
-    pknmodel = property(_get_model, doc="get the prior knowledge network")
+    pknmodel = property(_get_pknmodel, doc="get the prior knowledge network")
 
     def _get_cnograph(self):
         return self._cnograph
@@ -102,6 +102,7 @@ class CNOBase(object):
     def preprocessing(self, expansion=True, compression=True, cutnonc=True,
             maxInputsPerGate=2):
         """Apply preprocessing on the PKN model"""
+        # FIXME if used, the pknmodel is changed
         self._pknmodel.preprocessing(expansion, compression, cutnonc,
                 maxInputsPerGate=maxInputsPerGate)
 
@@ -114,7 +115,7 @@ class CNOBase(object):
 
             from cellnopt.pipeline.cnobase import CNObase
             from cellnopt.data import cnodata
-            o = CNOBase(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"), 
+            o = CNOBase(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"),
                 formalism="base")
             o.plot_midas(xkcd=True)   # use xkcd for fun
                                                                                                                     .. seealso:: full documentation about MIDAS in cellnopt.core.cnograph
@@ -123,6 +124,40 @@ class CNOBase(object):
 
     def plot_model(self):
         self._model.plot()
+
+    def plot_optimised_model(self, filename=None, show=True):
+        bs = self.results.results.best_bitstring
+        reactions = self.results.results.reactions
+        opt = {}
+        for b,r in zip(bs, reactions):
+            if b == 0:
+                opt[r]= 0
+            else:
+                opt[r] = 1
+        m = self._model.copy()
+        m.set_edge_attribute('opt', opt)
+        m.plot(edge_attribute='opt', cmap='gray_r', show=show, filename=filename)
+
+    def _reac_cnor2cno(self, reactions):
+        # CNOR ands are encoded with +
+        from cno import Reaction
+        reactions = [r.replace('+', '^') for r in reactions]
+        newreacs = []
+        for i,reac in enumerate(reactions):
+            r = Reaction(reac)
+            r.sort()
+            newreacs.append(r.name)
+        return newreacs
+
+    def plot_mapback_model(self):
+        from cno.io import mapback
+        m = mapback.MapBack(self.pknmodel, self._model)
+        reactions = self.results.results.reactions
+        bs = self.results.results.best_bitstring
+        links2map = [r for b,r in zip(bs,reactions) if b==1]
+        newreacs  = m.mapback(links2map)
+        model = m.plot_mapback(newreacs)
+        return model
 
     def plot_midas(self, xkcd = False):
         """Plot the MIDAS data
@@ -141,21 +176,21 @@ class CNOBase(object):
     def get_html_reproduce(self):
         text = """
         <p>In a shell, go to the report directory (where is contained this report)
-        and either execute the file called rerun.py or typoe these commands in 
-        a python shell 
+        and either execute the file called rerun.py or typoe these commands in
+        a python shell
         </p>
-        
+
         <pre>
         from cellnopt.pipeline import *
         c = CNObool(config=config.ini)
         c.gaBinaryT1()
         c.report()
         </pre>
-        
-        <p>You will need the configuration file that was used in the report 
+
+        <p>You will need the configuration file that was used in the report
         (<a href="config.ini">config.ini</a>) </p>
-        
-        <p>New results will be put in a sub directory so that your current 
+
+        <p>New results will be put in a sub directory so that your current
         report is not overwritten</p>
         """
         return text
@@ -168,8 +203,8 @@ class CNOBase(object):
     def init_config(self, force=False):
         if "config" in self.__dict__.keys():
             if force == False:
-                raise ValueError("""Your config already exists and will be erased. 
-If you really want to re-initialise the config attribute, use force=True 
+                raise ValueError("""Your config already exists and will be erased.
+If you really want to re-initialise the config attribute, use force=True
 parameter.""" )
 
         self.config = easydev.config_tools.DynamicConfigParser()

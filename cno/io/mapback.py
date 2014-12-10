@@ -7,7 +7,7 @@ from cno import CNOError
 
 class MapBack(object):
     """
-    
+
     :param pknmodel: compulsary and must be a CNOGraph data structure.
     :param model: a logical model, which shoudl be a subgraph of pknmodel with possible
         AND gates (see CNOGraph)
@@ -24,7 +24,7 @@ class MapBack(object):
 
     def search_path(self, source, target):
         """Search all simple paths in the graph G from source to target
-        
+
         :param G:
         :param source:
         :param target:
@@ -40,7 +40,7 @@ class MapBack(object):
 
     def plot_optimised_model(self, reactions):
         model = self.model.copy()
-        mapback = [(reac,1) if reac in reactions else (reac,0) 
+        mapback = [(reac,1) if reac in reactions else (reac,0)
                 for reac in model.reactions]
         mapback = dict(mapback)
         model.set_edge_attribute('mapback', mapback)
@@ -49,7 +49,7 @@ class MapBack(object):
 
     def plot_mapback(self, reactions):
         model = self.pknmodel.copy()
-        mapback = [(reac,1) if reac in reactions else (reac,0) 
+        mapback = [(reac,1) if reac in reactions else (reac,0)
                 for reac in model.reactions]
         mapback = dict(mapback)
         model.set_edge_attribute('mapback', mapback)
@@ -77,7 +77,7 @@ class MapBack(object):
     def mapback(self, links2map):
         """
         :param list links2map: list of edges 2 map from model to pknmodel.
-            list of reactions 
+            list of reactions
 
         :return: list of reactions in pknmodel that are on
 
@@ -99,7 +99,7 @@ class MapBack(object):
             >>> c3.plotdot()
 
         .. todo:: current issue is nonc not being linked
-   
+
         :References: although the implementation is slgihtly different, most of the code
             and testing were inspired by the mapBack function from CellNOptR 1.7 R package
             developed by F. Eduati.
@@ -109,9 +109,9 @@ class MapBack(object):
                 raise CNOError("Found an invalid reaction {0}".format(reaction) +
                         ", which is not in the model")
 
-        compressed = [node for node in self.pknmodel.nodes() 
+        compressed = [node for node in self.pknmodel.nodes()
             if node not in self.model.nodes()]
-        
+
         # AND gates are handled as follows.
         # Case1, the AND gate is in the PKN. Nothing to do. The following algorithm shoud work
         # Case2, the AND gate is not in the PKN. In such case, we can just remove it
@@ -134,7 +134,7 @@ class MapBack(object):
         # for each link 2 map in the submodel
         additional_ands = []
         for reaction in links2map:
-            reaction= Reaction(reaction)
+            reaction = Reaction(reaction)
             rhs = reaction.rhs
             lhs = reaction.get_signed_lhs_species()
             species = lhs['+'] + lhs['-']
@@ -156,8 +156,8 @@ class MapBack(object):
                     for j2 in range(1, len((path))):
                         n1 = path[j2-1]
                         n2 = path[j2]
-                        # FIXME iNOT are lost here 
-                        if startNode in lhs['+']: 
+                        # FIXME iNOT are lost here
+                        if startNode in lhs['+']:
                             reacPKN = n1 + "=" + n2
                         else:
                             reacPKN = "!" + n1 + "=" + n2
@@ -166,20 +166,20 @@ class MapBack(object):
                             additional_ands.append(n1)
                         if "^" in n2:
                             additional_ands.append(n2)
-                        
+
 
         newedges = sorted(list(set(newedges)))
         newedges = [x for x in newedges if x.count("=")==1]
         # some edges may have been added from path that are actually not present
-        # in the optimised networks. We have to identify the common edges in 
+        # in the optimised networks. We have to identify the common edges in
         # the pkn and processed models. Then, to remove them in not part of the optimised
         # model.
         e1 = set(self.pknmodel.reactions)
         e2 = set(self.model.reactions)
         common_reactions = list(e1.intersection(e2))
-        toremove = [reaction for reaction in common_reactions if reaction not in links2map]
+        toremove = [r for r in common_reactions if r not in links2map]
 
-        newedges = [edge for edge in newedges if edge not in toremove] 
+        newedges = [edge for edge in newedges if edge not in toremove]
         newedges.extend(andsPKN)
         newedges.extend(list(set(additional_ands)))
         return newedges

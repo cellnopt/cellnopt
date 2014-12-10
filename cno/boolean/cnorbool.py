@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of CORDA software
+#  This file is part of CNO software
 #
 #  Copyright (c) 2014 - EBI-EMBL
 #
@@ -14,15 +14,14 @@
 #
 ##############################################################################
 import os
-
 import sys
 
 from easydev import Logging, AttrDict
 
 from cno.io.multigraph import CNOGraphMultiEdges
-from cno import CNOGraph, XMIDAS
 from cno.core import CNOBase, CNORBase
-from cno.misc.results import BooleanResults
+from cno.core.results import BooleanResults
+from cno.core.models import BooleanModels
 from cno.core import ReportBool
 
 import pandas as pd
@@ -87,9 +86,6 @@ class CNORbool(CNOBase, CNORBase):
             colnames(sim_results$simResults[[1]][[i]]) = signals
         }
 
-        #plotModel(model, cnolist, bString=res$bString,
-        #          filename="Model-CNO-%(tag)s", output="PDF")
-
         # to be retrieved inside Python code
         best_bitstring = res$bString
         best_score = res$bScore
@@ -123,21 +119,21 @@ class CNORbool(CNOBase, CNORBase):
         results[columns_float] = results[columns_float].astype(float)
 
         # cnograph created automatically from the reactions
-        from cno.misc.models import BooleanModels
         df = pd.DataFrame(self.session.all_bitstrings,
                               columns=self.session.reactions)
         models = BooleanModels(df)
         models.scores = self.session.all_scores
         models.cnograph.midas = self.data.copy()
 
+        reactions = self._reac_cnor2cno(self.session.reactions)
+
         results = {
                 'best_score': self.session.best_score,
                 'best_bitstring': self.session.best_bitstring,
                 'all_scores': self.session.all_scores,
                 'all_bitstrings': self.session.all_bitstrings,
-                'reactions': self.session.reactions,
+                'reactions': reactions,
                 'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
-                'reactions': self.session.reactions,
                 'results': results,
                 'models':models,
                 'stimuli':self.session.stimuli.copy(),
@@ -193,7 +189,6 @@ class CNORbool(CNOBase, CNORBase):
         midas.remove_times([x for x in midas.times if x not in valid_times])
         try:midas.plot(mode="mse")
         except:pass
-
         return midas
 
     def simulate(self, bs=None, compression=True, expansion=True):
@@ -255,15 +250,11 @@ class CNORbool(CNOBase, CNORBase):
         model.preprocessing()
         model.plot(filename=self._report._make_filename("expmodel.png"), show=False)
 
-        #self.plot_optimised_model(filename=self._make_filename("optimised_model.png"),
-        #                          show=False)
+        self.plot_optimised_model(filename=self._report._make_filename("optimised_model.png"),
+                                  show=False)
 
-        #c3 = self.get_mapback_model()
-        #c3.plot(filename=self._make_filename("optimised_model_mapback.png"),
-        #                          show=False)
-        #c3 = self.get_mapback_model2()
-        #c3.plot(filename=self._make_filename("optimised_model_mapback.png"),
-        #        edge_attribute="mycolor", cmap="gray_r")
+        self.plot_mapback_model()
+        self._report.savefig("optimised_model_mapback.png")
 
         self.plot_errors(show=False)
         self._report.savefig("Errors.png")
@@ -275,7 +266,7 @@ class CNORbool(CNOBase, CNORBase):
         self.plot_fitness(show=False, save=True)
         # self._report.savefig("plot_fit.png")
 
-    def plot_fitness(self, show=False, save=True):
+    def plot_fitness(self, show=True, save=False):
         # TODO show and save parameters
         self.results.plot_fit()
 
@@ -285,7 +276,15 @@ class CNORbool(CNOBase, CNORBase):
         if show is False:
             pylab.close()
 
-    def _create_report(self):
+    def onweb(self, show=True):
+        self.create_report()
+        try:
+            self.create_report_images()
+        except:
+            pass
+        if show:        self._report.show()
+
+    def create_report(self):
         self._report._init_report()
         self._report.directory = self._report.report_directory
         # Save filenames and report in a section
@@ -327,8 +326,8 @@ class CNORbool(CNOBase, CNORBase):
         """, "Optimised model")
 
 
-        self._report.add_section('<img src="fitness.png">', "Fitness")
-        self._report.add_section('<img src="Errors.png">', "Errors")
+        self._report.add_section('<img class="figure" src="fitness.png">', "Fitness")
+        self._report.add_section('<img class="figure" src="Errors.png">', "Errors")
 
         self._report.add_section(self.get_html_reproduce(), "Reproducibility")
         fh = open(self._report.report_directory + os.sep + "rerun.py", 'w')
@@ -341,21 +340,24 @@ class CNORbool(CNOBase, CNORBase):
         # some stats
         stats = self._get_stats()
         txt = "<table>\n"
-        for k,v in stats.iteritems():
-            txt += "<tr><td>%s</td><td>%s</td></tr>\n" % (k,v)
+        for k in sorted(stats.keys()):
+            txt += "<tr><td>%s</td><td>%s</td></tr>\n" % (k, stats[k])
         txt += "</table>\n"
-        txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
+        #txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
         self._report.add_section(txt, "stats")
-        # dependencies
-        self._report.write(self._report.report_directory, "index.html")
 
+        # dependencies
+        self._report.add_section('<img src="dependencies.svg">', "Dependencies")
+        self._report.write(self._report.report_directory, "index.html")
 
     def _get_stats(self):
         res = {}
         #res['Computation time'] = self.total_time
         try:
-            res['Best Score'] = self.bScore
+            res['Best Score'] = self.results.results.best_score
+            res['Total time'] = self.results.results.results.Iter_time.sum()
         except:
             pass
+
         return res
 

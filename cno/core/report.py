@@ -1,8 +1,9 @@
 import os
+import shutil
+
+
 import pylab
 import easydev
-import shutil
-from easydev import gsf, Logging
 import pandas as pd
 from biokit.rtools import RPackageManager
 
@@ -29,7 +30,8 @@ class HTMLTable(object):
 
 class Report(easydev.Logging):
 
-    def __init__(self, formalism, tag=None, filename="index.html", overwrite=True, verbose=True):
+    def __init__(self, formalism, tag=None, filename="index.html",
+                 overwrite=True, verbose=True):
         super(Report, self).__init__(verbose)
         self.formalism = formalism
         from cno import version
@@ -88,7 +90,7 @@ class Report(easydev.Logging):
             raise IOError(txt)
 
         for filename in ["dana.css", "reset.css", "tools.js"]:
-            filename = gsf("cno", "", filename)
+            filename = easydev.gsf("cno", "", filename)
             shutil.copy(filename, directory)
         return directory
 
@@ -179,10 +181,14 @@ class Report(easydev.Logging):
             links.append("http://www.cellnopt.org")
 
         df = pd.DataFrame({
-            'package': ["""<a href="%s">%s</a>"""%(links[i],p) for i,p in enumerate(names)], 
+            'package': ["""<a href="%s">%s</a>"""%(links[i],p) for i,p in enumerate(names)],
             'version':versions})
 
         table = HTMLTable(df, name="dependencies", escape=False)
+
+        from cno.misc.dependencies import plot_dependencies
+        c = plot_dependencies(show=False, filename=self._make_filename('dependencies.svg'))
+
         return table
 
 
@@ -191,10 +197,10 @@ class Report(easydev.Logging):
         reftxt = self._create_references(references)
         section = """<div class="section" id="%(id)s">
         <h2> <a class="toc-backref" href="#id%(index)s">%(title)s</a></h2>
-        
+
         %(references)s\n
         %(content)s
-    </div>    
+    </div>
         """ % {'title':title, 'references':reftxt,'content':content,
                'id': title.replace(" ", "_"), 'index':len(self.sections)+1}
         # check that it is correct
@@ -211,7 +217,7 @@ class Report(easydev.Logging):
         toc = """<div class="contents local topic" id="contents">
         <ul class="simple">"""
         for i, name in enumerate(self.section_names):
-            toc += """<li> 
+            toc += """<li>
 %(i)s - <a class="reference internal" href="%(href)s" id="%(id)s">  %(name)s</a>
 </li>""" % {'i':i+1, 'name':name, 'href':"#"+name.replace(" ", "_"), 'id':'id%s' % str(i+1)}
         toc += """</ul>\n</div>"""
@@ -220,13 +226,13 @@ class Report(easydev.Logging):
     def _create_references(self, references):
         if len(references) == 0:
             return ""
-            
+
         txt = """
         <div class="admonition-documentation admonition">
             <p class="first admonition-title">Documentation</p>
             <ul class="last simple">
             <li>"""
-        
+
         for ref in references:
             txt += """      <a class="reference external" href=%(url)s>%(title)s</a>""" %  {'url':ref[0],'title':ref[1]}
         txt += """
