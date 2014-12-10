@@ -66,8 +66,6 @@ class CNORbool(CNOBase, CNORBase):
         self._report = ReportBool()
         self.results = BooleanResults()
 
-        #self._report._init_report()
-
     def optimise(self, tag="cnorbool", reltol=0.1,
             expansion=True, maxgens=150, stallgenmax=100, compression=True):
 
@@ -208,11 +206,10 @@ class CNORbool(CNOBase, CNORBase):
 
 
         """
-        if bs == None:
+        if bs is None:
             bs = ",".join([str(x) for x in self.results.best_bitstring])
         else:
             bs = ",".join([str(x) for x in bs])
-
 
         script_template = """
         library(CellNOptR)
@@ -239,9 +236,6 @@ class CNORbool(CNOBase, CNORBase):
     models = property(_get_models)
 
     def create_report_images(self):
-
-        #if self._optimised == False:
-        #    raise ValueError("You must run the optimise method first")
 
         # ust a simple example of settinh the uniprot url
         # should be part of cellnopt.core
@@ -364,4 +358,64 @@ class CNORbool(CNOBase, CNORBase):
             pass
 
         return res
+
+    def _get_sim(self, bs):
+        self.session.bs1 = bs 
+        script = """
+        png()  
+        output = cutAndPlot(cnolist, model, list(bs1), plotPDF=F)
+        dev.off()
+        """
+        self.session.run(script)
+        res = self.session.output['simResults'][0]
+        res = list(res['t0'].flatten() ) + list(res['t1'].flatten())
+        return res
+
+    def get_gtt(self):
+        import numpy as np
+        N = len(self.models)
+        from easydev import progress_bar
+        b = progress_bar(N)
+        d = {}
+        for i in range(0, N):
+            res = np.array(self._get_sim(self.models.df.ix[i].values))
+            b.animate(i, N)
+            d[i] = res 
+
+        df = pd.DataFrame(d).transpose()
+        grouped = df.groupby(list(df.columns))
+        hist([len(this) for this in grouped.groups.values()], 100)
+        return d
+
+class GTT(object):
+    def __init__(self, model, data, models, scores):
+        """
+        Note that once, grouped, the scores should be identical albeit the
+        model size
+
+        [scores[i] for i in grouped.groups.values()[10]]
+
+        """
+        self.models = models
+        self.scores = scores
+        self.model = model
+        self.data = data # a MIDAS file
+
+    def _get_sim(self, bs):
+        self.session.bs1 = bs 
+        script = """
+        png()  
+        output = cutAndPlot(cnolist, model, list(bs1), plotPDF=F)
+        dev.off()
+        """
+        self.session.run(script)
+        res = self.session.output['simResults'][0]
+        res = list(res['t0'].flatten() ) + list(res['t1'].flatten())
+        return res
+
+
+
+
+
+
 
