@@ -1,17 +1,40 @@
+"""
 
+
+
+
+"""
 
 __all__ = ['Parameter', 'Parameters', 'BooleanParameters']
 
 
 class Parameter(object):
-    def __init__(self, section, name, dest, default, description="TODO"):
-        self.description = description
+    """Define a user parameter
+
+    A parameter is defined by 
+    - **dest** a **destination** name, which is the variable name to 
+      be used internally. 
+    - **name** a user name to be used within the configuration file. It can 
+      be used also within executable. The difference with the **dest** name is 
+      that it may be longer to be more explicit (with dashes, which are not accepted in Python)
+    - **section** a section to store the parameter in the configuration file
+    - **default** a default value
+    - **decription** to be used with a --help option
+    - **type** may be provided.
+
+    p = Parameter('optimisation', '--max-iteration', 'maxiter', 
+        100, 'maximum number of iterations')
+
+    """
+    def __init__(self, section, name, dest, default, types=None, description=""):
         self.section = section
         self.name = name
-        self.default = default
         self.dest = dest
-        self.type = type(default)
-        self.value = None
+        self.default = default
+        if types is None:
+            self.types = type(default)
+        self.description = description
+        #self.value = None
 
     def _get_kargs(self):
         kargs = {
@@ -31,9 +54,9 @@ class Parameters(object):
         self.parameters = {}
 
     def add_parameter(self, section, name, dest, default,
-                      description="TODO"):
+                      description=""):
+        # Could add a Parameter instance ?
         p = Parameter(section, name, dest, default,  description)
-
         self.parameters[name] = p
 
     def get_keys_from_section(self, section):
@@ -42,9 +65,10 @@ class Parameters(object):
         return keys
 
 
-class BooleanParameters(Parameters):
+class GAParameters(Parameters):
     # THe keys used here have the same caps as in the R code.
-    gaBinaryT1_params = {
+    name = 'GA'
+    params = {
         "sizeFac": 0.0001,
         "NAFac": 1,
         "popSize": 50,
@@ -60,39 +84,39 @@ class BooleanParameters(Parameters):
         "timeIndex2": 3
         }
     def __init__(self):
-        super(BooleanParameters, self).__init__()
-        self.init_gabinary_t1()
+        super(GAParameters, self).__init__()
+        self._init_gabinary_t1()
 
-    def init_gabinary_t1(self):
+    def _init_gabinary_t1(self):
         # just an alias
-        default = self.gaBinaryT1_params
-
+        default = self.params
+        name = self.name
         # adding all info required
-        self.add_parameter("GA", "--elitism", "elitism", default['elitism'],
+        self.add_parameter(name, "--elitism", "elitism", default['elitism'],
                            "The elitism number (should be 10% of the popsize)")
-        self.add_parameter("GA", "--size-factor", "sizeFac", default["sizeFac"],
+        self.add_parameter(name, "--size-factor", "sizeFac", default["sizeFac"],
                            "The penalty factor (if NaN values)")
-        self.add_parameter("GA", "--population-size", "popSize", default["popSize"],
+        self.add_parameter(name, "--population-size", "popSize", default["popSize"],
                            "The population size")
-        self.add_parameter("GA", "--max-time", "maxTime", default['maxTime'],
+        self.add_parameter(name, "--max-time", "maxTime", default['maxTime'],
                            "Maximum time of the simulation (seconds)")
-        self.add_parameter("GA", "--na-factor", "NAFac", default['NAFac'],
+        self.add_parameter(name, "--na-factor", "NAFac", default['NAFac'],
                            "The penalty factor (if NaN values)")
-        self.add_parameter("GA", "--pmutation", "pMutation", default['pMutation'],
+        self.add_parameter(name, "--pmutation", "pMutation", default['pMutation'],
                            "Mutation rate")
-        self.add_parameter("GA", "--max-generation", "maxGens",  default['maxGens'],
+        self.add_parameter(name, "--max-generation", "maxGens",  default['maxGens'],
                             "maximum number of generation")
-        self.add_parameter("GA", "--max-stall-generation", "stallGenMax", default['stallGenMax'],
+        self.add_parameter(name, "--max-stall-generation", "stallGenMax", default['stallGenMax'],
                            "Max number of stall generation")
-        self.add_parameter("GA", "--selection-pressure", "selPress", default['selPress'],
+        self.add_parameter(name, "--selection-pressure", "selPress", default['selPress'],
                            "todo")
-        self.add_parameter("GA", "--relative-tolerance", "relTol", default['relTol'],
+        self.add_parameter(name, "--relative-tolerance", "relTol", default['relTol'],
                             "todo")
-        self.add_parameter("GA", "--ga-verbose", "verbose", True,
+        self.add_parameter(name, "--ga-verbose", "verbose", True,
                            "verbosity in GA")
-        self.add_parameter("GA", "--time-index-1", "timeIndex1",  default['timeIndex1'],
+        self.add_parameter(name, "--time-index-1", "timeIndex1",  default['timeIndex1'],
                          "first time index to optimise")
-        self.add_parameter("GA", "--time-index-2", "timeIndex2",  default['timeIndex2'],
+        self.add_parameter(name, "--time-index-2", "timeIndex2",  default['timeIndex2'],
                          "second time index to optimise")
     #def __getattr__(self, key):
     #    return self.parameters[key]

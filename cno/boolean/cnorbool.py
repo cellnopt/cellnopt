@@ -26,10 +26,10 @@ from cno.core import ReportBool
 
 import pandas as pd
 import pylab
+from biokit.rtools import bool2R
+
 
 __all__ = ["CNORbool"]
-
-from biokit.rtools import bool2R
 
 
 class CNORbool(CNOBase, CNORBase):
@@ -56,13 +56,17 @@ class CNORbool(CNOBase, CNORBase):
         c.plot_errors()
 
     """
-    def __init__(self, model, data, verbose=True, verboseR=False):
-        CNOBase.__init__(self,model, data, verbose=verbose)
+    #params = BooleanParameters.default
+    def __init__(self, model, data, tag=None, verbose=True, verboseR=False, 
+            config=None):
+        CNOBase.__init__(self,model, data, tag=tag, verbose=verbose, 
+                config=config)
         CNORBase.__init__(self, verboseR)
         self.parameters = {} # fill with GA binary parameters
         self._report = ReportBool()
-        self._report._init_report()
+        self.results = BooleanResults()
 
+        #self._report._init_report()
 
     def optimise(self, tag="cnorbool", reltol=0.1,
             expansion=True, maxgens=150, stallgenmax=100, compression=True):
@@ -144,7 +148,6 @@ class CNORbool(CNOBase, CNORBase):
         results['pkn'] = self.pknmodel
         results['midas'] = self.data
 
-        self.results = BooleanResults()
         self.results.results = results
         self.results.models = models
 
@@ -290,6 +293,7 @@ class CNORbool(CNOBase, CNORBase):
         # Save filenames and report in a section
         fname = self._report.directory + os.sep + "PKN-pipeline.sif"
 
+        self.config.save(self._report.directory + os.sep + 'config.ini')
         self.cnograph.to_sif(fname)
         fname = self._report.directory + os.sep + "MD-pipeline.csv"
         self.midas.to_midas(fname)

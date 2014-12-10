@@ -40,12 +40,17 @@ class CNORBase(object):
 class CNOBase(object):
     """Alias to CNOGraph and common class to all simulators"""
 
-    def __init__(self, pknmodel, data, verbose=False, config=None):
+    def __init__(self, pknmodel, data, tag=None, verbose=False, config=None):
         # TODO: check that files do exist and raise an error otherwise
         self._pknmodel = None
         self._data = None
         self._verbose = verbose
-
+        self.name = self.__class__.__name__
+        if tag is not None:
+            self.tag = tag
+        else:
+            self.tag = ""
+        
         # DONT MOVE those imports to prevent import cycling
         from cno.io import CNOGraph
         from cno.io import XMIDAS
@@ -209,14 +214,14 @@ parameter.""" )
 
         self.config = easydev.config_tools.DynamicConfigParser()
         self.config.add_section("General")
-        #self.config.add_option("General", "pknmodel", self._pknmodel_filename)
-        #self.config.add_option("General", "data", self._data_filename)
-        #self.config.add_option("General", "formalism", self.formalism)
+        self.config.add_option("General", "pknmodel", self._pknmodel.filename)
+        self.config.add_option("General", "data", self._data.filename)
+        self.config.add_option("General", "formalism", self.__class__.__name__)
         #self.config.add_option("General", "use_cnodata", self._use_cnodata)
-        #self.config.add_option("General", "tag", self.tag)
+        self.config.add_option("General", "tag", self.tag)
         #self.config.add_option("General", "overwrite_report", self._overwrite_report)
         #self.config.add_option("General", "Rexecutable", self.Rexecutable)
-        #self.config.add_option("General", "verbose", self.verbose)
+        self.config.add_option("General", "verbose", self.verbose)
         #self.config.add_option("General", "report_directory", self.report_directory)
 
     def save_config_file(self, filename=None):

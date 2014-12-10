@@ -22,7 +22,7 @@ import pylab
 import numpy as np
 
 #from cnobool import CNObool, BooleanParameters
-from cno.core.params import BooleanParameters
+from cno.core.params import GAParameters
 from cno import CNOGraph, XMIDAS
 from cno.misc.results import DTResults
 from cno.core.report import ReportDT
@@ -32,9 +32,7 @@ from biokit.rtools import bool2R
 __all__ = ["CNORdt"]
 
 
-
-
-class DTParameters(BooleanParameters):
+class DTParameters(GAParameters):
     # THe keys used here have the same caps as in the R code.
     defaults = {
         'boolupdates': 10,
@@ -75,19 +73,20 @@ class CNORdt(CNORBase, CNOBase):
 
     """    
     dt_params = DTParameters.defaults
-    def __init__(self, model, data, verbose=True, verboseR=False):
-
+    #name = 'cnorbool'
+    def __init__(self, model, data, tag=None, verbose=True, verboseR=False, 
+            config=None):
         """.. rubric:: constructor
 
         """
-        CNOBase.__init__(self,model, data, verbose=verbose)
+        CNOBase.__init__(self,model, data, tag=tag, verbose=verbose, 
+                config=config)
         CNORBase.__init__(self, verboseR)
         self.parameters = {} # fill with GA binary parameters
         self._report = ReportDT()
-        self._report._init_report()
+        self.results = DTResults()
+        #self._report._init_report()
 
-        self._optimised = False
-        
         params = self.dt_params    
         self.config.add_section("DT")
         self.config.add_option("DT", "boolupdates", params["boolupdates"])
@@ -130,13 +129,13 @@ class CNORdt(CNORBase, CNOBase):
         #    if x in kargs.keys():
         #        self.config.GA[mapping[x]] = kargs[x]
         #    params[x] = self.config.GA[mapping[x]]
-        
+       
+        # TODO: add bitstring as input ?
            
         script = """
         library(CNORdt)
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
-
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
             expansion=%(expansion)s, maxInputsPerGate=3)
 
@@ -152,14 +151,14 @@ class CNORdt(CNORBase, CNOBase):
         best_score = res$bScore
         all_scores = res$stringsTolScores
         all_bitstrings = res$stringsTol
-        results = as.data.frame(res$results)
-
         reactions = model$reacID
+        results = as.data.frame(res$results)
         stimuli = as.data.frame(cnolist@stimuli)
         inhibitors = as.data.frame(cnolist@inhibitors)
         species = colnames(cnolist@signals[[1]])
-
         """
+        self._results = {}
+
         params['maxtime'] =  10
         params['elitism'] = 5 
         params['popsize'] = 30 
@@ -173,7 +172,6 @@ class CNORdt(CNORBase, CNOBase):
         params['compression'] = bool2R(compression)
         params['expansion'] = bool2R(expansion)
         
-        self._results = {}
         self.session.run(script % params)
 
         results = self.session.results
@@ -196,8 +194,6 @@ class CNORdt(CNORBase, CNOBase):
         #self.best_bitstring = df.ix[df.index[-1]]
         #self.best_bitstring =  [int(x) for x in self.best_bitstring.split(",")]
         
-        #self.optimised_bitstring = {}
-        #self.optimised_bitstring['T1'] = self.best_bitstring[:]
 
         from cno.misc.models import DTModels
         df = pd.DataFrame(self.session.all_bitstrings,
@@ -226,7 +222,6 @@ class CNORdt(CNORBase, CNOBase):
         results['pkn'] = self.pknmodel
         results['midas'] = self.data
 
-        self.results = DTResults()
         self.results.results = results
         self.results.models = models
 
@@ -282,8 +277,6 @@ class CNORdt(CNORBase, CNOBase):
 
     def create_report_images(self):
 
-        #if self._optimised == False:
-        #    raise ValueError("You must run the optimise method first")
 
         # ust a simple example of settinh the uniprot url
         # should be part of cellnopt.core
@@ -331,6 +324,7 @@ class CNORdt(CNORBase, CNOBase):
         # Save filenames and report in a section
         fname = self._report.directory + os.sep + "PKN-pipeline.sif"
 
+        self.config.save(self._report.directory + os.sep + 'config.ini')
         self.cnograph.to_sif(fname)
         fname = self._report.directory + os.sep + "MD-pipeline.csv"
         self.midas.to_midas(fname)

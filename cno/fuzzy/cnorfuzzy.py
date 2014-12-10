@@ -9,7 +9,7 @@ from cno.core import CNOBase, OptionBase
 from cno.core import CNORBase
 from cno.misc.results import FuzzyResults
 from cno.core.report import ReportFuzzy
-from cno.core.params import BooleanParameters
+from cno.core.params import GAParameters
 from biokit.rtools import bool2R
 
 
@@ -37,11 +37,11 @@ $optimisation
 
 """
 
-class FuzzyParameters(BooleanParameters):
+class FuzzyParameters(GAParameters):
     # THe keys used here have the same caps as in the R code.
     def __init__(self):
         super(FuzzyParameters, self).__init__()
-        self.init_gabinary_t1()
+        self._init_gabinary_t1()
         self.nTF = 7
 
 
