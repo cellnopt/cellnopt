@@ -57,9 +57,9 @@ class CNORbool(CNOBase, CNORBase):
 
     """
     #params = BooleanParameters.default
-    def __init__(self, model, data, tag=None, verbose=True, verboseR=False, 
+    def __init__(self, model, data, tag=None, verbose=True, verboseR=False,
             config=None):
-        CNOBase.__init__(self,model, data, tag=tag, verbose=verbose, 
+        CNOBase.__init__(self,model, data, tag=tag, verbose=verbose,
                 config=config)
         CNORBase.__init__(self, verboseR)
         self.parameters = {} # fill with GA binary parameters
@@ -242,8 +242,13 @@ class CNORbool(CNOBase, CNORBase):
         for node in self._pknmodel.nodes():
             self._pknmodel.node[node]['URL'] = "http://www.uniprot.org/uniprot/?query=Ras&sort=score"
 
+
+        self._pknmodel.plot(filename=self._report._make_filename("pknmodel.svg"),
+                            show=False)
+        self._pknmodel.plot(filename=self._report._make_filename("pknmodel.png"),
+                            show=False)
+
         model = self.cnograph.copy()
-        model.plot(filename=self._report._make_filename("pknmodel.svg"), show=False)
         model.preprocessing()
         model.plot(filename=self._report._make_filename("expmodel.png"), show=False)
 
@@ -309,30 +314,36 @@ class CNORbool(CNOBase, CNORBase):
         self._report.add_section(txt, "Script used")
 
         txt = """<a href="http://www.cellnopt.org/">
-            <object data="pknmodel.svg" type="image/svg+xml">
-            <span>Your browser doesn't support SVG images</span> </object></a>"""
-        txt += """<a class="reference external image-reference" href="scripts/exercice_3.py">
-<img alt="MIDAS" class="align-right" src="midas.png" /></a>"""
+            <object data="pknmodel.svg" type="image/svg+xml" >
+            <span>Your browser doesn't support SVG images</span>
+
+            </object></a>"""
+
+        # <img src="pknmodel.png">
 
         self._report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
 
-        self._report.add_section('<img src="expmodel.png">', "Expanded before optimisation")
-        self._report.add_section( """
-        <img src="optimised_model.png">
-        <img src="optimised_model_mapback.png">
+        txt = """<a class="reference external image-reference" href="scripts/exercice_3.py">
+<img alt="MIDAS" class="align-left" src="midas.png" /></a>"""
+        self._report.add_section(txt, "Data", [("http://www.cellnopt.org", "XMIDAS class")])
 
-        """, "Optimised model")
-
-
-        self._report.add_section('<img class="figure" src="fitness.png">', "Fitness")
-        self._report.add_section('<img class="figure" src="Errors.png">', "Errors")
+        self._report.add_section('<img class="figure" src="expmodel.png">',
+            "Expanded before optimisation")
+        self._report.add_section('img class="figure" src="optimised_model.png">',
+            "Optimised model")
+        self._report.add_section('<img class="figure" src="optimised_model_mapback.png">',
+            "Optimised mapback model")
+        self._report.add_section('<img class="figure" src="fitness.png">',
+            "Fitness")
+        self._report.add_section('<img class="figure" src="Errors.png">',
+            "Errors")
 
         self._report.add_section(self.get_html_reproduce(), "Reproducibility")
         fh = open(self._report.report_directory + os.sep + "rerun.py", 'w')
-        fh.write("from cellnopt.pipeline import *\n")
-        fh.write("CNObool(config=config.ini)\n")
-        fh.write("c.gaBinaryT1()\n")
-        fh.write("c.report()\n")
+        fh.write("from cellnopt import CNORbool, cnodata*\n")
+        fh.write("CNORbool(config=config.ini)\n")
+        fh.write("c.optimise()\n")
+        fh.write("c.onweb()\n")
         fh.close()
 
         # some stats
@@ -356,66 +367,5 @@ class CNORbool(CNOBase, CNORBase):
             res['Total time'] = self.results.results.results.Iter_time.sum()
         except:
             pass
-
         return res
-
-    def _get_sim(self, bs):
-        self.session.bs1 = bs 
-        script = """
-        png()  
-        output = cutAndPlot(cnolist, model, list(bs1), plotPDF=F)
-        dev.off()
-        """
-        self.session.run(script)
-        res = self.session.output['simResults'][0]
-        res = list(res['t0'].flatten() ) + list(res['t1'].flatten())
-        return res
-
-    def get_gtt(self):
-        import numpy as np
-        N = len(self.models)
-        from easydev import progress_bar
-        b = progress_bar(N)
-        d = {}
-        for i in range(0, N):
-            res = np.array(self._get_sim(self.models.df.ix[i].values))
-            b.animate(i, N)
-            d[i] = res 
-
-        df = pd.DataFrame(d).transpose()
-        grouped = df.groupby(list(df.columns))
-        hist([len(this) for this in grouped.groups.values()], 100)
-        return d
-
-class GTT(object):
-    def __init__(self, model, data, models, scores):
-        """
-        Note that once, grouped, the scores should be identical albeit the
-        model size
-
-        [scores[i] for i in grouped.groups.values()[10]]
-
-        """
-        self.models = models
-        self.scores = scores
-        self.model = model
-        self.data = data # a MIDAS file
-
-    def _get_sim(self, bs):
-        self.session.bs1 = bs 
-        script = """
-        png()  
-        output = cutAndPlot(cnolist, model, list(bs1), plotPDF=F)
-        dev.off()
-        """
-        self.session.run(script)
-        res = self.session.output['simResults'][0]
-        res = list(res['t0'].flatten() ) + list(res['t1'].flatten())
-        return res
-
-
-
-
-
-
 

@@ -56,7 +56,6 @@ def plotmodel(args=None):
 
     cno.preprocessing(compression=compression, expansion=expansion, cutnonc=cutNONC)
 
-    
     try:
         cno.plot(viewer=options.viewer)
     except:

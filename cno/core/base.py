@@ -50,7 +50,7 @@ class CNOBase(object):
             self.tag = tag
         else:
             self.tag = ""
-        
+
         # DONT MOVE those imports to prevent import cycling
         from cno.io import CNOGraph
         from cno.io import XMIDAS
@@ -123,7 +123,9 @@ class CNOBase(object):
             o = CNOBase(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"),
                 formalism="base")
             o.plot_midas(xkcd=True)   # use xkcd for fun
-                                                                                                                    .. seealso:: full documentation about MIDAS in cellnopt.core.cnograph
+
+
+        .. seealso:: full documentation about MIDAS in cellnopt.core.cnograph
         """
         self._pknmodel.plot()
 

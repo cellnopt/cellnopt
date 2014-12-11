@@ -48,6 +48,9 @@ class MapBack(object):
         return model
 
     def plot_mapback(self, reactions):
+        """reactions should be the output of :meth:`mapback`.
+
+        """
         model = self.pknmodel.copy()
         mapback = [(reac,1) if reac in reactions else (reac,0)
                 for reac in model.reactions]
