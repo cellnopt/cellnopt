@@ -17,6 +17,8 @@ import os
 import argparse
 from biokit.rtools import RSession
 import easydev
+from cno.core.params import CNOConfigParser
+from cno.core.params import ParamsGA, ParamsGeneral
 
 
 __all__ = ["CNOBase", "CNORBase", "OptionBase"]
@@ -203,9 +205,7 @@ class CNOBase(object):
         return text
 
     def load_config(self, filename):
-        import easydev.config_tools
-        self.config = easydev.config_tools.DynamicConfigParser()
-        self.config.load_ini(filename)
+        self.config = CNOConfigParser(filename)
 
     def init_config(self, force=False):
         if "config" in self.__dict__.keys():
@@ -214,22 +214,32 @@ class CNOBase(object):
 If you really want to re-initialise the config attribute, use force=True
 parameter.""" )
 
-        self.config = easydev.config_tools.DynamicConfigParser()
-        self.config.add_section("General")
-        self.config.add_option("General", "pknmodel", self._pknmodel.filename)
-        self.config.add_option("General", "data", self._data.filename)
-        self.config.add_option("General", "formalism", self.__class__.__name__)
+        self.config = CNOConfigParser()
+        self.config.add_section(ParamsGeneral())
+        self.config.add_section(ParamsGA())
         #self.config.add_option("General", "use_cnodata", self._use_cnodata)
-        self.config.add_option("General", "tag", self.tag)
         #self.config.add_option("General", "overwrite_report", self._overwrite_report)
         #self.config.add_option("General", "Rexecutable", self.Rexecutable)
-        self.config.add_option("General", "verbose", self.verbose)
         #self.config.add_option("General", "report_directory", self.report_directory)
 
     def save_config_file(self, filename=None):
-        if filename==None:
+        if filename is None:
             filename = self.report_directory + os.sep + "config.ini"
         self.config.save(filename)
+
+    def onweb(self, show=True):
+        self.create_report()
+        try:
+            self.create_report_images()
+        except:
+            pass
+        if show:
+            self._report.show()
+
+    def create_report(self):
+        raise NotImplementedError
+    def create_report_images(self):
+        raise NotImplementedError
 
 
 class OptionBase(argparse.ArgumentParser):
@@ -285,8 +295,5 @@ class OptionBase(argparse.ArgumentParser):
         group.add_argument("--tag", dest='tag', # a least one data file expected
                          default=None, type=str,
                          help="tag to append to the report directory name")
-        group.add_argument("--config-file", dest='config', # a least one data file expected
-                         default=None, type=str,
-                         help="a configuration file")
 
 

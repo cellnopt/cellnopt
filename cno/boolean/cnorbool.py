@@ -23,10 +23,12 @@ from cno.core import CNOBase, CNORBase
 from cno.core.results import BooleanResults
 from cno.core.models import BooleanModels
 from cno.core import ReportBool
-
+from cno.core.params import ParamsGA
 import pandas as pd
 import pylab
 from biokit.rtools import bool2R
+from cno.core.params import params_to_update
+
 
 
 __all__ = ["CNORbool"]
@@ -62,12 +64,32 @@ class CNORbool(CNOBase, CNORBase):
         CNOBase.__init__(self,model, data, tag=tag, verbose=verbose,
                 config=config)
         CNORBase.__init__(self, verboseR)
-        self.parameters = {} # fill with GA binary parameters
+
+        #self.parameters = Parameters()
         self._report = ReportBool()
         self.results = BooleanResults()
 
-    def optimise(self, tag="cnorbool", reltol=0.1,
-            expansion=True, maxgens=150, stallgenmax=100, compression=True):
+        self.config.General.pknmodel.value = self.pknmodel.filename
+        self.config.General.data.value = self.data.filename
+
+    def _update_config(self, section, kwargs):
+        for k, v in kwargs.items():
+            try:
+                section = getattr(self.config, section)
+                option = getattr(section, k)
+                option.value = v
+            except:
+                # additional options should be ignored.
+                pass
+
+    # time_index_2 = 2
+    # should be same default values as in paramsGA
+
+    @params_to_update()
+    def optimise(self,  NAFac=1, pMutation=0.5, selpress=1.2, popsize=50, 
+            reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001, time_index_1=1,
+            maxgens=500, stallgenmax=100, another=True):
+        self._update_config('GA', self.optimise.actual_kwargs)
 
         script_template = """
         library(CellNOptR)
@@ -80,7 +102,7 @@ class CNORbool(CNOBase, CNORBase):
             stallGenMax=%(stallgenmax)s, maxGens=%(maxgens)s)
         sim_results = cutAndPlot(cnolist, model, list(res$bString),
                                  plotParams=list(maxrow = 80, cex=0.5),
-                                 plotPDF=T, tag="%(tag)s")
+                                 plotPDF=F)
 
         signals = colnames(cnolist@signals$`0`)
         colnames(sim_results$mse) = signals
@@ -99,21 +121,24 @@ class CNORbool(CNOBase, CNORBase):
         inhibitors = as.data.frame(cnolist@inhibitors)
         species = colnames(cnolist@signals[[1]])
         """
+        expansion = True
+        compression = True
         self._results = {}
+        # reuse paramsGA
         script = script_template % {
-                'pkn': self.pknmodel.filename,
-                'midas': self.data.filename,
-                'tag':tag,
-                'maxgens':maxgens,
-                'stallgenmax':stallgenmax,
-                'reltol':reltol,
-                'compression': bool2R(compression),
-                'expansion': bool2R(expansion)
-                }
+            'pkn': self.pknmodel.filename,
+            'midas': self.data.filename,
+            'maxgens':maxgens,
+            'stallgenmax':stallgenmax,
+            'reltol':reltol,
+            'compression': bool2R(compression),
+            'expansion': bool2R(expansion)
+            }
         self.session.run(script)
 
         # need to change type of some columns, which are all string
         results = self.session.results
+        results.columns = [x.strip() for x in results.columns]
 
         columns_int = ['Generation', 'Stall_Generation']
         columns_float = ['Best_score', 'Avg_Score_Gen', 'Best_score_Gen', 'Iter_time']
@@ -124,7 +149,9 @@ class CNORbool(CNOBase, CNORBase):
         df = pd.DataFrame(self.session.all_bitstrings,
                               columns=self.session.reactions)
         models = BooleanModels(df)
-        models.scores = self.session.all_scores
+        # flatten to handle exhaustive
+        import numpy as np
+        models.scores = np.array(list(pylab.flatten(self.session.all_scores)))
         models.cnograph.midas = self.data.copy()
 
         reactions = self._reac_cnor2cno(self.session.reactions)
@@ -141,7 +168,6 @@ class CNORbool(CNOBase, CNORBase):
                 'stimuli':self.session.stimuli.copy(),
                 'inhibitors':self.session.inhibitors.copy(),
                 'species':self.session.species,
-                'tag': tag
         }
         results['pkn'] = self.pknmodel
         results['midas'] = self.data
@@ -161,7 +187,6 @@ class CNORbool(CNOBase, CNORBase):
         stimuli = results['stimuli']
         inhibitors = results['inhibitors']
         species = results['species']
-        tag = results['tag']
 
         # need to make sure that order in cellnopt is the same as in the midas
         # shoudl be fine
@@ -236,12 +261,10 @@ class CNORbool(CNOBase, CNORBase):
     models = property(_get_models)
 
     def create_report_images(self):
-
         # ust a simple example of settinh the uniprot url
         # should be part of cellnopt.core
         for node in self._pknmodel.nodes():
             self._pknmodel.node[node]['URL'] = "http://www.uniprot.org/uniprot/?query=Ras&sort=score"
-
 
         self._pknmodel.plot(filename=self._report._make_filename("pknmodel.svg"),
                             show=False)
@@ -277,14 +300,6 @@ class CNORbool(CNOBase, CNORBase):
 
         if show is False:
             pylab.close()
-
-    def onweb(self, show=True):
-        self.create_report()
-        try:
-            self.create_report_images()
-        except:
-            pass
-        if show:        self._report.show()
 
     def create_report(self):
         self._report._init_report()

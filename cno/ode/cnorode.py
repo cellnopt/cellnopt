@@ -12,10 +12,10 @@ from cno.core import CNOBase, CNORBase
 
 #from cnobase import CNObase, OptionBase
 
-from cno.core.params import Parameters
 from cno.misc.results import ODEResults
 from cno.core import ReportODE
 from biokit.rtools import bool2R
+from cno.core.params import Parameters
 
 
 __all__ = ["CNORode"]

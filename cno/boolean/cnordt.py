@@ -21,8 +21,7 @@ import pandas as pd
 import pylab
 import numpy as np
 
-#from cnobool import CNObool, BooleanParameters
-from cno.core.params import GAParameters
+from cno.core.params import ParamsGA
 from cno import CNOGraph, XMIDAS
 from cno.misc.results import DTResults
 from cno.core.report import ReportDT
@@ -32,7 +31,7 @@ from biokit.rtools import bool2R
 __all__ = ["CNORdt"]
 
 
-class DTParameters(GAParameters):
+class DTParameters(ParamsGA):
     # THe keys used here have the same caps as in the R code.
     defaults = {
         'boolupdates': 10,
