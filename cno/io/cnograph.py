@@ -30,7 +30,7 @@ import pylab
 import networkx as nx
 import pygraphviz as gv
 import numpy as np
-from easydev import Logging, AttrDict, TempFile, DevTools
+from easydev import Logging, TempFile, DevTools
 
 # cellnopt modules
 from cno.io.sif import SIF

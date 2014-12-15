@@ -126,8 +126,8 @@ class Report(easydev.Logging):
         <pre>
         from cno import CNObool
         c = CNObool(config=config.ini)
-        c.gaBinaryT1()
-        c.report()
+        c.optimise()
+        c.onweb()
         </pre>
 
         <p>You will need the configuration file that was used in the report

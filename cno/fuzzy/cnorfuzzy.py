@@ -5,7 +5,9 @@ import pandas as pd
 import numpy as np
 import pylab
 
-from cno.core import CNOBase, OptionBase
+from cno.core import CNOBase
+from cno.core.params import OptionsBase
+
 from cno.core import CNORBase
 from cno.misc.results import FuzzyResults
 from cno.core.report import ReportFuzzy
@@ -191,7 +193,7 @@ class CNORfuzzy(CNOBase, CNORBase):
         # ! reactions here is different. it should include the
         # AND edges as well
         print(len(reactions), len(strings[0]))
-        fuzreactions = ['a=' + str(i) for i in range(0, len(strings[0]))] 
+        fuzreactions = ['a=' + str(i) for i in range(0, len(strings[0]))]
         for i, reac in enumerate(reactions):
             fuzreactions[i] = reac
         df = pd.DataFrame(strings, columns=fuzreactions)
@@ -476,7 +478,7 @@ class CNORfuzzy(CNOBase, CNORBase):
         self.numType1 = simlist['numType1']
 
         # numType1 are the number of edges from stimuli
-        # numtype2 are the other edges 
+        # numtype2 are the other edges
         # includes the AND gate edges.
         self.blength = simlist['numType2'] + simlist['numType1']
 
@@ -544,7 +546,7 @@ def standalone(args=None):
         print("No report request (use --report)")
 
 
-class OptionFuzzy(OptionBase):
+class OptionFuzzy(OptionsBase):
 
     def  __init__(self, version="1.0", prog=None):
         usage = """usage: python %s --data ToyModelMMB.csv --model ToyModelMMB.sif""" % prog

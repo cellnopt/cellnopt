@@ -14,14 +14,10 @@
 #
 ##############################################################################
 import os
-import argparse
 from biokit.rtools import RSession
-import easydev
-from cno.core.params import CNOConfigParser
-from cno.core.params import ParamsGA, ParamsGeneral
+from cno.core.params import CNOConfig
 
-
-__all__ = ["CNOBase", "CNORBase", "OptionBase"]
+__all__ = ["CNOBase", "CNORBase"]
 
 
 class CNORBase(object):
@@ -68,23 +64,7 @@ class CNOBase(object):
 
         self._cnograph = CNOGraph(pknmodel, data)
 
-        if config:
-            self.load_config(config)
-        else:
-            # if use_cnodata, let us search files using cnodata if not found locally
-            """if use_cnodata:
-                if os.path.exists(pknmodel) == False:
-                    pknmodel = cnodata(pknmodel)
-                    if os.path.exists(data) == False:
-                        data = cnodata(data)
-                                                                                                                    if pknmodel == None or data == None:
-                txt = "Input %s not a valid file" % pknmodel
-                txt += "Or %s not a valid file" % data
-                raise ValueError(txt)
-                                                                                                                    self._pknmodel_filename = pknmodel
-            self._data_filename = data"""
-            # keep track of all configuration parameters
-            self.init_config()
+        self.config = CNOConfig()
 
     def _get_verbose(self):
         return self._verbose
@@ -182,46 +162,6 @@ class CNOBase(object):
         else:
             self.midas.plot()
 
-    def get_html_reproduce(self):
-        text = """
-        <p>In a shell, go to the report directory (where is contained this report)
-        and either execute the file called rerun.py or typoe these commands in
-        a python shell
-        </p>
-
-        <pre>
-        from cellnopt.pipeline import *
-        c = CNObool(config=config.ini)
-        c.gaBinaryT1()
-        c.report()
-        </pre>
-
-        <p>You will need the configuration file that was used in the report
-        (<a href="config.ini">config.ini</a>) </p>
-
-        <p>New results will be put in a sub directory so that your current
-        report is not overwritten</p>
-        """
-        return text
-
-    def load_config(self, filename):
-        self.config = CNOConfigParser(filename)
-
-    def init_config(self, force=False):
-        if "config" in self.__dict__.keys():
-            if force == False:
-                raise ValueError("""Your config already exists and will be erased.
-If you really want to re-initialise the config attribute, use force=True
-parameter.""" )
-
-        self.config = CNOConfigParser()
-        self.config.add_section(ParamsGeneral())
-        self.config.add_section(ParamsGA())
-        #self.config.add_option("General", "use_cnodata", self._use_cnodata)
-        #self.config.add_option("General", "overwrite_report", self._overwrite_report)
-        #self.config.add_option("General", "Rexecutable", self.Rexecutable)
-        #self.config.add_option("General", "report_directory", self.report_directory)
-
     def save_config_file(self, filename=None):
         if filename is None:
             filename = self.report_directory + os.sep + "config.ini"
@@ -240,60 +180,5 @@ parameter.""" )
         raise NotImplementedError
     def create_report_images(self):
         raise NotImplementedError
-
-
-class OptionBase(argparse.ArgumentParser):
-
-    def  __init__(self, version="1.0", prog=None, usage=""):
-        super(OptionBase, self).__init__(usage=usage, version=version, prog=prog)
-        self.add_general_options()
-
-    def add_general_options(self):
-        """The input oiptions.
-
-        Default is None. Keep it that way because otherwise, the contents of
-        the ini file is overwritten in :class:`apps.Apps`.
-        """
-
-        group = self.add_argument_group("General",
-                    """This section allows to provide path and file names of the input data.
-                    If path is provided, it will be used to prefix the midas and sif filenames.
-                        --path /usr/share/data --sif test.sif --midas test.csv
-                    means that the sif file is located in /usr/share/data.
-                    """)
-
-        group.add_argument("--model", dest='model',
-                         default=None, type=str, # at most 1 model expected
-                         help="Path to model (SIF format).")
-        group.add_argument("--data", dest='data', # a least one data file expected
-                         default=None, type=str,
-                         help="Name of the data files")
-        group.add_argument("--config", dest='config', # a least one data file expected
-                         default=None, type=str,
-                         help="Name of configuration file")
-        group.add_argument("--verbose", dest='verbose',
-                         action="store_true",
-                         help="verbose option.")
-        group.add_argument("--no-expansion", dest='no_expansion',
-                         action="store_true",
-                         help="do not expand and gates.")
-        group.add_argument("--no-compression", dest='no_compression',
-                         action="store_true",
-                         help="compression option.")
-        group.add_argument("--no-cutnonc", dest='no_cutnonc',
-                         action="store_true",
-                         help="nonc option.")
-        group.add_argument("--report", dest='report',
-                         action="store_true",
-                         help="report option.")
-        group.add_argument("--use-cnodata", dest='use_cnodata',
-                         action="store_true",
-                         help="user cnodata to fetch file from cellnopt.data (local or web version).")
-        group.add_argument("--overwrite-report", dest='overwrite_report',
-                         action="store_false",
-                         help="overwrite existing directory.")
-        group.add_argument("--tag", dest='tag', # a least one data file expected
-                         default=None, type=str,
-                         help="tag to append to the report directory name")
 
 

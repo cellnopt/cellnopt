@@ -1,2 +1,2 @@
-from .base import CNOBase, OptionBase, CNORBase
+from .base import CNOBase,  CNORBase
 from .report import ReportBool, ReportODE, ReportFuzzy

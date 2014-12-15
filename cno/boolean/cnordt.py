@@ -15,18 +15,17 @@
 ##############################################################################
 import os
 
-from easydev import Logging, AttrDict
-
 import pandas as pd
 import pylab
 import numpy as np
 
 from cno.core.params import ParamsGA
-from cno import CNOGraph, XMIDAS
 from cno.misc.results import DTResults
 from cno.core.report import ReportDT
 from cno.core import CNORBase, CNOBase
 from biokit.rtools import bool2R
+
+from cno.core.params import params_to_update
 
 __all__ = ["CNORdt"]
 
@@ -37,8 +36,8 @@ class DTParameters(ParamsGA):
         'boolupdates': 10,
         'lowerB': 0.8,
         'upperB': 10}
-            
-    def __init__(self):        
+
+    def __init__(self):
         super(DTParameters, self).__init__()
         self.init_gabinary_t1()
         self.init_dt()
@@ -51,8 +50,8 @@ class DTParameters(ParamsGA):
                            "TODO")
         self.add_parameter("DT", "--upperB", "upperB", self.defaults['upperB'],
                            "TODO")
-                           
-    
+
+
 class CNORdt(CNORBase, CNOBase):
     """
 
@@ -60,25 +59,25 @@ class CNORdt(CNORBase, CNOBase):
 
 
     .. todo:: one difficulty is that boolUpdates
-        if different from number of time points. 
+        if different from number of time points.
         will return a simulation, which size is different from
         the midas file: In cnordt, the data is interpolated
-        and replaced but in cellnopt.core, this is 
+        and replaced but in cellnopt.core, this is
         more tricky. So, we set boolupdates to be of same size as
-        the time points. 
-        
-    .. warning:: boolUpdates must be same as len(times)
-  
+        the time points.
 
-    """    
+    .. warning:: boolUpdates must be same as len(times)
+
+
+    """
     dt_params = DTParameters.defaults
     #name = 'cnorbool'
-    def __init__(self, model, data, tag=None, verbose=True, verboseR=False, 
+    def __init__(self, model, data, tag=None, verbose=True, verboseR=False,
             config=None):
         """.. rubric:: constructor
 
         """
-        CNOBase.__init__(self,model, data, tag=tag, verbose=verbose, 
+        CNOBase.__init__(self,model, data, tag=tag, verbose=verbose,
                 config=config)
         CNORBase.__init__(self, verboseR)
         self.parameters = {} # fill with GA binary parameters
@@ -86,12 +85,13 @@ class CNORdt(CNORBase, CNOBase):
         self.results = DTResults()
         #self._report._init_report()
 
-        params = self.dt_params    
+        params = self.dt_params
         self.config.add_section("DT")
         self.config.add_option("DT", "boolupdates", params["boolupdates"])
         self.config.add_option("DT", "lowerB", params["lowerB"])
         self.config.add_option("DT", "upperB", params["upperB"])
-        
+
+    @params_to_update()
     def optimise(self, boolUpdates, lowerB, upperB, **kargs):
         """
 
@@ -108,7 +108,7 @@ class CNORdt(CNORBase, CNOBase):
         self.config.DT.boolupdates  = boolUpdates
         self.config.DT.lowerb  = lowerB
         self.config.DT.upperb  = upperB
-        
+
         mapping = {
             "selpress": "selection-pressure",
             'reltol': "relative-tolerance",
@@ -128,9 +128,9 @@ class CNORdt(CNORBase, CNOBase):
         #    if x in kargs.keys():
         #        self.config.GA[mapping[x]] = kargs[x]
         #    params[x] = self.config.GA[mapping[x]]
-       
+
         # TODO: add bitstring as input ?
-           
+
         script = """
         library(CNORdt)
         pknmodel = readSIF("%(pkn)s")
@@ -141,9 +141,9 @@ class CNORdt(CNORBase, CNOBase):
         optbs = NULL
 
         res = gaBinaryDT(CNOlist=cnolist, model=model,
-          initBstring=optbs, boolUpdates=%(boolUpdates)s, maxTime=%(maxtime)s, 
+          initBstring=optbs, boolUpdates=%(boolUpdates)s, maxTime=%(maxtime)s,
                   lowerB=%(lowerB)s,
-                  upperB=%(upperB)s, stallGenMax=%(stallgenmax)s, elitism=%(elitism)s, 
+                  upperB=%(upperB)s, stallGenMax=%(stallgenmax)s, elitism=%(elitism)s,
                   popSize=%(popsize)s, sizeFac=1e-4)
 
         best_bitstring = res$bString
@@ -159,8 +159,8 @@ class CNORdt(CNORBase, CNOBase):
         self._results = {}
 
         params['maxtime'] =  10
-        params['elitism'] = 5 
-        params['popsize'] = 30 
+        params['elitism'] = 5
+        params['popsize'] = 30
         params['stallgenmax'] = 100
         params['pkn'] = self.pknmodel.filename
         params['midas'] = self.data.filename
@@ -170,7 +170,7 @@ class CNORdt(CNORBase, CNOBase):
         expansion = True
         params['compression'] = bool2R(compression)
         params['expansion'] = bool2R(expansion)
-        
+
         self.session.run(script % params)
 
         results = self.session.results
@@ -183,16 +183,16 @@ class CNORdt(CNORBase, CNOBase):
         #params['model'] = 'PKN-pipeline.sif'
         #params['midas'] = 'MD-pipeline.csv'
         #self._script_optim = script % params
-        
+
         # getting results
         #index = 0
         #self.best_score = self.results['gaBinaryT1'][index].Best_score.min()
         #self.total_time = self.results['gaBinaryT1'][index].Iter_time.sum()
-        
+
         #df = self.results['gaBinaryT1'][index].Best_bitString
         #self.best_bitstring = df.ix[df.index[-1]]
         #self.best_bitstring =  [int(x) for x in self.best_bitstring.split(",")]
-        
+
 
         from cno.misc.models import DTModels
         df = pd.DataFrame(self.session.all_bitstrings,
@@ -279,8 +279,8 @@ class CNORdt(CNORBase, CNOBase):
 
         # ust a simple example of settinh the uniprot url
         # should be part of cellnopt.core
-        for node in self._pknmodel.nodes():
-            self._pknmodel.node[node]['URL'] = "http://www.uniprot.org/uniprot/?query=Ras&sort=score"
+        #for node in self._pknmodel.nodes():
+        #    self._pknmodel.node[node]['URL'] = "http://www.uniprot.org/uniprot/?query=Ras&sort=score"
 
         model = self.cnograph.copy()
         model.plot(filename=self._report._make_filename("pknmodel.svg"), show=False)
@@ -375,7 +375,7 @@ class CNORdt(CNORBase, CNOBase):
         stats = self._get_stats()
         txt = "<table>\n"
         for k,v in stats.iteritems():
-            txt += "<tr><td>%s</td><td>%s</td></tr>\n" % (k,v)
+            txt += "<tr><td>%s:</td><td>%s</td></tr>\n" % (k,v)
         txt += "</table>\n"
         txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
         self._report.add_section(txt, "stats")
@@ -390,11 +390,11 @@ class CNORdt(CNORBase, CNOBase):
         except:
             pass
         return res
-       
+
     def _set_simulation(self):
         self.simulate()
         self.midas.create_random_simulation()
-        
+
         Ntimes = self.config.DT.boolupdates
         Nspecies = len(self.midas.df.columns)
         Nexp = len(self.midas.experiments.index)
@@ -409,20 +409,20 @@ class CNORdt(CNORBase, CNOBase):
         self.df['experiment'] = list(self.midas.experiments.index) * Ntimes
         self.df['time'] = [time for time in self.midas.times for x in range(0, Nexp)]
         self.df['cellLine'] = [self.midas.cellLines[0]] * Nexp * Ntimes
-        
+
         self.df.set_index(['cellLine', 'experiment', 'time'], inplace=True)
         self.df.sortlevel(1, inplace=True)
         #self.df.columns =
 
         self.midas.sim = self.df.copy()
         self.midas.sim.columns = self.midas.df.columns
-        
+
     def _simulate(self):
         """
-        
+
         .. todo:: lowerB, boolupdates should be user parameters as well
-        
-        
+
+
         """
         # given the best bitstring, simulate the data and plot the fit.
 
@@ -435,12 +435,12 @@ class CNORdt(CNORBase, CNOBase):
             ,sizeFac = 1e-04, NAFac = 1)
 
         signals = colnames(cnolist@signals[[1]])
-       
+
         sim_data = output$simResults
 
-        
+
         """
-        
+
         params = {
                 'pknmodel': self.pknmodel.filename,
                 'midas': self.data.filename,
@@ -462,6 +462,6 @@ class CNORdt(CNORBase, CNOBase):
 
 
 
-        
+
 
 

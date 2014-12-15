@@ -1,14 +1,16 @@
+import argparse
 from easydev import AttrDict
 
 
-__all__ = ['Parameter', 'Parameters', 'ParamsGA', 'params_to_update']
+
+__all__ = ['Parameter', 'Parameters', 'ParamsGA', 'params_to_update',
+           'ParamsPreprocessing']
 
 
 # Let us create a handy named tuple to define a parameter data structure
 from collections import namedtuple
-Params = namedtuple('Params', 
+Params = namedtuple('Params',
         ['name', 'argname', 'default', 'description'])
-
 
 
 def params_to_update():
@@ -27,17 +29,17 @@ def params_to_update():
 class Parameter(Params):
     """Define a user parameter
 
-    A parameter is defined by 
-    - **name** a **destination** name, which is the variable name to 
-      be used internally. 
-    - **argname** a user name to be used within the configuration file. It can 
-      be used also within executable. It may be longer than **name** to be 
+    A parameter is defined by
+    - **name** a **destination** name, which is the variable name to
+      be used internally.
+    - **argname** a user name to be used within the configuration file. It can
+      be used also within executable. It may be longer than **name** to be
       more explicit (with dashes, which are not accepted in Python)
     - **default** a default value
     - **description** to be used with a --help option
     - **types** may be provided.
 
-        >>> p = Parameter('optimisation', '--max-iteration', 100, 
+        >>> p = Parameter('optimisation', '--max-iteration', 100,
             'maximum number of iterations')
         >>> p.value
         100
@@ -48,16 +50,16 @@ class Parameter(Params):
         >>> p.value
         100
         >>> p1 == p2
-    
+
     Here, we can further check types
-    Tuple so nothing can be modified except new arguments such as types 
+    Tuple so nothing can be modified except new arguments such as types
     and value.
 
     """
     def __init__(self, name, argname, default, description, types=[]):
         self._value = None
         assert argname.startswith("--"), "argument name must start with -- signs"
-        super(Parameter, self).__init__(name=name, argname=argname, 
+        super(Parameter, self).__init__(name=name, argname=argname,
                 default=default, description=description)
         self.value = default
         # TODO check types
@@ -81,22 +83,30 @@ class Parameter(Params):
 
 
 class Parameters(AttrDict):
+    reserved = ['name', 'description']
     def __init__(self, name, description=""):
         super(Parameters, self).__init__()
-        # reserved name 
-        #self.description = description
+        # reserved name
+        self.description = description
         self.name = name
 
     def remove_parameter(self, name):
         del self[name]
 
     def add_parameter(self, params):
-        if params.name == 'name':
-            raise ValueError("The name of a parameter cannot be the reserved word 'name'")
+        if params.name in self.reserved:
+            raise ValueError("The name of a parameter cannot be one of the reserved word %s" % self.reserved)
         self[params.name] = params
 
     def _get_names(self):
-        return [x for x in self.keys() if x not in ["name", "value"]]
+        # + ['value'] is required. see tests
+        return [x for x in self.keys() if x not in self.reserved + ['value']]
+
+    def __repr__(self):
+        txt = "Section/Parameters: %s\n" % self.name
+        for key in self._get_names():
+            txt += "- " + key + ": " + self[key].__repr__() + "\n"
+        return txt
 
     def __str__(self):
         txt =""
@@ -119,7 +129,7 @@ class Parameters(AttrDict):
 
     def reset(self):
         for name in self._get_names():
-            self[name].reset() 
+            self[name].reset()
 
     def __eq__(self, other):
         if sorted(self._get_names()) != sorted(other._get_names()):
@@ -140,19 +150,31 @@ class ParamsGeneral(Parameters):
         self._init()
 
     def _init(self):
-        self.add_parameter(Parameter("pknmodel", "--pknmodel", None,
-            ""))
-        self.add_parameter(Parameter("data", "--data", None, 
-            ""))
-        self.add_parameter(Parameter("formalism", "--formalism", None, 
-            ""))
-        self.add_parameter(Parameter("tag", "--tag", None, 
-            ""))
-        #self.config.add_option("Genera", "overwrite_report", self._overwrite_report)
-        #self.config.add_option("General", "Rexecutable", self.Rexecutable)
-        self.add_parameter(Parameter("verbose", "--verbose", True, 
-            ""))
-        #self.config.add_option("General", "report_directory", self.report_directory)
+        for data in [
+            ("pknmodel", "--pkn-model", None,
+            "The input prior knowledge network in SIF format (or SBML-qual)"),
+            ("data", "--data", None, "The input data in MIDAS format"),
+            ("formalism", "--formalism", None, "not used yet"),
+            ("tag", "--tag", None, "not used yet"),
+            ("report", "--report", True,  "create report"),
+            ("onweb", "--on-web", True, "open report in a browser. This option also set --report "),
+            ("verbose", "--verbose", True,  "verbosity"),
+            ("verboseR", "--verbose-R", True,  "verbosity of R scripts")]:
+
+            self.add_parameter(Parameter(*data))
+
+
+class ParamsPreprocessing(Parameters):
+    def __init__(self):
+        super(ParamsPreprocessing, self).__init__('Preprocessing', "Preprocessing description")
+        self._init()
+
+    def _init(self):
+        for data in [("cutnonc", "--with-cutnonc", True, ""),
+                     ("compression", "--with-compression", True, ""),
+                     ("expansion", "--with-expansion", True, ""),
+                     ("maxInputsPerGate", "--max-inputs-per-gate", 3, "")]:
+            self.add_parameter(Parameter(*data))
 
 
 class ParamsGA(Parameters):
@@ -166,37 +188,37 @@ class ParamsGA(Parameters):
         self._init()
 
     def _init(self):
+        pass
         # adding all info required
         self.add_parameter(Parameter('elitism', '--elitism', 5,
-            "The elitism number (should be 10% of the popsize)"))
-        self.add_parameter(Parameter('sizefactor', '--size-factor', 0.0001, 
+            "The elitism number (should be 10%% of the popsize)"))
+        self.add_parameter(Parameter('sizefactor', '--size-factor', 0.0001,
             "The penalty factor (if NaN values)"))
         self.add_parameter(Parameter("popsize", "--population-size", 50,
             "The population size"))
-        self.add_parameter(Parameter('maxtime', "--max-time", 60, 
+        self.add_parameter(Parameter('maxtime', "--max-time", 60,
             "Maximum time of the simulation (seconds)"))
-        self.add_parameter(Parameter('NAFac', "--na-factor", 1, 
+        self.add_parameter(Parameter('NAFac', "--na-factor", 1,
             "The penalty factor (if NaN values)"))
-        self.add_parameter(Parameter('pMutation', "--pmutation", 0.5, 
+        self.add_parameter(Parameter('pmutation', "--pmutation", 0.5,
             "Mutation rate"))
-        self.add_parameter(Parameter("maxgens", "--max-generation", 500, 
+        self.add_parameter(Parameter("maxgens", "--max-generations", 500,
             "maximum number of generation"))
-        self.add_parameter(Parameter('maxstallgen', "--max-stall-generation", 100, 
+        self.add_parameter(Parameter('maxstallgens', "--max-stall-generations", 100,
             "Max number of stall generation"))
-        self.add_parameter(Parameter('selpress', "--selection-pressure", 1.2, 
+        self.add_parameter(Parameter('selpress', "--selection-pressure", 1.2,
             "todo"))
-        self.add_parameter(Parameter('reltol', "--relative-tolerance", 0.1, 
+        self.add_parameter(Parameter('reltol', "--relative-tolerance", 0.1,
             "todo"))
-        self.add_parameter(Parameter('verbose', "--verbose", True, 
+        self.add_parameter(Parameter('ga_verbose', "--ga-verbose", True,
             "verbosity in genetic algorithm"))
         # indices starts at zero.
         self.add_parameter(Parameter('time_index_1', "--time-index-1", 1,
            "first time index to optimise"))
-        self.add_parameter(Parameter('time_index_2', "--time-index-2", 2, 
+        self.add_parameter(Parameter('time_index_2', "--time-index-2", 2,
            "second time index to optimise"))
 
 
-#from collections import OrderedDict
 
 
 class CNOConfigParser(AttrDict):
@@ -205,6 +227,9 @@ class CNOConfigParser(AttrDict):
         super(CNOConfigParser, self).__init__()
         if filename:
             self.read(filename)
+
+    def remove_section(self, section):
+        del self[section]
 
     def add_section(self, section):
         self[section.name] = section
@@ -262,13 +287,47 @@ class CNOConfigParser(AttrDict):
         return True
 
 
-def test():
-    s1 = ParamsGA()
-    s2 = ParamsGeneral()
-    c = CNOConfigParser()
-    c.add_section(s2)
-    c.add_section(s1)
-    return c
+class OptionsBase(argparse.ArgumentParser):
+    def __init__(self, version="1.0", prog="cellnopt"):
+        super(OptionsBase, self).__init__(version=version, prog=prog)
+        from cno.core.params import CNOConfigParser
+        self.config = CNOConfigParser()
+
+        section = ParamsGeneral()
+        self.add_section(section)
+
+        section = ParamsPreprocessing()
+        self.add_section(section)
+
+    def add_section(self, section):
+        self.config.add_section(section)
+        group = self.add_argument_group(section.name, section.description)
+        for key in sorted(section._get_names()):
+            param = section[key]
+
+            if isinstance(param.default, bool):
+                action = "store_" + str(param.default).lower()
+                group.add_argument(param.argname, dest=param.name,
+                    action=action, help=param.description)
+            elif isinstance(param.default, str):
+                group.add_argument(param.argname, dest=param.name,
+                    default=param.default, type=str,
+                    help=param.description)
+            else:
+                group.add_argument(param.argname, dest=param.name,
+                    default=param.default, help=param.description)
+
+
+class CNOConfig(CNOConfigParser):
+
+    def __init__(self, filename=None):
+        super(CNOConfig, self).__init__(filename)
+        self.init_config()
+
+    def init_config(self):
+        self.add_section(ParamsGeneral())
+        self.add_section(ParamsGA())
+        self.add_section(ParamsPreprocessing())
 
 
 

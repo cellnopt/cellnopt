@@ -16,17 +16,18 @@
 import os
 import sys
 
-from easydev import Logging, AttrDict
+import numpy as np
+import pandas as pd
+import pylab
 
-from cno.io.multigraph import CNOGraphMultiEdges
 from cno.core import CNOBase, CNORBase
 from cno.core.results import BooleanResults
 from cno.core.models import BooleanModels
 from cno.core import ReportBool
-from cno.core.params import ParamsGA
-import pandas as pd
-import pylab
+from cno.core.params import OptionsBase
+
 from biokit.rtools import bool2R
+
 from cno.core.params import params_to_update
 
 
@@ -59,15 +60,16 @@ class CNORbool(CNOBase, CNORBase):
 
     """
     #params = BooleanParameters.default
-    def __init__(self, model, data, tag=None, verbose=True, verboseR=False,
-            config=None):
+    def __init__(self, model, data, tag=None, verbose=True,
+                 verboseR=False, config=None):
+
         CNOBase.__init__(self,model, data, tag=tag, verbose=verbose,
                 config=config)
         CNORBase.__init__(self, verboseR)
 
-        #self.parameters = Parameters()
         self._report = ReportBool()
         self.results = BooleanResults()
+        self.results2 = BooleanResults()
 
         self.config.General.pknmodel.value = self.pknmodel.filename
         self.config.General.data.value = self.data.filename
@@ -82,14 +84,18 @@ class CNORbool(CNOBase, CNORBase):
                 # additional options should be ignored.
                 pass
 
-    # time_index_2 = 2
-    # should be same default values as in paramsGA
-
+    # !! should be same default values as in paramsGA
     @params_to_update()
-    def optimise(self,  NAFac=1, pMutation=0.5, selpress=1.2, popsize=50, 
-            reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001, time_index_1=1,
-            maxgens=500, stallgenmax=100, another=True):
+    def optimise(self,  NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
+            reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
+            time_index_1=1, maxgens=500, maxstallgens=100, another=True):
+
+        # update config GA section with user parameters
         self._update_config('GA', self.optimise.actual_kwargs)
+
+        # keep track of the GA parameters, which may have been update above
+        gad = dict([(k, self.config.GA[k].value)
+            for k in self.config.GA._get_names()])
 
         script_template = """
         library(CellNOptR)
@@ -98,8 +104,11 @@ class CNORbool(CNOBase, CNORBase):
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
             expansion=%(expansion)s, maxInputsPerGate=3)
 
-        res = gaBinaryT1(cnolist, model, relTol=%(reltol)s,
-            stallGenMax=%(stallgenmax)s, maxGens=%(maxgens)s)
+        res = gaBinaryT1(cnolist, model, popSize=%(popsize)s, maxGens=%(maxgens)s,
+            maxTime=%(maxtime)s, elitism=%(elitism)s, pMutation=%(pmutation)s,
+            NAFac=%(NAFac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefactor)s,
+            stallGenMax=%(maxstallgens)s)
+
         sim_results = cutAndPlot(cnolist, model, list(res$bString),
                                  plotParams=list(maxrow = 80, cex=0.5),
                                  plotPDF=F)
@@ -124,18 +133,18 @@ class CNORbool(CNOBase, CNORBase):
         expansion = True
         compression = True
         self._results = {}
-        # reuse paramsGA
-        script = script_template % {
+
+        params = {
             'pkn': self.pknmodel.filename,
             'midas': self.data.filename,
-            'maxgens':maxgens,
-            'stallgenmax':stallgenmax,
-            'reltol':reltol,
             'compression': bool2R(compression),
             'expansion': bool2R(expansion)
             }
-        self.session.run(script)
+        params.update(gad)
 
+        script = script_template % params
+        self.session.run(script)
+        self.reactions_r = self.session.reactions
         # need to change type of some columns, which are all string
         results = self.session.results
         results.columns = [x.strip() for x in results.columns]
@@ -147,21 +156,20 @@ class CNORbool(CNOBase, CNORBase):
 
         # cnograph created automatically from the reactions
         df = pd.DataFrame(self.session.all_bitstrings,
-                              columns=self.session.reactions)
+                              columns=self.reactions_r)
         models = BooleanModels(df)
         # flatten to handle exhaustive
         import numpy as np
         models.scores = np.array(list(pylab.flatten(self.session.all_scores)))
         models.cnograph.midas = self.data.copy()
 
-        reactions = self._reac_cnor2cno(self.session.reactions)
 
         results = {
                 'best_score': self.session.best_score,
                 'best_bitstring': self.session.best_bitstring,
                 'all_scores': self.session.all_scores,
                 'all_bitstrings': self.session.all_bitstrings,
-                'reactions': reactions,
+                'reactions': self._reac_cnor2cno(self.reactions_r),
                 'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
                 'results': results,
                 'models':models,
@@ -174,6 +182,74 @@ class CNORbool(CNOBase, CNORBase):
 
         self.results.results = results
         self.results.models = models
+
+    #use same parameters as in T1
+    def optimise2(self, reltol=0.1, time_index_2=3, best_bitstring=None):
+        # TODO assert there are 2 time indices
+        # something interesting to do is to run steady stte not only
+        # for the best bitstring but all those within the tolerance !
+        script_template = """
+        # model, cnolist and best_bitstring are created when calling
+        # optimise()
+        res2 = gaBinaryTN(cnolist, model, popSize=%(popsize)s, maxGens=%(maxgens)s,
+            maxTime=%(maxtime)s, elitism=%(elitism)s, pMutation=%(pmutation)s,
+            NAFac=%(NAFac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefactor)s,
+            stallGenMax=%(maxstallgens)s, timeIndex=%(timeindex)s, bStrings=list(best_bitstring))
+            # bitstring is provided when calling optimise()
+
+
+        results2 = as.data.frame(res2$results)
+        best_bitstring2 = res2$bString
+        best_score2 = res2$bScore
+        all_scores2 = res2$stringsTolScores
+        all_bitstrings2 = res2$stringsTol
+        """
+        params = dict([(k, self.config.GA[k].value)
+            for k in self.config.GA._get_names()])
+        params['timeindex'] = time_index_2
+        params['reltol'] = reltol
+        self._results2 = {}
+
+        script= script_template % params
+        self.session.run(script)
+
+        results = self.session.results2
+        results.columns = [x.strip() for x in results.columns]
+        columns_int = ['Generation', 'Stall_Generation']
+        columns_float = ['Best_score', 'Avg_Score_Gen', 'Best_score_Gen', 'Iter_time']
+        results[columns_int] = results[columns_int].astype(int)
+        results[columns_float] = results[columns_float].astype(float)
+
+        # cnograph created automatically from the reactions
+        # TODneed to gure outat are  reactio names
+        df = pd.DataFrame(self.session.all_bitstrings2,
+                              columns=range(0, len(self.session.all_bitstrings2)))
+        models = BooleanModels(df)
+        # flatten to handle exhaustive
+        models.scores = np.array(list(pylab.flatten(self.session.all_scores2)))
+        models.cnograph.midas = self.data.copy()
+
+        #reactions = self._reac_cnor2cno(self.session.reactions)
+
+        results = {
+                'best_score': self.session.best_score2,
+                'best_bitstring': self.session.best_bitstring2,
+                'all_scores': self.session.all_scores2,
+                'all_bitstrings': self.session.all_bitstrings2,
+                #'reactions': reactions,
+                'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
+                'results': results,
+                'models':models,
+                'stimuli':self.session.stimuli.copy(),
+                'inhibitors':self.session.inhibitors.copy(),
+                'species':self.session.species,
+        }
+        results['pkn'] = self.pknmodel
+        results['midas'] = self.data
+
+        self.results2.results = results
+        self.results2.models = models
+
 
     def plot_errors(self, close=False, show=False):
         # todo show parameter
@@ -263,8 +339,8 @@ class CNORbool(CNOBase, CNORBase):
     def create_report_images(self):
         # ust a simple example of settinh the uniprot url
         # should be part of cellnopt.core
-        for node in self._pknmodel.nodes():
-            self._pknmodel.node[node]['URL'] = "http://www.uniprot.org/uniprot/?query=Ras&sort=score"
+        #for node in self._pknmodel.nodes():
+        #    self._pknmodel.node[node]['URL'] = "http://www.uniprot.org/uniprot/?query=Ras&sort=score"
 
         self._pknmodel.plot(filename=self._report._make_filename("pknmodel.svg"),
                             show=False)
@@ -325,8 +401,6 @@ class CNORbool(CNOBase, CNORBase):
          </div>""", "Description")
         txt = """<pre class="literal-block">\n"""
         #txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
-        txt += "o.report()\n</pre>\n"
-        self._report.add_section(txt, "Script used")
 
         txt = """<a href="http://www.cellnopt.org/">
             <object data="pknmodel.svg" type="image/svg+xml" >
@@ -336,15 +410,15 @@ class CNORbool(CNOBase, CNORBase):
 
         # <img src="pknmodel.png">
 
-        self._report.add_section(txt, "PKN graph", [("http://www.cellnopt.org", "cnograph")])
+        self._report.add_section(txt, "PKN graph", [("http://pythonhosted.org//cno/references.html#module-cno.io.cnograph", "cnograph")])
 
         txt = """<a class="reference external image-reference" href="scripts/exercice_3.py">
 <img alt="MIDAS" class="align-left" src="midas.png" /></a>"""
-        self._report.add_section(txt, "Data", [("http://www.cellnopt.org", "XMIDAS class")])
+        self._report.add_section(txt, "Data", [("http://pythonhosted.org//cno/references.html#module-cno.io.midas.xmidas", "XMIDAS class")])
 
         self._report.add_section('<img class="figure" src="expmodel.png">',
             "Expanded before optimisation")
-        self._report.add_section('img class="figure" src="optimised_model.png">',
+        self._report.add_section('<img class="figure" src="optimised_model.png">',
             "Optimised model")
         self._report.add_section('<img class="figure" src="optimised_model_mapback.png">',
             "Optimised mapback model")
@@ -353,7 +427,7 @@ class CNORbool(CNOBase, CNORBase):
         self._report.add_section('<img class="figure" src="Errors.png">',
             "Errors")
 
-        self._report.add_section(self.get_html_reproduce(), "Reproducibility")
+        #self._report.add_section(self.get_html_reproduce(), "Reproducibility")
         fh = open(self._report.report_directory + os.sep + "rerun.py", 'w')
         fh.write("from cellnopt import CNORbool, cnodata*\n")
         fh.write("CNORbool(config=config.ini)\n")
@@ -365,7 +439,7 @@ class CNORbool(CNOBase, CNORBase):
         stats = self._get_stats()
         txt = "<table>\n"
         for k in sorted(stats.keys()):
-            txt += "<tr><td>%s</td><td>%s</td></tr>\n" % (k, stats[k])
+            txt += "<tr><td>%s:</td><td>%s</td></tr>\n" % (k, stats[k])
         txt += "</table>\n"
         #txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
         self._report.add_section(txt, "stats")
@@ -383,4 +457,58 @@ class CNORbool(CNOBase, CNORBase):
         except:
             pass
         return res
+
+
+def standalone(args=None):
+    """This function is used by the standalone application called cellnopt_boolean
+
+    ::
+
+        cellnopt_boolean --help
+
+    """
+    if args == None:
+        args = sys.argv[:]
+
+    user_options = OptionsBoolean()
+
+    if len(args) == 1:
+        user_options.parse_args(["prog", "--help"])
+    else:
+        options = user_options.parse_args(args[1:])
+
+    if options.onweb is True or options.report is True:
+        o = CNORbool(options.pknmodel, options.data, verbose=options.verbose,
+                 verboseR=options.verboseR, config=user_options.config)
+
+    if options.onweb is True:
+        o.optimise()
+        o.onweb()
+    elif options.report is True:
+        o.optimise()
+        o.report()
+    else:
+        from easydev.console import red
+        print(red("No report requested; nothing will be saved or shown"))
+        print("use --on-web or --report options")
+
+class OptionsBoolean(OptionsBase):
+
+    def  __init__(self):
+        prog = "cellnopt_boolean_steady"
+        version = prog + " v1.0 (Thomas Cokelaer @2014)"
+        super(OptionsBoolean, self).__init__(version=version, prog=prog)
+        from cno.core.params import ParamsGA
+        section = ParamsGA()
+        self.add_section(section)
+
+
+
+
+
+if __name__ == "__main__":
+    """Used by setup.py as an entry point to :func:`standalone`"""
+    standalone(sys.argv)
+
+
 
