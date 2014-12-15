@@ -112,6 +112,7 @@ class CNORbool(CNOBase, CNORBase):
         sim_results = cutAndPlot(cnolist, model, list(res$bString),
                                  plotParams=list(maxrow = 80, cex=0.5),
                                  plotPDF=F)
+        sim_results2 = NULL
 
         signals = colnames(cnolist@signals$`0`)
         colnames(sim_results$mse) = signals
@@ -132,7 +133,6 @@ class CNORbool(CNOBase, CNORBase):
         """
         expansion = True
         compression = True
-        self._results = {}
 
         params = {
             'pkn': self.pknmodel.filename,
@@ -188,6 +188,11 @@ class CNORbool(CNOBase, CNORBase):
         # TODO assert there are 2 time indices
         # something interesting to do is to run steady stte not only
         # for the best bitstring but all those within the tolerance !
+
+        if best_bitstring is None:
+            best_bitstring = self.results.results.best_bitstring
+
+        reactions = [r for r,b in zip(self.reactions_r, best_bitstring) if b==0]
         script_template = """
         # model, cnolist and best_bitstring are created when calling
         # optimise()
@@ -196,6 +201,11 @@ class CNORbool(CNOBase, CNORBase):
             NAFac=%(NAFac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefactor)s,
             stallGenMax=%(maxstallgens)s, timeIndex=%(timeindex)s, bStrings=list(best_bitstring))
             # bitstring is provided when calling optimise()
+
+
+        sim_results2 = cutAndPlot(cnolist, model, list(res$bString, res2$bString),
+                                   plotParams=list(maxrow = 80, cex=0.5),
+                                                                    plotPDF=F)
 
 
         results2 = as.data.frame(res2$results)
@@ -208,7 +218,6 @@ class CNORbool(CNOBase, CNORBase):
             for k in self.config.GA._get_names()])
         params['timeindex'] = time_index_2
         params['reltol'] = reltol
-        self._results2 = {}
 
         script= script_template % params
         self.session.run(script)
@@ -222,13 +231,29 @@ class CNORbool(CNOBase, CNORBase):
 
         # cnograph created automatically from the reactions
         # TODneed to gure outat are  reactio names
-        df = pd.DataFrame(self.session.all_bitstrings2,
-                              columns=range(0, len(self.session.all_bitstrings2)))
+
+        try:
+            print("only 1 bitstring")
+            df = pd.DataFrame(self.session.all_bitstrings2,
+                    columns=reactions)
+            self.df = df
+        except:
+            print("several bitstrings")
+            df = pd.DataFrame(self.session.all_bitstrings2)
+            df = df.transpose()
+            self.reactions2 = reactions
+            df.columns = reactions
+            self.df = df
+
         models = BooleanModels(df)
         # flatten to handle exhaustive
-        models.scores = np.array(list(pylab.flatten(self.session.all_scores2)))
-        models.cnograph.midas = self.data.copy()
+        try:
+            # if only 1 item, it is not a list...
+            models.scores = np.array(list(pylab.flatten(self.session.all_scores2)))
+        except:
+            models.scores = np.array([self.session.all_scores2])
 
+        #models.cnograph.midas = self.data.copy()
         #reactions = self._reac_cnor2cno(self.session.reactions)
 
         results = {
@@ -236,7 +261,7 @@ class CNORbool(CNOBase, CNORBase):
                 'best_bitstring': self.session.best_bitstring2,
                 'all_scores': self.session.all_scores2,
                 'all_bitstrings': self.session.all_bitstrings2,
-                #'reactions': reactions,
+                'reactions': reactions,
                 'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
                 'results': results,
                 'models':models,
@@ -304,7 +329,6 @@ class CNORbool(CNOBase, CNORBase):
         c.results.cnorbool.reactions
         array([1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0])
         c.results.cnorbool.reactions
-
 
         """
         if bs is None:
