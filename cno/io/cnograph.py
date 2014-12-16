@@ -474,7 +474,7 @@ class CNOGraph(nx.DiGraph):
                                  verbose=self.verbose)
         elif isinstance(data, XMIDAS):
             self._midas = copy.deepcopy(data)
-        elif data == None:
+        elif data is None:
             self._midas = data
         else:
             msg = "Incorrect data, Must a valid MIDAS file or instance of XMIDAS class {}"
@@ -1097,7 +1097,7 @@ class CNOGraph(nx.DiGraph):
         # graph is a DiGraph attribute
         # that is sometimes replaced by {} inside networkx so we need to overwrite it here
         # each time we want to plot the graph.
-        if len(self)==0:
+        if len(self) == 0:
             self.logging.error("empty graph, nothing to plot")
             return
 
@@ -1113,18 +1113,20 @@ class CNOGraph(nx.DiGraph):
         cmap = self._get_cmap(cmap)
 
         # update the node attributes if required with default color
+        # required is we manipualte the _signals, _inbitors and so on
+        self.set_default_node_attributes()
         # or ues the requried node attribute.
         M = 1
-        if node_attribute != None:
+        if node_attribute is not None:
             # TODO check that it exists
-            #cmap = matplotlib.cm.get_cmap(cmap)
+            # cmap = matplotlib.cm.get_cmap(cmap)
             sm = matplotlib.cm.ScalarMappable(
                 norm = matplotlib.colors.Normalize(vmin=0, vmax=1), cmap=cmap)
 
-             # node[0] is the name, node[1] is the data
+            # node[0] is the name, node[1] is the data
             data = [node[1][node_attribute] for node in self.nodes(data=True)
                     if node_attribute in node[1].keys()]
-            if normalise_cmap == True:
+            if normalise_cmap is True:
                 M = max(data)
 
             # color could be encoded as values between 0 and 1
@@ -1151,15 +1153,15 @@ class CNOGraph(nx.DiGraph):
 
             # set edge with edge_attribute set to 0 as invisible edges
             reactions = [self.edge2reaction(edge) for edge in self.edges(data=True)
-                    if edge[2][edge_attribute]>0]
+                    if edge[2][edge_attribute] > 0]
             self.set_edge_visibility_from_reactions(reactions)
 
 
         # create temp files
         # FIXME we create png here ?? do we use outfile ?
         infile  = tempfile.NamedTemporaryFile(suffix=".dot", delete=False)
-        if filename == None:
-            outfile  = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        if filename is None:
+            outfile = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
             filename = outfile.name
 
         # Some nodes may belong to 2 colors. Creating subgraph is one way to go
@@ -1175,13 +1177,12 @@ class CNOGraph(nx.DiGraph):
                     self.node[node]['color'] = "red"
                     self.node[node]['fillcolor'] = "#9ACD32"
 
-
         # to not change the current graph, let us copy it
         # FIXME we use 'this' variable  and use it for edges
         # but not for the nodes... why ?
         this = self.copy()
 
-        if edge_attribute_labels and edge_attribute != None:
+        if edge_attribute_labels and edge_attribute is not None:
             self._set_edge_attribute_label(this, edge_attribute)
 
         count = 0
@@ -1281,7 +1282,7 @@ class CNOGraph(nx.DiGraph):
             outfile.delete = True
             outfile.close()
 
-        if node_attribute != None:
+        if node_attribute is not None:
             self.set_default_node_attributes()
 
         #if show == True:
@@ -1293,7 +1294,6 @@ class CNOGraph(nx.DiGraph):
         #        _ = zp.pan_factory(ax)
         #    except:
         #        pass
-
 
     def _repr_png_(self):
         """Returns an Image for display in an IPython console"""
