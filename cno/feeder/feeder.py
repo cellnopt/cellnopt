@@ -15,12 +15,11 @@
 ##############################################################################
 """Wrapping of CNORfeeder package (see bioconductor)"""
 
-from biokit import rtools
+from cno.core import CNORBase
 
 
-class Feeder(object):
-    """Find missing links automatically
-
+class Feeder(CNORBase):
+    """Find missing links automatically based on CNORfeeder R package
 
     .. plot::
         :include-source:
@@ -32,11 +31,10 @@ class Feeder(object):
                    k=4, verbose=False)
         feeder.newlinks
         feeder.plot()
-
-
-
     """
-    def __init__(self):
+    def __init__(self, verboseR=True):
+        CNORBase.__init__(self, verboseR)
+
         self.Rscript = """
             library(CNORfeeder)
             pknmodel = readSIF("%(pkn)s")
@@ -55,7 +53,6 @@ class Feeder(object):
                                            allInter=F)
             newlinks = modelIntegr$reacID[modelIntegr$indexIntegr]
             """
-        self.rsession = rtools.RSession()
 
     def run(self, model, data, k=2, compression=True,
             expansion=True, maxInputsPerGate=3, err1=0.1, err2=0,
@@ -72,20 +69,18 @@ class Feeder(object):
         :param float err2:
         :param bool verbose:
 
-
-        :return: nothing but populates the :attr:`newlinks` and :attr:`alllinks`
-            attributes
+        :return: nothing but populates the :attr:`newlinks` and
+            :attr:`alllinks` attributes
 
         """
-
-        # TODO could be a model/data instance (e.g. XMIDAS)
+        from biokit.rtools import bool2R
         self.model = model
         self.data = data
         cmd = self.Rscript % {'pkn': model,
                               'data': data,
                               'k': k,
-                              'compression': rtools.bool2R(compression),
-                              'expansion': rtools.bool2R(expansion),
+                              'compression': bool2R(compression),
+                              'expansion': bool2R(expansion),
                               'err1': err1,
                               'err2': err2,
                               'maxInputsPerGate': maxInputsPerGate}
@@ -123,13 +118,11 @@ class Feeder(object):
             # Could be a + or ^ combination
             for this_lhs in lhs.split("+"):
                 if "^" not in this_lhs:
-                    c.add_edge(this_lhs, rhs, link='+', ecolor=.5, 
-                            penwidth=3) # all positive here by chance
+                    c.add_edge(this_lhs, rhs, link='+', ecolor=.5,
+                               penwidth=3)  # all positive here by chance
                     c.edge[this_lhs][rhs]['penwidth'] = penwidth
                 else:
-                    # # TODO 
+                    # # TODO
                     raise NotImplementedError
         c.plot(edge_attribute='ecolor', edge_attribute_labels=False, cmap=cmap)
-
-
         return c

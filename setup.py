@@ -80,6 +80,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'cno_plotmodel=cno.apps.plotmodel:plotmodel',
+            'cno_boolean=cno.boolean.cnorbool:standalone',
             ]
         },
 

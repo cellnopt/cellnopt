@@ -1,32 +1,6 @@
 .. contents::
 
 
-Formalisms
-==============
-
-boolean
-----------
-.. automodule:: cno.feeder.feeder
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :synopsis: 
-
-.. automodule:: cno.boolean.cnorbool
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :synopsis: 
-
-milp
--------
-
-.. automodule:: cno.milp.model
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :synopsis: 
-
 Data Structures
 ================
 

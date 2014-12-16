@@ -10,7 +10,7 @@
 #  See accompanying file LICENSE.txt or copy at
 #      http://www.gnu.org/licenses/gpl-3.0.html
 #
-#  website: http://www.ebi.ac.uk/~cokelaer/XXX
+#  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
 import os
@@ -37,17 +37,17 @@ __all__ = ["CNORbool"]
 class CNORbool(CNOBase, CNORBase):
     """Access to CellNOptR R package to run boolean analysis
 
-
     ::
 
-        c = pipeline.CNObool("PKN-test.sif", "MD-test.csv")
+        from cno impoprt CNORbool, cnodata
+        c = CNORbool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
         c.optimise(compression=True, expansion=True, reltol=.15)
 
 
     Results are stored in :attr:`results`. Information stored are various.
     The errors corresponding to the best models can be visualised with
     :meth:`plot_errors`  and models within the tolerance are stored in
-    :attr:`models.
+    :attr:`models`.
 
     .. plot::
         :include-source:
@@ -58,17 +58,35 @@ class CNORbool(CNOBase, CNORBase):
         c.optimise()
         c.plot_errors()
 
+    If you have 2 time points in addition to time zero, the second
+    time point can also be optimised::
+
+         c.optimise2()
+
+    Calling plot_errors again will show the 2 time points results.
+
+    .. note:: When calling :meth:`optimise` or :meth:`optimise2` the
+        sections of the configuration files called GA and GA2 are updated
+        with the parameters provided by the user.
     """
     # params = BooleanParameters.default
     def __init__(self, model, data, tag=None, verbose=True,
                  verboseR=False, config=None):
+        """.. rubric:: Constructor
+
+        :param model: model in SIF or SBMLqual format
+        :param data: a MIDAS file
+        :param tag: not yet used
+        :param config: a configuration file stored in :attr:`config`
+        :param bool verboseR: swith on/off verbosity of the R session
+        """
 
         CNOBase.__init__(self, model, data, tag=tag, verbose=verbose,
                          config=config)
         CNORBase.__init__(self, verboseR)
 
         self._report = ReportBool()
-        self._report.Rdependencies = [] # just to speed up report.
+        self._report.Rdependencies = []  # just to speed up report.
         self.results = BooleanResults()
         self.results2 = BooleanResults()
 
@@ -79,7 +97,6 @@ class CNORbool(CNOBase, CNORBase):
         p.name = 'GA2'
         self.config.add_section(p)
         self._called = []
-
 
     def _update_config(self, section, kwargs):
         for k, v in kwargs.items():
@@ -94,11 +111,20 @@ class CNORbool(CNOBase, CNORBase):
     # !! should be same default values as in paramsGA
     @params_to_update()
     def optimise(self,  NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
-        reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
-        time_index_1=1, maxgens=500, maxstallgens=100, another=True):
-        # TODO resuse bitstring is any ?
-        self.logging.info("Running the optimisation. Can take a very long " +
-                          "time. To see the progression, set verboseR attribute to True")
+                 reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
+                 time_index_1=1, maxgens=500, maxstallgens=100):
+        """Perform the optimisation and save results
+
+
+        * Results are stored in :attr:`results`
+        * Models with the tolerance are stored in :attr:`results.models`
+
+        Parameters are those of a Genetic Algorithm used to perform
+        the analysis.
+        """
+        self.logging.info("Running the optimisation. Can take a very long"
+                          "time. To see the progression, set verboseR "
+                          "attribute to True")
         # update config GA section with user parameters
         self._update_config('GA', self.optimise.actual_kwargs)
 
@@ -302,6 +328,15 @@ class CNORbool(CNOBase, CNORBase):
         self._called.append('optimise2')
 
     def plot_errors(self, close=False, show=False):
+        """Plots RMSE between the data and simulated data
+
+        The simulated data uses the best bitstring obtained
+        after calling :meth:`optimise` and :meth:`optimise2`.
+
+        If :meth:`optimise2` is called, 2 time points are used
+        to plot the errors. Otherwise only 1 is used.
+
+        """
         # todo show parameter
         assert hasattr(self.results, "_results")
 
@@ -399,15 +434,11 @@ class CNORbool(CNOBase, CNORBase):
 
 
     def simulate(self, bs=None, compression=True, expansion=True):
-        """
+        """Return the score of the objective function
 
-        input could be a bitstring with correct length and same order
-        OR a model
-
-        c.results.cnorbool.best_bitstring
-        c.results.cnorbool.reactions
-        array([1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0])
-        c.results.cnorbool.reactions
+        :param list bs: a bitstring. Must be a list of zeros and ones
+            with order identical to :meth:`reactions_r`, which 
+            is populated once :meth:`optimise` is called.
 
         """
         if bs is None:
@@ -436,10 +467,14 @@ class CNORbool(CNOBase, CNORBase):
         return self.session.mse
 
     def simulate2(self, bs1=None, bs2=None, compression=True, expansion=True):
-        """
+        """Return the score of the objective function using 2 time points
 
-        todo:: in the script, no need to do preprocessing and reading files again
-        and again
+        :param list bs1: a bitstring. Must be a list of zeros and ones
+            with order identical to :meth:`reactions_r`, which 
+            is populated once :meth:`optimise` is called.
+        :param list bs2: the second bitstring. Must be a list of zeros and ones
+            with length equal to the number of zeros in the first btstring.
+
         """
         if bs1 is None:
             bs1 = ",".join([str(x) for x in self.results.results.best_bitstring])
@@ -537,6 +572,7 @@ class CNORbool(CNOBase, CNORBase):
             pylab.close()
 
     def create_report(self):
+        """Creates a full report with figures and HTML page"""
         self._report._init_report()
         self._report.directory = self._report.report_directory
         # Save filenames and report in a section

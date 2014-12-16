@@ -60,7 +60,7 @@ References
     :numbered:
 
     references
-
+    ref_formalism
 
 .. .. toctree::
 ..    biblio.rst
