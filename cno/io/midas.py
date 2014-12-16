@@ -1582,7 +1582,7 @@ class XMIDAS(MIDASReader):
         pylab.legend(fontsize=fontsize)
 
     def to_csv(self, filename, expand_time_column=False):
-        return self.to_midas(filename, expand_time_column=False):
+        return self.to_midas(filename, expand_time_column=False)
 
     def to_midas(self, filename, expand_time_column=False):
         """Save XMIDAS into a MIDAS CSV file.
