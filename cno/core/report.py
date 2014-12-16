@@ -18,10 +18,10 @@ class HTMLTable(object):
         self.name = name
         self.kargs = kargs.copy()
 
-    def to_html(self):
+    def to_html(self, index=False):
         pd.set_option('display.max_colwidth', -1)
         kargs = self.kargs.copy()
-        kargs['index'] = False
+        kargs['index'] = index
         kargs['bold_rows'] = True
         table = self.df.to_html(**kargs)
         pd.set_option('display.max_colwidth', 50)
@@ -31,7 +31,7 @@ class HTMLTable(object):
 class Report(easydev.Logging):
 
     def __init__(self, formalism, tag=None, filename="index.html",
-                 overwrite=True, verbose=True):
+                 overwrite=True, verbose=True, dependencies=True):
         super(Report, self).__init__(verbose)
         self.formalism = formalism
         from cno import version
@@ -47,7 +47,7 @@ class Report(easydev.Logging):
         self.sections = []
         self.section_names = []
         self.filename = filename
-        self._rpm = RPackageManager()
+
         self.Rdependencies = []
 
     def show(self):
@@ -175,10 +175,12 @@ class Report(easydev.Logging):
         versions = [x.version for x in dependencies]
         links = ["""https://pypi.python.org/pypi/%s"""%p for p in names]
 
-        for package in self.Rdependencies:
-            names.append(package)
-            versions.append(self._rpm.get_package_version(package))
-            links.append("http://www.cellnopt.org")
+        if len(self.Rdependencies):
+            self._rpm = RPackageManager()
+            for package in self.Rdependencies:
+                names.append(package)
+                versions.append(self._rpm.get_package_version(package))
+                links.append("http://www.cellnopt.org")
 
         df = pd.DataFrame({
             'package': ["""<a href="%s">%s</a>"""%(links[i],p) for i,p in enumerate(names)],

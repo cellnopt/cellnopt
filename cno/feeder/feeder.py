@@ -116,7 +116,7 @@ class Feeder(object):
         reactions = Reactions(self.newlinks)
 
         for e in c.edges():
-            c.edge[e[0]][e[1]]['ecolor'] = 0
+            c.edge[e[0]][e[1]]['ecolor'] = 1
 
         for reaction in reactions._reactions:
             lhs, rhs = reaction.lhs, reaction.rhs

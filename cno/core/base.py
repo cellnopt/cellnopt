@@ -16,6 +16,7 @@
 import os
 from biokit.rtools import RSession
 from cno.core.params import CNOConfig
+from easydev import Logging
 
 __all__ = ["CNOBase", "CNORBase"]
 
@@ -35,14 +36,15 @@ class CNORBase(object):
     verboseR = property(_get_verboseR, _set_verboseR)
 
 
-class CNOBase(object):
+class CNOBase(Logging ):
     """Alias to CNOGraph and common class to all simulators"""
 
     def __init__(self, pknmodel, data, tag=None, verbose=False, config=None):
+        super(CNOBase, self).__init__(level=verbose)
+
         # TODO: check that files do exist and raise an error otherwise
         self._pknmodel = None
         self._data = None
-        self._verbose = verbose
         self.name = self.__class__.__name__
         if tag is not None:
             self.tag = tag
@@ -65,13 +67,6 @@ class CNOBase(object):
         self._cnograph = CNOGraph(pknmodel, data)
 
         self.config = CNOConfig()
-
-    def _get_verbose(self):
-        return self._verbose
-    def _set_verbose(self, verbose):
-        # TODO check value is a bool
-        self._verbose = verbose
-    verbose = property(_get_verbose, _set_verbose)
 
     def _get_pknmodel(self):
         return self._pknmodel
