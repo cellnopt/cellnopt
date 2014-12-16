@@ -73,7 +73,6 @@ Reactions
 .. automodule:: cno.io.reactions
     :members:
     :undoc-members:
-    :inherited-members:
     :synopsis: 
 
 SIF format

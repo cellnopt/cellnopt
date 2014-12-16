@@ -30,13 +30,11 @@ All other dependencies should be installed automatically (networkx, numpy, matpl
 
 ::
 
-    pip install easydev
-    pip install cython
-    pip install cellnopt
+    pip install cno
 
 
-Contributions and isses
-########################
+Contributions and issues
+##########################
 
 Code hosted on `github <https://github.com/cellnopt/cellnopt>`_.
 
