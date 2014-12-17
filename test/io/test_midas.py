@@ -27,7 +27,7 @@ def reading_and_saving(filename):
     if 'filtering' in filename:
         return
 
-    if 'multiple' in filename:
+    if 'multiple' in filename and "wrong" not in filename:
         m1 = XMIDAS(filename, cellLine='C1')
         try:
             m1 = XMIDAS(filename)
@@ -71,6 +71,13 @@ def test_no_inhibitors():
     m.remove_inhibitors(['pi3k', 'raf1'])
     m.names_inhibitors
 
+def test_incompatible_cellline():
+    # multiple cell lines
+    try:
+        m = XMIDAS(getdata("MD-test_wrong_multiple_cellline.csv"), 'C1')
+        assert False
+    except CNOError:
+        assert True
 
 def test_xmidas():
     # constructor
@@ -118,7 +125,11 @@ def test_xmidas():
     m.remove_stimuli("dummy")
 
     mm = m.copy()
-    mm.remove_cellLine("Cell")
+    try:
+        mm.remove_cellLine("Cell")
+        assert False
+    except:
+        assert True
     del mm
 
     # ------------------------------------------- rename methods
