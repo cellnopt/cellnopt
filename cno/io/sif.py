@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of the cinapps.tcell package
+#  This file is part of the cno package
 #
 #  Copyright (c) 2012-2014 - EMBL-EBI
 #
@@ -10,7 +10,7 @@
 #  See accompanying file LICENSE.txt or copy at
 #      http://www.gnu.org/licenses/gpl-3.0.html
 #
-#  website: www.cellnopt.org
+#  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
 from __future__ import print_function
@@ -20,7 +20,6 @@ import os
 import re
 
 from cno.io.reactions import Reactions
-#from cno.io.sbml import SBML
 from cno.misc import CNOError
 
 import numpy as np
@@ -31,15 +30,15 @@ __all__ = ["SIF"]
 class SIF(Reactions):
     """Manipulate network stored in SIF format.
 
-    The SIF format is used in Cytoscape and CellNOpt (www.cellnop.org).
+    The SIF format is used in Cytoscape and CellNOpt (www.cellnopt.org).
     However, the format used in CellNOpt(R) restrict edges to be only
     1 or -1. Besides, special nodes called **AND** nodes can be added
     using the "and" string followed by a unique identifier(integer)
-    e.g., and22; seebelow for details.
+    e.g., and22; see below for details.
 
     .. seealso:: :ref:`sif` section in the online documentation.
 
-    The SIF format is a tab-separated format. It encodes relations betwee nodes in a network.
+    The SIF format is a tab-separated format. It encodes relations between nodes in a network.
     Each row contains a relation where the first column represents the input node, the second
     value is the type of relation. The following columns represents the output node(s). Here is a
     simple example::
@@ -100,8 +99,6 @@ class SIF(Reactions):
             format allows to have any relations. The "cno" format also interprets nodes that starts
             with "and" as logical AND gates. Such nodes are transformed into more cmpact notations.
             That is reactions.
-
-
         ::
 
             A 1 and1
