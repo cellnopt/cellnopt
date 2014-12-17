@@ -1,7 +1,6 @@
 import argparse
 from easydev import AttrDict
-
-
+import functools
 
 __all__ = ['Parameter', 'Parameters', 'ParamsGA', 'params_to_update',
            'ParamsPreprocessing']
@@ -19,6 +18,7 @@ def params_to_update():
     containing just those keyword arguments actually passed in to the function.
     """
     def decorator(function):
+        @functools.wraps(function)
         def inner(self, *args, **kwargs):
             inner.actual_kwargs = kwargs
             return function(self, *args, **kwargs)
