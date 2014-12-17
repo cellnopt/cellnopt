@@ -39,18 +39,16 @@ __all__ = ["XMIDAS", "Trend", 'MIDASReader']
 class MIDAS(object):
     """This is s a description of the MIDAS format (let us call it 1.0)
 
-
-
     column with those name are ignored:
 
     ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
 
     """
     _valid_codes = {
-                   'ID':'identifier',
-                   'TR':'stimuli/inhibitors',
-                   'DA':'times',
-                   'DV':'measurements'}
+                   'ID': 'identifier',
+                   'TR': 'stimuli/inhibitors',
+                   'DA': 'times',
+                   'DV': 'measurements'}
 
     _ignore_codes = ['NOINHIB', 'NOCYTO', 'NOLIG', 'NO-CYTO', 'NO-INHIB', 'NO-LIG']
 
@@ -205,11 +203,12 @@ class MIDASReader(MIDAS):
                 txt += "    Column's name must start with one of the valid code {}\n".format(self._valid_codes)
                 raise CNOError(txt)
 
+        # should have at least one DV
         if len([x for x in self._data.columns if x.startswith("DV")]) == 0:
             raise CNOError("Header of MIDAS file has no columns starting with DV. expects at least one")
 
     def _set_missing_time_zero(self):
-         # check if zero time data is available for all experiments
+        # check if zero time data is available for all experiments
         unique_times = sorted(list(self.df.index.levels[2]))
 
         self._missing_time_zero = False
@@ -534,7 +533,8 @@ class XMIDAS(MIDASReader):
 
         """
         super(XMIDAS, self).__init__(filename, verbose=verbose, exclude_rows=exclude_rows)
-
+        self._data = pd.DataFrame()
+        self._missing_time_zero = None
         self._cellLine = cellLine
 
         # multi index related (position of the columns)
@@ -542,12 +542,9 @@ class XMIDAS(MIDASReader):
         self._experiment_index = 1
         self._time_index = 2
 
-
         self.verbose = verbose
-
         #self._ignore_invalid_columns = True
 
-        self._data = pd.DataFrame()
         self._experiments = pd.DataFrame()
         self.df = pd.DataFrame()
         self.sim = self.df.copy() * 0
@@ -574,6 +571,7 @@ class XMIDAS(MIDASReader):
             except Exception as e:
                 raise CNOError(e.message +
                 "Invalid input file. Expecting a XMIDAS instance or valid filename")
+
         self._params = {
                 'plot.layout.space': 0.5,
                 'plot.fontsize':16,
@@ -779,25 +777,20 @@ class XMIDAS(MIDASReader):
         columns = self.df.columns[:]
         for label in labels:
             if label not in columns:
-                self.logging.warning("{} not in the species. skipped".format(label))
+                self.logging.warning("{} not =in the species. skipped".format(label))
             else:
                 self.df.drop(label, axis=1, inplace=True)
                 self.sim.drop(label, axis=1, inplace=True)
                 self.errors.drop(label, axis=1, inplace=True)
 
     def remove_cellLine(self, labels):
-        """Remove a cellLine from the dataframe.
-
-        Does not really work since there is only one cellLine in the dataframe.
-        If you call this method with the active cell line, the dataframe will
-        be empty. You can set it back by activating a new cell line.
-
-        Valid cellLine found in the :attr:`cellLines` attribute.
-
-        This method may be useful later with multi cell line.
-
-        """
-        self._remove_labels_from_level(labels, self._levels[0])
+        if labels in self.cellLines and len(self.cellLines) == 1:
+            raise ValueError("Irrelevant since there is only one cell line in the dataframe")
+        else:
+            raise NotImplementedError
+            # self._remove_labels_from_level(labels, self._levels[0])
+            # need to handle _data as well removing rows that correspond to the cell line
+            # set cell line to the remaining one if only one
 
     def remove_times(self, labels):
         """Remove time values from the data
@@ -942,8 +935,9 @@ class XMIDAS(MIDASReader):
         self.reset_index()
         self.df.replace({self._levels[0]: to_replace}, inplace=True)
         self.set_index()
-        #self._cellLines = []
-        for k,v in to_replace.items():
+        for k, v in to_replace.items():
+            if v in self.cellLines:
+                raise ValueError('CellLine %s already a cell line name' % v)
             old = 'TR:' + k + ':CellLine'
             if old in self._data.columns:
                 new = 'TR:' + v + ':CellLine'
@@ -1581,11 +1575,44 @@ class XMIDAS(MIDASReader):
         radviz(df[['experiment']+species], "experiment")
         pylab.legend(fontsize=fontsize)
 
-    def to_csv(self, filename, expand_time_column=False):
-        return self.to_midas(filename, expand_time_column=False)
 
-    def to_midas(self, filename, expand_time_column=False):
+    def to_measurements(self):
+        """Returns a Measurements instance
+
+        Each datum in the dataframe :attr:`df` is converted into an
+        instance of :class:`~cno.io.measurement.Measurements`.
+
+        :return: list of experiments.
+
+        ::
+
+            mb = MIDASbuilder(m.to_measurements)
+            mb.xmidas
+
+        """
+        experiments = []
+        for row in self.df.iterrows():
+            cellLine, exp, time = row[0]
+            data = row[1]
+            inhibitors = self.experiments.ix[exp].Inhibitors
+            stimuli = self.experiments.ix[exp].Stimuli
+            for species in data.index:
+                e = Measurement(species, time=time, stimuli=dict(stimuli),
+                        inhibitors=dict(inhibitors), value=data[species],
+                        cellLine=cellLine)
+                experiments.append(e)
+        return experiments
+
+    def to_csv(self, filename, expand_time_column=False, export_only_current_cellLine=True):
+        return self.to_midas(filename, expand_time_column=False,
+                             export_only_current_cellLine=export_only_current_cellLine)
+
+    def to_midas(self, filename, expand_time_column=False, export_only_current_cellLine=True):
         """Save XMIDAS into a MIDAS CSV file.
+
+        By default, only the current cell line is exported.
+
+        Multi cell line are not saved.
 
         :param str filename:
 
@@ -1624,7 +1651,7 @@ class XMIDAS(MIDASReader):
             for exp in self.experiments.index:
 
                 #FIXME: if we drop an experiment, this fails. do we want to
-                # update the laels when calling remove_experiment method
+                # update the labels when calling remove_experiment method
                 measurements = self.df.xs((self.cellLine, exp, time))
                 measurements = measurements[self.df.columns] # maybe not needed
                 # keep it for now to be sure that order of measurements is same as in the header
@@ -1664,7 +1691,7 @@ class XMIDAS(MIDASReader):
             :class:`~cno.io.midas_normalisation.XMIDASNormalise`
         """
         if self.df.max().max() <=1  and self.df.min.min()>=0:
-            raise CNOError("dataalready between 0 and 1")
+            raise CNOError("data already between 0 and 1")
         assert mode in ["time", "control"], "mode must be control or time"
         kargs['changeThreshold'] = changeThreshold
         if mode == "time":
@@ -1674,39 +1701,10 @@ class XMIDAS(MIDASReader):
             n = normalisation.XMIDASNormalise(self, **kargs)
             normed_midas = n.control_normalisation()
 
-        if inplace == False:
+        if inplace is False:
             return normed_midas
         else:
             self.df = normed_midas.copy()
-
-
-
-    def to_measurements(self):
-        """Returns a Measurements instance
-
-        Each datum in the dataframe :attr:`df` is converted into an
-        instance of :class:`~cno.io.measurement.Measurements`.
-
-        :return: list of experiments.
-
-        ::
-
-            mb = MIDASbuilder(m.to_measurements)
-            mb.xmidas
-
-        """
-        experiments = []
-        for row in self.df.iterrows():
-            cellLine, exp, time = row[0]
-            data = row[1]
-            inhibitors = self.experiments.ix[exp].Inhibitors
-            stimuli = self.experiments.ix[exp].Stimuli
-            for species in data.index:
-                e = Measurement(species, time=time, stimuli=dict(stimuli),
-                        inhibitors=dict(inhibitors), value=data[species],
-                        cellLine=cellLine)
-                experiments.append(e)
-        return experiments
 
     def add_uniform_distributed_noise(self, inplace=False, dynamic_range=1,
             mode="bounded"):
@@ -1853,8 +1851,6 @@ class XMIDAS(MIDASReader):
             from cno import XMIDAS, cnodata
             m = XMIDAS(cnodata("MD-ToyPB.csv"))
             m.pca()
-
-
 
         """
         from sklearn.decomposition import PCA
