@@ -271,16 +271,10 @@ class MIDASReader(MIDAS):
         # FIXME this part is slow (for loop)
         # build the tuples that will be used by the MultiIndex dataframe
         tuples = []
-        # make sure to read each row in the original data using .shape
-        import time as timer
-        t1 = timer.time()
 
-        self._debug_data = _data
-        self._debug_experiments = value_experiments
-
-
+        # This is a slow part 80 % of the initialisation.
         for ix in _data.index:
-            # 1. find name of the experiment by
+            # 1. find name of the experiment
             this_exp = value_experiments.ix[ix]
             # scan unique experiments and figure out which one is this_exp
             exp_name = None
@@ -289,8 +283,8 @@ class MIDASReader(MIDAS):
                     #[1:] to ignore the cell line TODO
                     # found it
                     exp_name = this_unique_exp[0]
-                else:
-                    pass
+                    # if so, not need to look for others
+                    break
             assert exp_name is not None
 
             # 2. times
@@ -299,9 +293,6 @@ class MIDASReader(MIDAS):
             time = list(time)[0]
             tuples.append((self.cellLine, exp_name, time))
 
-        self._debug_tuples = tuples
-        t2 = timer.time()
-        print(t2-t1)
         # replace empty strings with 0
         # note that ,,, is interpreted as ,NaN,NaN,NaN
         # but , , , is interpreted as ," "," "," ",

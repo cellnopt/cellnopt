@@ -21,7 +21,6 @@
     from cno.io.reactions import Reactions
     r = Reactions()
 
-
 """
 from __future__ import print_function
 import re
