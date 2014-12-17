@@ -30,6 +30,12 @@ def test_reaction():
     except:
         assert True
 
+    try:
+        r = Reaction("A++B=C")
+        assert False
+    except:
+        assert True
+
 
     # simplification
     r = Reaction("A+A=B")
@@ -107,7 +113,7 @@ class test_Reactions():
                 c.add_reaction("A=%sB" % symbol)
                 assert False
             except:
-                assert True
+                assert True        
 
     def test_search(self):
         c = Reactions(verbose=True)
