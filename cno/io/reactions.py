@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of the cinapps.tcell package
+#  This file is part of the cno package
 #
 #  Copyright (c) 2012-2013 - EMBL-EBI
 #
@@ -10,7 +10,7 @@
 #  See accompanying file LICENSE.txt or copy at
 #      http://www.gnu.org/licenses/gpl-3.0.html
 #
-#  website: www.cellnopt.org
+#  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
 """This module contains a base class to manipulate reactions
@@ -20,7 +20,6 @@
     from cno import Reaction
     from cno.io.reactions import Reactions
     r = Reactions()
-
 
 
 """
@@ -90,6 +89,7 @@ class Reaction(str, ReactionBase):
     ANDs operator are not simplified. More sophisticated simplifications using Truth
     Table could be used but will not be implemented in this class for now.
     """
+    # use __new__ to inherit from str class.
     def __new__(cls, reaction=None, strict_rules=True):
         """
 
@@ -104,7 +104,7 @@ class Reaction(str, ReactionBase):
         self = str.__new__(cls, reaction)
         self._strict_rules = strict_rules
 
-        # since srtings are immutable, we use this attribute to play around
+        # since strings are immutable, we use this attribute to play around
         # with the name
         self._name = None
         if reaction is not None:
@@ -181,7 +181,7 @@ class Reaction(str, ReactionBase):
         reaction = reaction.strip()
         reaction = reaction.replace("&", self.and_symbol)
 
-        # = sign is compulsary
+        # = sign is compulsory
         N = reaction.count("=")
         if N != 1:
             raise CNOError("Invalid reaction name (only one = character expected. found {0})".format(N))
@@ -197,6 +197,15 @@ class Reaction(str, ReactionBase):
             if this in rhs:
                 raise CNOError("Found an unexpected character (%s) in the LHS of reactions %s" %
                         (reaction, self.valid_symbols))
+
+        if reaction.startswith("="):
+            pass
+        else:
+            species = re.split("[+|^]", reaction.split("=")[0])
+            if "" in species:
+                # it means there were several ++ or ^^
+                raise CNOError("Reaction (%s) has two many + or ^ signs" % reaction)
+
         return reaction
 
     def ands2ors(self, reaction):
@@ -227,7 +236,7 @@ class Reaction(str, ReactionBase):
         # we first need to split + and then ^
         splitted_ors = [x for x in self.lhs.split("+")] # left species keeping ! sign
 
-        # loop over splitted list searching for ANDs
+        # loop over split list searching for ANDs
         species = []
         for this in splitted_ors:
             species_ands = this.split("^")
@@ -248,7 +257,7 @@ class Reaction(str, ReactionBase):
             return new_reac
 
     def simplify(self, inplace=True):
-        """Simplfies reaction if possible.
+        """Simplifies reaction if possible.
 
         ::
 
