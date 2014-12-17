@@ -10,7 +10,7 @@
 #  See accompanying file LICENSE.txt or copy at
 #      http://www.gnu.org/licenses/gpl-3.0.html
 #
-#  website: www.cellnopt.org
+#  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
 import os
@@ -51,7 +51,7 @@ class CNOBase(Logging ):
         else:
             self.tag = ""
 
-        # DONT MOVE those imports to prevent import cycling
+        # DON'T MOVE those imports to prevent import cycling
         from cno.io import CNOGraph
         from cno.io import XMIDAS
         #
@@ -90,16 +90,6 @@ class CNOBase(Logging ):
 
     def plot_pknmodel(self):
         """Plot the original PKN model
-
-        .. plot::
-            :include-source:
-            :width: 80%
-
-            from cellnopt.pipeline.cnobase import CNObase
-            from cellnopt.data import cnodata
-            o = CNOBase(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"),
-                formalism="base")
-            o.plot_midas(xkcd=True)   # use xkcd for fun
 
 
         .. seealso:: full documentation about MIDAS in cellnopt.core.cnograph
