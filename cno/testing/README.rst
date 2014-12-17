@@ -27,7 +27,7 @@ MD-test_multiple_cellline.csv
 MD-test_one_stimulus.csv
 MD-test_unnorm_exp.csv
 MD-test_wrong_time.csv
-
+MD-test_wrong_multiple_cellline.csv  cell lines values 1/0 are incompatible
 ==================================== ===================================================
 
 Graph/SIF related
