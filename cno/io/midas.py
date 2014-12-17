@@ -186,6 +186,16 @@ class MIDASReader(MIDAS):
                 # change his mind and reset the cell line to be looked at.
                 pass
 
+        # check that each row belongs to one and only one cell line
+        N = len(self._data)
+        if all(self._data[[x for x in self._data.columns
+                        if 'CellLine' in x]].sum(axis=1) == [1] * N) is not True:
+            row_indices = (self._data[[x for x in self._data.columns
+                        if 'CellLine' in x]].sum(axis=1) != [1] * N)
+            indices = self._data.index[row_indices]
+            raise CNOError("cell line columns are not compatible  in rows %s . " % indices +
+                            "Check that sum over cell line on each row is unity")
+
         if len(celltype_names) == 1:
             self._cellLine = celltype_names[0]
 
@@ -258,11 +268,17 @@ class MIDASReader(MIDAS):
 
         # FIXME: already done above ...seemed required for time0_to_duplicate test
         self._experiments.replace("NaN", 0, inplace=True)
-        self.logging.debug("init22")
         # FIXME this part is slow (for loop)
         # build the tuples that will be used by the MultiIndex dataframe
         tuples = []
         # make sure to read each row in the original data using .shape
+        import time as timer
+        t1 = timer.time()
+
+        self._debug_data = _data
+        self._debug_experiments = value_experiments
+
+
         for ix in _data.index:
             # 1. find name of the experiment by
             this_exp = value_experiments.ix[ix]
@@ -273,13 +289,19 @@ class MIDASReader(MIDAS):
                     #[1:] to ignore the cell line TODO
                     # found it
                     exp_name = this_unique_exp[0]
-            assert exp_name != None
+                else:
+                    pass
+            assert exp_name is not None
 
             # 2. times
             time = set(value_times.ix[ix])
             assert len(time) == 1
             time = list(time)[0]
             tuples.append((self.cellLine, exp_name, time))
+
+        self._debug_tuples = tuples
+        t2 = timer.time()
+        print(t2-t1)
         # replace empty strings with 0
         # note that ,,, is interpreted as ,NaN,NaN,NaN
         # but , , , is interpreted as ," "," "," ",
@@ -332,7 +354,6 @@ class MIDASReader(MIDAS):
             # - no time zero provided
             # - one control provided all inh and all stim off so sum==0
             # - one control provided for each different set of inhibitors (could include previous case)
-
             df = self.df.query('time==0')
             if len(df) == 0:
                 # no time 0 provided --> case 1
@@ -354,11 +375,10 @@ class MIDASReader(MIDAS):
             elif S == -1:
                 self.logging.debug("Adding time zero")
                 self._add_time_zero()
-
                 # drop the time 0, which has no data in principle
 
-        #self._set_missing_time_zero()
-        #if self._missing_time_zero is True:
+        # self._set_missing_time_zero()
+        # if self._missing_time_zero is True:
         #    raise CNOError("Issue with missing time zero ")
 
         if self.df.shape[0] > len(self.times) * self.experiments.shape[0]:
