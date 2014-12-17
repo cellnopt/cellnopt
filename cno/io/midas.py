@@ -998,6 +998,7 @@ class XMIDAS(MIDASReader):
         M = self.df.max().max()
         if inplace:
             self.df /= M
+            self.errors /= M
         else:
             return self.df / M
 
@@ -1015,6 +1016,7 @@ class XMIDAS(MIDASReader):
 
         """
         newdf = self.df.divide(self.df.max(), level="experiment")
+        # TODO: divide errors by max as well but across experiments
         if inplace:
              self.df = newdf.copy()
         else:
@@ -1198,7 +1200,13 @@ class XMIDAS(MIDASReader):
                 times = np.array(list(data.index))
                 simtimes = times/float(M)
 
-                pylab.plot(simtimes+j, data/1.05+(self.nExps-i-1), marker=marker, color=color,
+                Xtimes = simtimes + j
+                delta_t = Xtimes[-1] - Xtimes[0]
+                delta_t/=20.
+                Xtimes[0] += delta_t
+                Xtimes[-1] -= delta_t
+
+                pylab.plot(Xtimes, data/1.05+(self.nExps-i-1), marker=marker, color=color,
                         linestyle=linestyle,
                            markersize=markersize, lw=lw)
                 #    plot(times+j, sim[i,j]/1.05+(self.nExps-i-1), 'b--o',
@@ -1253,7 +1261,7 @@ class XMIDAS(MIDASReader):
         if vmax > 1:
             df /= vmax
         errors = self.errors.copy()
-        errors /=
+        errors /= vmax  # V(X/vmax) = V(X)/vmax
         errors.fillna(0, inplace=True)
         if errors.sum().sum()>0:
             show_error = True
@@ -1264,32 +1272,46 @@ class XMIDAS(MIDASReader):
         for i in range(0, len(self.experiments)):
             for j in range(0, self.nSignals):
                 y = df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
-                yerr = errors[self.names_species[j]].ix['average'].ix[self.experiments.index[i]]
+                try:
+                    yerr = errors[self.names_species[j]].ix['average'].ix[self.experiments.index[i]]
+                except:
+                    yerr = errors[self.names_species[j]].ix[self.cellLine].ix[self.experiments.index[i]]
                 yerr = list(pylab.flatten(yerr.values))
-                print(yerr)
                 trend.set(y)
                 Y = y
 
                 ratio = 0.95
+                        
+                Xtimes = trend.normed_times+j
+                delta_t = Xtimes[-1] - Xtimes[0]
+                delta_t/=20.
+                Xtimes[0] += delta_t
+                Xtimes[-1] -= delta_t
+
                 if mode == "data":
                     color = trend.get_bestfit_color()
 
-                    pylab.plot(trend.normed_times+j,
+                    pylab.plot(Xtimes,
                                ratio*Y + self.nExps-i-1 ,
                                'k-o', markersize=markersize, color=color, mfc='gray')
                     if show_error is True:
-                        pylab.errorbar(trend.normed_times+j,
+                        pylab.errorbar(Xtimes,
                                ratio*Y + self.nExps-i-1,
-                               yerr=yerr)
+                               yerr=yerr, color='k', ecolor='k', elinewidth=3, linewidth=3)
 
-                    pylab.fill_between(trend.normed_times+j,
+                    pylab.fill_between(Xtimes,
                                        ratio*Y + self.nExps-1-i ,
                                        self.nExps-1-i, alpha=trend.alpha/1.1,
                                        color=color)
                 else:
-                    pylab.plot(trend.normed_times+j,
+                    pylab.plot(Xtimes,
                                ratio*Y + self.nExps-i-1 , 'k-o',
                                markersize=markersize, color="k", mfc='gray')
+                    if show_error is True:
+                        pylab.errorbar(Xtimes,
+                               ratio*Y + self.nExps-i-1,
+                               yerr=yerr, ecolor='k', elinewidth=3, linewidth=3, color='k')
+
 
                 #    plot(times+j, sim[i,j]/1.05+(self.nExps-i-1), 'b--o', markersize=markersize)
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize",10))
