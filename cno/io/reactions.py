@@ -1,8 +1,8 @@
 # -*- python -*-
 #
-# This file is part of the cno package
+# This file is part of the CNO package
 #
-#  Copyright (c) 2012-2013 - EMBL-EBI
+#  Copyright (c) 2012-2014 - EMBL-EBI
 #
 #  File author(s): Thomas Cokelaer (cokelaer@ebi.ac.uk)
 #
@@ -173,7 +173,6 @@ class Reaction(str, ReactionBase):
                    doc="Getter for the right hand side of the = character")
 
     def _get_sign(self):
-        # FIXME used in sif only.
         if "!" in self.name and self.and_symbol not in self.name:
             return "-1"
         else:
