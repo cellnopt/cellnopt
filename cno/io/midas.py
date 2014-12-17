@@ -14,7 +14,6 @@
 #
 ##############################################################################
 from __future__ import print_function
-#from __future__ import unicode_literals
 import types
 
 import pylab
@@ -455,7 +454,6 @@ class MIDASReader(MIDAS):
         self.df.set_index(self._levels, inplace=True)
         self.df = self.df.sort_index()
 
-
     def _duplicate_time_zero_using_inhibitors_only(self):
         """
         Sometimes the time zero data sets are not explicitly written in MIDAS
@@ -539,7 +537,7 @@ class XMIDAS(MIDASReader):
         """**Constructor**
 
         :param str filename: filename of a MIDAS file or a XMIDAS instance
-        :param str cellLine: name of a cell Line (compulsary if several
+        :param str cellLine: name of a cell Line (compulsory if several
             cell lines are present)
 
         """
@@ -584,15 +582,19 @@ class XMIDAS(MIDASReader):
                 "Invalid input file. Expecting a XMIDAS instance or valid filename")
 
         self._params = {
-                'plot.layout.space': 0.5,
-                'plot.fontsize':16,
-                'plot.fontsize.times':16,
-                'plot.fontsize.species':16,
-                'plot.fontsize.perturbations':14,
-                'plot.fontsize.titles':16,
-                'plot.layout.shift_top': 1,
-                'plot.colorbar.N': 10,
+                'plot_layout_space': 0.2,  # spaces between axes
+                'plot_fontsize':16,
+                'plot_fontsize_times':16,
+                'plot_fontsize_species':16,
+                'plot_fontsize_perturbations':14,
+                'plot_fontsize_titles':16,
+                'plot_layout_shifttop': 1,
+                'plot_colorbar_N': 20,
+                'plot_orientation_perturbation_label': 90,
+                'plot_data_markersize': 5
                 }
+        from easydev import AttrDict
+        self._params = AttrDict(**self._params)
 
     def _manage_replicates(self):
         """
@@ -1156,7 +1158,7 @@ class XMIDAS(MIDASReader):
             :include-source:
 
             >>> from cno import XMIDAS, cnodata
-            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"));
+            >>> m = XMIDAS(cnodata("MD-ToyPB.csv"))
             >>> m.plot_layout()
             >>> m.plot_data()
             >>> m.plot_sim_data()
@@ -1204,7 +1206,7 @@ class XMIDAS(MIDASReader):
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize", 10))
         pylab.gca().set_xticks(xt)
 
-    def plot_data(self, markersize=4, logx=False,color="black", **kargs):
+    def plot_data(self, logx=False, color="black", **kargs):
         """plot experimental curves
 
         .. plot::
@@ -1222,11 +1224,13 @@ class XMIDAS(MIDASReader):
         mode = kargs.get("mode", "data")
         times = np.array(self.times)
         max_time = float(max(self.times))
+        markersize = self._params['plot_data_markersize']
 
         if self.df.max().max() > 1 or self.df.min().min() < 0:
-            raise ValueError('data must be between 0 and 1')
-
-
+            if mode == 'data':
+                self.logging.info("Data is not normalised. Scaling by max across of species and perturbations ")
+            else:
+                raise ValueError('data must be between 0 and 1 for simulation')
 
         if logx == False:
             # a tick at x = 0, 0.5 in each box (size of 1) + last x=1 in last box
@@ -1243,13 +1247,26 @@ class XMIDAS(MIDASReader):
 
         trend = Trend()
 
-        # TODO must be using the index instead of a range ince indices may not
+        # do a copy to rescale the data locally
+        df = self.df.copy()
+        vmax = float(df.max(skipna=True).max(skipna=True))
+        if vmax > 1:
+            df /= vmax
+        errors = self.errors.copy()
+        errors /=
+        errors.fillna(0, inplace=True)
+        if errors.sum().sum()>0:
+            show_error = True
+        else:
+            show_error = False
+
         # start at zero
         for i in range(0, len(self.experiments)):
-            #vMax = float(self.df.max(skipna=True).max(skipna=True))
             for j in range(0, self.nSignals):
-                y = self.df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
-
+                y = df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
+                yerr = errors[self.names_species[j]].ix['average'].ix[self.experiments.index[i]]
+                yerr = list(pylab.flatten(yerr.values))
+                print(yerr)
                 trend.set(y)
                 Y = y
 
@@ -1260,6 +1277,10 @@ class XMIDAS(MIDASReader):
                     pylab.plot(trend.normed_times+j,
                                ratio*Y + self.nExps-i-1 ,
                                'k-o', markersize=markersize, color=color, mfc='gray')
+                    if show_error is True:
+                        pylab.errorbar(trend.normed_times+j,
+                               ratio*Y + self.nExps-i-1,
+                               yerr=yerr)
 
                     pylab.fill_between(trend.normed_times+j,
                                        ratio*Y + self.nExps-1-i ,
@@ -1281,7 +1302,6 @@ class XMIDAS(MIDASReader):
             cmap = self._colormap.get_cmap_red_green()
         return cmap
 
-
     def _get_diff_data(self, mode, squared=True):
         diffs = self.get_diff(self.sim, squared=squared)
         # we re-order the dataframe with the indices of the experiments
@@ -1295,13 +1315,12 @@ class XMIDAS(MIDASReader):
         return diffs
 
     def plot_layout(self, cmap="heat",
-        rotation=90, margin=0.05, colorbar=True, vmax=None, vmin=0.,
+        rotation=90, colorbar=True, vmax=None, vmin=0.,
         mode="data", **kargs):
         """plot MSE errors and layout
 
         :param cmap:
         :param rotation:
-        :param margin:
         :param colorbar:
         :param vmax:
         :param vmin:
@@ -1330,17 +1349,16 @@ class XMIDAS(MIDASReader):
         diffs = self._get_diff_data(mode)
 
         # aliases
-        fct = self._params['plot.fontsize.times']
-        fcs = self._params['plot.fontsize.species']
-        fcp = self._params['plot.fontsize.perturbations']
-        fcti = self._params['plot.fontsize.titles']
+        fct = self._params['plot_fontsize_times']
+        fcp = self._params['plot_fontsize_perturbations']
+        fcti = self._params['plot_fontsize_titles']
 
         # The layout
         gs = pylab.GridSpec(10, 10,
-                wspace=self._params['plot.layout.space'],
-                hspace=self._params['plot.layout.space'])
+                wspace=self._params['plot_layout_space'],
+                hspace=self._params['plot_layout_space'])
         fig = pylab.figure(num=1, figsize=(10, 6))
-        shift_top = self._params['plot.layout.shift_top']  #2
+        shift_top = self._params['plot_layout_shifttop']
         layout_width = 7
         w1 = layout_width + 1
         w2 = layout_width + 2
@@ -1400,8 +1418,9 @@ class XMIDAS(MIDASReader):
         ax2.set_xticks([i+.5 for i,x in enumerate(self.names_species)])
         N = len(self.names_species)
         ax2.set_xticks(pylab.linspace(0.5, N-1, N))
-        ax2.set_xticklabels(self.names_species, rotation=90,
-                fontsize=fcs)
+        ax2.set_xticklabels(self.names_species,
+                            rotation=self._params['plot_orientation_perturbation_label'],
+                            fontsize=self._params['plot_fontsize_species'])
 
         # the stimuli
         if len(self.names_stimuli)>0:
@@ -1442,18 +1461,17 @@ class XMIDAS(MIDASReader):
                        horizontalalignment="center", verticalalignment="center",
                        fontsize=int(fcti/1.5))
 
-        #colorbar
-        # we build our own colorbar to place it on the RHS
+        # colorbar. we build our own colorbar to place it on the RHS
         if colorbar and mode == "mse":
             pylab.sca(ax_cb)
-            N = self._params['plot.colorbar.N']
+            N = self._params['plot_colorbar_N']
             cbar = pylab.linspace(0, 1, N)
             indices = [int(x) for x in cbar**self.cmap_scale*(N-1)]
 
             cbar = [cbar[i] for i in indices]
 
             pylab.pcolor(np.array([cbar, cbar]).transpose(), cmap=cmap,
-                         vmin=0, vmax=1);
+                         vmin=0, vmax=1)
             ax_cb.yaxis.tick_right()
             ticks = np.array(ax_cb.get_yticks())
             M = max(ticks)
@@ -2263,13 +2281,13 @@ class Trend(object):
     def get_bestfit(self):
         corrs = self._get_correlation(self.normed_values)
         keys,values = (corrs.keys(), corrs.values())
-        #M  = max(values)
+        # M  = max(values)
         return keys[np.argmax(values)]
 
     def get_bestfit_color(self):
         corrs = self._get_correlation(self.normed_values)
         keys,values = (corrs.keys(), corrs.values())
-        #M  = max(values)
+        # M  = max(values)
         res = keys[np.argmax(values)]
 
         if "constant" in res:

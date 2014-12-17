@@ -78,7 +78,7 @@ class CNORbool(CNOBase, CNORBase):
         :param data: a MIDAS file
         :param tag: not yet used
         :param config: a configuration file stored in :attr:`config`
-        :param bool verboseR: swith on/off verbosity of the R session
+        :param bool verboseR: switch on/off verbosity of the R session
         """
 
         CNOBase.__init__(self, model, data, tag=tag, verbose=verbose,
