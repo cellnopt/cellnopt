@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of the cno package
+# This file is part of the cno package
 #
 #  Copyright (c) 2012-2013 - EMBL-EBI
 #
@@ -26,16 +26,13 @@
 from __future__ import print_function
 import re
 
-import numpy
-from easydev import Logging
-
 from cno.misc import CNOError
 
 __all__ = ["Reaction", "Reactions"]
 
 
 class ReactionBase(object):
-    valid_symbols = ["+","!", "&", "^"]
+    valid_symbols = ["+", "!", "&", "^"]
     and_symbol = "^"
 
 
@@ -123,8 +120,10 @@ class Reaction(str, ReactionBase):
         if reaction is not None:
             reaction = self._valid_reaction(reaction)
         self._name = reaction[:]
+
     def _get_name(self):
         return self._name
+
     name = property(_get_name, _set_name, doc="Getter/Setter for the reaction name")
 
     def _get_species(self, reac=None):
@@ -143,31 +142,35 @@ class Reaction(str, ReactionBase):
         species = re.split("[+|=|^|!]", reac)
         species = [x for x in species if x]
         return species
+
     species = property(_get_species)
 
     def get_signed_lhs_species(self):
         lhs = self.lhs[:]
         species = re.split("[+|^]", lhs)
-        pos = [x for x in species if x.startswith("!") is False] 
-        neg = [x[1:] for x in species if x.startswith("!") is True] 
+        pos = [x for x in species if x.startswith("!") is False]
+        neg = [x[1:] for x in species if x.startswith("!") is True]
         return {'-': neg, '+': pos}
 
     def _get_lhs(self):
         return self.name.split("=")[0]
+
     lhs = property(_get_lhs,
-            doc="Getter for the left hand side of the = character")
+                   doc="Getter for the left hand side of the = character")
 
     def _get_lhs_species(self):
         lhs = self.name.split("=")[0]
         species = self._get_species(reac=lhs)
         return species
+
     lhs_species = property(_get_lhs_species,
-            doc="Getter for the list of species on the left hand side of the = character")
+                           doc="Getter for the list of species on the left hand side of the = character")
 
     def _get_rhs(self):
         return self.name.split("=")[1]
+
     rhs = property(_get_rhs,
-            doc="Getter for the right hand side of the = character")
+                   doc="Getter for the right hand side of the = character")
 
     def _get_sign(self):
         # FIXME used in sif only.
@@ -175,6 +178,7 @@ class Reaction(str, ReactionBase):
             return "-1"
         else:
             return "1"
+
     sign = property(_get_sign, doc="return sign of the reaction")
 
     def _valid_reaction(self, reaction):
@@ -187,16 +191,16 @@ class Reaction(str, ReactionBase):
             raise CNOError("Invalid reaction name (only one = character expected. found {0})".format(N))
         #
         if self._strict_rules:
-            if reaction[0] in ["=", "^" , "+"]:
+            if reaction[0] in ["=", "^", "+"]:
                 raise CNOError("Reaction (%s) cannot start with %s" %
-                        (reaction, "=, ^, +"))
+                               (reaction, "=, ^, +"))
 
         #
         lhs, rhs = reaction.split("=")
         for this in self.valid_symbols:
             if this in rhs:
                 raise CNOError("Found an unexpected character (%s) in the LHS of reactions %s" %
-                        (reaction, self.valid_symbols))
+                               (reaction, self.valid_symbols))
 
         if reaction.startswith("="):
             pass
@@ -234,7 +238,7 @@ class Reaction(str, ReactionBase):
             return
 
         # we first need to split + and then ^
-        splitted_ors = [x for x in self.lhs.split("+")] # left species keeping ! sign
+        splitted_ors = [x for x in self.lhs.split("+")]  # left species keeping ! sign
 
         # loop over split list searching for ANDs
         species = []
@@ -303,9 +307,9 @@ class Reaction(str, ReactionBase):
         return new_name
 
     def rename_species(self, mapping={}):
-        for k,v in  mapping.items():
+        for k, v in mapping.items():
             self.name = self._rename_one_species(self.name, k, v)
-            
+
     def __eq__(self, other):
         # The reaction may not be sorted and user may not want to it to be sorted,
         # so we create a new instance and sort it
@@ -320,7 +324,6 @@ class Reaction(str, ReactionBase):
             return True
         else:
             return False
-
 
 
 class Reactions(ReactionBase):
@@ -356,6 +359,7 @@ class Reactions(ReactionBase):
 
     .. seealso:: :class:`cno.io.reactions.Reaction` and :class:`cno.io.sif.SIF`
     """
+
     def __init__(self, reactions=[], strict_rules=True, verbose=False):
         super(Reactions, self).__init__()
         self.strict_rules = strict_rules
@@ -378,10 +382,12 @@ class Reactions(ReactionBase):
         # sort (transformed to a list)
         species = sorted(species)
         return species
+
     species = property(_get_species, doc="return list of unique species")
 
     def _get_reaction_names(self):
         return [reaction.name for reaction in self._reactions]
+
     reactions = property(fget=_get_reaction_names, doc="return list of reaction names")
 
     def __str__(self):
@@ -447,7 +453,7 @@ class Reactions(ReactionBase):
 
         for reac in reacIDs_toadd:
             self.add_reaction(reac)
-    
+
     def rename_species(self, mapping={}):
         """Rename species in all reactions
         
