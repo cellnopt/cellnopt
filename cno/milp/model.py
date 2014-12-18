@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of the cellnopt package
+# This file is part of the CNO package
 #
 #  Copyright (c) 2014 - EMBL-EBI
 #
@@ -14,8 +14,6 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-
-
 import pulp
 from numpy import isnan
 from cno.io import Reaction
@@ -89,19 +87,23 @@ class MILPTrain(CNOBase):
 
     def _get_pknmodel(self):
         return self._pknmodel
+
     def _set_pknmodel(self, new_pkn):
         self._pknmodel = new_pkn
         self._reset_class_attributes()
         self._reset_problem()
+
     pknmodel = property(_get_pknmodel, _set_pknmodel,
                         doc="getter/setter to the model")
 
     def _get_midas(self):
         return self._data
+
     def _set_midas(self, new_midas):
         self._data = new_midas
         self._reset_class_attributes()
         self._reset_problem()
+
     midas = property(_get_midas, _set_midas, doc="getter/setter to the data")
 
     def change_pkn_and_midas(self, new_pkn, new_midas):
@@ -147,6 +149,9 @@ class MILPTrain(CNOBase):
         # make the trick, but may not be optimal.
         self.model._variable_ids.clear()
         self.model._variables = []
+
+    def optimise(self):
+        return self.train()
 
     def train(self):
         """Initialize and solve the optimization problem.
@@ -340,8 +345,8 @@ class MILPTrain(CNOBase):
         time_start = self.midas.times[0]
         time_end = self.midas.times[1]
         measured = self.midas.df
-        measured_start = measured.query("time=="+str(time_start))
-        measured_end = measured.query("time=="+str(time_end))
+        measured_start = measured.query("time==" + str(time_start))
+        measured_end = measured.query("time==" + str(time_end))
 
         error_obj = None  # error objective expression initialization
         for k in self.experiment:
@@ -352,7 +357,7 @@ class MILPTrain(CNOBase):
                 if not isnan(value):
                     if value < 0:
                         value += 1
-                    error_obj += value + (1 - 2*value)*self.x_var[j][k]
+                    error_obj += value + (1 - 2 * value) * self.x_var[j][k]
         return error_obj
 
     def size_objective_expression(self):
