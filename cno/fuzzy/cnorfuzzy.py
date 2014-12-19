@@ -1,3 +1,18 @@
+# -*- python -*-
+#
+#  This file is part of CNO software
+#
+#  Copyright (c) 2013-2014 - EBI-EMBL
+#
+#  File author(s): Thomas Cokelaer <cokelaer@ebi.ac.uk>
+#
+#  Distributed under the GPLv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: http://github.com/cellnopt/cellnopt
+#
+##############################################################################
 import sys
 import os
 
@@ -9,33 +24,20 @@ from cno.core import CNOBase
 from cno.core.params import OptionsBase
 
 from cno.core import CNORBase
-from cno.misc.results import FuzzyResults
+from cno.core.results import FuzzyResults
 from cno.core.report import ReportFuzzy
-from cno.core.params import ParamsGA
+from cno.core.models import FuzzyModels
+from cno.core.params import ParamsGA, ParamsFuzzy
+
 from biokit.rtools import bool2R
+
+from cno.core.params import params_to_update
 
 
 __all__ = ["CNORfuzzy"]
 
 """
 $redThresh  0e+00 1e-04 5e-04 1e-03 3e-03 5e-03 1e-02
-$doRefinement  TRUE
-$sizeFac  1e-04
-$NAFac  1
-$popSize  50
-$pMutation  0.5
-$maxTime  180
-$maxGens  500
-$stallGenMax  100
-$selPress  1.2
-$elitism  5
-$relTol  0.1
-$verbose  TRUE
-$optimisation
-    $optimisation$algorithm "NLOPT_LN_SBPLX"
-    $optimisation$xtol_abs  0.001
-    $optimisation$maxEval  10000
-    $optimisation$maxTime  300
 
 """
 
@@ -54,14 +56,19 @@ class CNORfuzzy(CNOBase, CNORBase):
     """
     def __init__(self, model=None, data=None, verbose=True, verboseR=False):
         """.. rubric:: constructor"""
-        #super(CNORfuzzy, self).__init__(model, data, verbose=verbose)
         CNOBase.__init__(self,model, data, verbose=verbose)
         CNORBase.__init__(self, verboseR=verboseR)
 
-        self.parameters = FuzzyParameters()
-
         self._report = ReportFuzzy()
-        self._report._init_report()
+        self._report.Rdependencies = []  # just to speed up report
+
+        self.results = FuzzyResults()
+
+        self.config.General.pknmodel.value = self.pknmodel.filename
+        self.config.General.data.value = self.data.filename
+
+        p = ParamsFuzzy()
+        self.config.add_section(p)
 
         self.thresholds = [0.0001, 0.0005, 0.001, 0.002, 0.003, 0.004, 0.005,
             0.006, 0.007, 0.008, 0.009, 0.01, 0.013, 0.015, 0.017, 0.02, 0.025, 0.03, 0.05,
@@ -77,37 +84,26 @@ class CNORfuzzy(CNOBase, CNORBase):
                 'midas': self.data.filename}
         self.session.run(script)
 
-    def optimise(self, tag="cnorfuzzy", N=2,
-            popsize=50,reltol=0.1, maxtime=180, expansion=True, maxgens=150,
-            stallgenmax=100, compression=True):
+    @params_to_update()
+    def optimise(self, N=2,
+        NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
+        reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
+        time_index_1=1, maxgens=500, maxstallgens=100):
 
+        self.logging.info("Running the optimisation. Can take a very long"
+                          "time. To see the progression, set verboseR "
+                          "attribute to True")
+        # update config GA section with user parameters
+        self._update_config('GA', self.optimise.actual_kwargs)
 
-        # update config with uesr parameters if provided; keys are user parameter
-        # values are internal names used in the config file
-        mapping = {
-            "selpress": "selection-pressure",
-            'reltol': "relative-tolerance",
-            'maxtime': "max-time",
-            'sizefac': "size-factor",
-            'nafac': "na-factor",
-            "elitism": 'elitism',
-            'popsize': "population-size",
-            'stallgenmax': "max-stall-generation",
-            'maxgens': "max-generation",
-            'pmutation': "probability-mutation",
-            'timeindex': "time-index",
-            "verbose": "verbose"
-        }
-        #for x in mapping.keys():
-        #    # update config data structure only if user parameter provided
-        #    if x in kargs.keys():
-        #        self.config.GA[mapping[x]] = kargs[x]
-        #    params[x] = self.config.GA[mapping[x]]
-        #
-        #    elitism=%(elitism)s, pMutation=%(pmutation)s,
-        #    NAFac=%(nafac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefac)s,
-        #    stallGenMax=%(stallgenmax)s)
-        script_template = """
+         # keep track of the GA parameters, which may have been update above
+        gad = dict([(k, self.config.GA[k].value)
+            for k in self.config.GA._get_names()])
+
+        fuzzyd = dict([(k, self.config.Fuzzy[k].value)
+            for k in self.config.Fuzzy._get_names()])
+
+        script = """
         library(CNORfuzzy)
         cnolist = CNOlist("%(midas)s")
         pknmodel = readSIF("%(pkn)s")
@@ -124,8 +120,9 @@ class CNORfuzzy(CNOBase, CNORBase):
         paramsList$popSize = %(popsize)s
         paramsList$maxTime = %(maxtime)s
         paramsList$maxGens = %(maxgens)s
-        paramsList$stallGenMax = %(stallgenmax)s
-        paramsList$optimisation$maxtime = 60*5
+        paramsList$elitism = %(elitism)s
+        paramsList$stallGenMax = %(maxstallgens)s
+        paramsList$optimisation$maxtime = %(optimisation_max_time)s
 
         N = %(N)s
         allRes = list()
@@ -139,21 +136,26 @@ class CNORfuzzy(CNOBase, CNORBase):
         # signals order is not sorted in CellNOptR
         signals = colnames(cnolist@signals[[1]])
         #sim = plotMeanFuzzyFit(0.01, summary$allFinalMSEs, allRes)
+
+        res1 = allRes[[1]]
+        best_score = res1['currBestDiscrete']
+        best_bitstring = res1['intString']
         """
-        script = script_template % {
-                'pkn': self.pknmodel.filename,
-                'midas': self.data.filename,
-                'tag': tag,
-                'N': N,
-                'popsize': popsize,
-                'maxgens': maxgens,
-                'maxtime': maxtime,
-                'stallgenmax': stallgenmax,
-                'reltol': reltol,
-                'compression': bool2R(compression),
-                'expansion': bool2R(expansion)
-                }
-        self.session.run(script)
+
+        expansion = True
+        compression = True
+
+        params = {
+            'pkn': self.pknmodel.filename,
+            'midas': self.data.filename,
+            'compression': bool2R(compression),
+            'expansion': bool2R(expansion)
+            }
+        params.update(gad)
+        params.update(fuzzyd)
+        params['N'] = N
+
+        self.session.run(script % params)
         allRes = self.session.allRes
 
         # The contents of allRes is a list of N Res structures
@@ -172,39 +174,43 @@ class CNORfuzzy(CNOBase, CNORBase):
         #reactions = res1['paramsList']['model']['reacID']
         species = res1['paramsList']['model']['namesSpecies']
 
-        #scores = res1['t1opt']['stringsTolScores']
-        # res1['t1opt']['stringsTol']
-
         reactions = res1['processedModel']['reacID']
-        bScore = res1['currBestDiscrete']
-        bString = res1['intString']
 
         # TODO: find best MSE/bitstring amongst the N runs
 
         # redRef contains a MSE for each threshold
         res1['redRef'][8]['MSE']
-
         # !! several runs; should be gathered together
-        from cno.misc.models import FuzzyModels
 
         strings = self.session.allRes[0]['t1opt']['stringsTol']
         scores = self.session.allRes[0]['t1opt']['stringsTolScores']
 
         # ! reactions here is different. it should include the
         # AND edges as well
-        print(len(reactions), len(strings[0]))
-        fuzreactions = ['a=' + str(i) for i in range(0, len(strings[0]))]
-        for i, reac in enumerate(reactions):
-            fuzreactions[i] = reac
-        df = pd.DataFrame(strings, columns=fuzreactions)
+        if strings.ndim == 1:
+            # BUGGY CNORfuzzy looks like bitstrings do not have correct length
+            # if not enough strings are found.
+            bstring = self.session.allRes[0]['t1opt']['bString']
+            reactions = self.session.allRes[0]['processedModel']['reacID']
+            N = len(bstring)
+            M = len(reactions)
+            fuzreactions = ['a=' + str(i) for i in range(0, N)]
+            for i, reac in enumerate(reactions):
+                fuzreactions[i] = reac
+            df = pd.DataFrame([[0]*N], columns=fuzreactions)
+        else:
+            # FIXME what is it ? why adding a= ? reactions
+            fuzreactions = ['a=' + str(i) for i in range(0, len(strings[0]))]
+            for i, reac in enumerate(reactions):
+                fuzreactions[i] = reac
+            df = pd.DataFrame(strings, columns=fuzreactions)
+
         models = FuzzyModels(df)
         models.scores = scores
         models.cnograph.midas = self.data.copy()
 
         self.species = species
         self.reactions = reactions
-        self.bScore = bScore
-        self.bString = bString
         self.signals = self.session.signals
 
         # transforms the results into dataframes
@@ -214,15 +220,16 @@ class CNORfuzzy(CNOBase, CNORBase):
                 "Avg_Score_Gen","Best_score_Gen","Best_bit_Gen","Iter_time"))
             allRes[i]['t1opt']['results'] = df
 
-        results = {}
-        results['species'] = species
-        results['bScore'] = bScore
+        results = {
+            'best_score': self.session.best_score,
+            'best_bitstring': self.session.best_bitstring,
+            'species': species,
+        }
 
         self.results = FuzzyResults()
         self.results.results = results
         self.results.models = models
         self.results.allRes = allRes
-
 
     def _compute_mean_mses(self):
         """plot MSEs using interpolation of the results provided by the Fuzzy Analysis"""
@@ -289,11 +296,6 @@ class CNORfuzzy(CNOBase, CNORBase):
         pylab.grid()
         pylab.xticks(fontsize=16)
         pylab.yticks(fontsize=16)
-
-    def todo(self):
-        from cno.core.models import Models
-        res = self.results.allResp[0]
-        Models( pd.DataFrame(res.t1opt['stringsTol'], columns=list(self.reactions)))
 
     def create_report_images(self):
 
@@ -382,37 +384,11 @@ class CNORfuzzy(CNOBase, CNORBase):
             midas.plot(mode="mse")
         except:
             pass
-
         return midas
 
-    def _create_report(self):
-        self._report._init_report()
+    def create_report(self):
 
-        self._report.directory = self._report.report_directory
-        # Save filenames and report in a section
-        fname = self._report.directory + os.sep + "PKN-pipeline.sif"
-        self.cnograph.to_sif(fname)
-
-        fname = self._report.directory + os.sep + "MD-pipeline.csv"
-        self.midas.to_midas(fname)
-
-        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'
-        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
-        txt += '<li><a href="config.ini">Config file</a></li>'
-        txt += '<li><a href="rerun.py">Script</a></li></ul>'
-        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
-        self._report.add_section(txt, "Input data files")
-        self._report.add_section(
-        """
-         <div class="section" id="Script_used">
-         <object height=120 width=300 type='text/x-scriptlet' border=1
-         data="description.html"></object>
-         </div>""", "Description")
-        txt = """<pre class="literal-block">\n"""
-        #txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
-        txt += "todo\n"
-        txt += "o.report()\n</pre>\n"
-        self._report.add_section(txt, "Script used")
+        self._create_report_header()
 
         txt = """<a href="http://www.cellnopt.org/">
             <object data="pknmodel.svg" type="image/svg+xml">
@@ -429,7 +405,7 @@ class CNORfuzzy(CNOBase, CNORBase):
         self._report.add_section('<img src="fitness.png">', "Fitness")
         self._report.add_section('<img src="Errors.png">', "Errors")
 
-        self._report.add_section(self.get_html_reproduce(), "Reproducibility")
+        #self._report.add_section(self.get_html_reproduce(), "Reproducibility")
         fh = open(self._report.directory + os.sep + "rerun.py", 'w')
         fh.write("from cno import CNORfuzzy\n")
         fh.write("CNORfuzzy(config=config.ini)\n")
@@ -446,13 +422,13 @@ class CNORfuzzy(CNOBase, CNORBase):
         txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
         self._report.add_section(txt, "stats")
         # dependencies
-        self._report.write(self._report.directory, "index.html")
+        self._report.write("index.html")
 
     def _get_stats(self):
         res = {}
         #res['Computation time'] = self.total_time
         try:
-            res['Best Score'] = self.bScore
+            res['Best Score'] = self.results.results.best_score
         except:
             pass
         return res
@@ -492,18 +468,13 @@ class CNORfuzzy(CNOBase, CNORBase):
         bs = [random.randint(0,self.nTF+1) for x in range(0,self.blength)]
         return bs
 
-
-        #
         #  intString <- (sample.int(dim(paramsList$type2Funs)[1],
         #         (simList$numType1+simList$numType2),replace=TRUE)) - 1
         #i d'abord numtype1
 
-
     def simulate(self, bstring, NAFac=1, sizeFac=0.0001):
         self._check_parameters(bstring)
-
         self.session.bstring = bstring
-
         params = {'NAFac': NAFac, 'sizeFac': sizeFac}
         script = """
         model = preprocessing(cnolist, pknmodel)
@@ -518,61 +489,49 @@ class CNORfuzzy(CNOBase, CNORBase):
         self.session.run(script)
         return self.session.score
 
-
 def standalone(args=None):
     """This function is used by the standalone application called cellnopt_boolean
 
     ::
 
-        cno_fuzzy --help
+        cellnopt_boolean --help
 
     """
-    if args == None:
+    if args is None:
         args = sys.argv[:]
 
-    user_options = OptionFuzzy(prog="cno_fuzzy")
+    user_options = OptionsFuzzy()
 
     if len(args) == 1:
         user_options.parse_args(["prog", "--help"])
     else:
         options = user_options.parse_args(args[1:])
 
-    o = CNOfuzzy(options.model, options.data, verbose=options.verbose)
-    o.optimise()
+    if options.onweb is True or options.report is True:
+        o = CNORfuzzy(options.pknmodel, options.data, verbose=options.verbose,
+            verboseR=options.verboseR, config=user_options.config)
 
-    if options.report:
+    if options.onweb is True:
+        o.optimise()
+        o.onweb()
+    elif options.report is True:
+        o.optimise()
         o.report()
     else:
-        print("No report request (use --report)")
+        from easydev.console import red
+        print(red("No report requested; nothing will be saved or shown"))
+        print("use --on-web or --report options")
 
 
-class OptionFuzzy(OptionsBase):
-
-    def  __init__(self, version="1.0", prog=None):
-        usage = """usage: python %s --data ToyModelMMB.csv --model ToyModelMMB.sif""" % prog
-        super(OptionFuzzy, self).__init__(usage=usage, version=version, prog=prog)
-        self.add_gaBinaryT1_options()
-
-    def add_gaBinaryT1_options(self):
-        """The input options.
-
-        Default is None. Keep it that way because otherwise, the contents of
-        the ini file is overwritten in :class:`apps.Apps`.
-        """
-        params = FuzzyParameters()
-        group = self.add_argument_group("Genetic Algorithm",
-                    """This section gathers the parameters of the Genetic Algorithm
-                    """)
-        keys = params.get_keys_from_section("GA")
-
-        for key in  keys:
-            param = params.parameters[key]
-
-            kargs = param._get_kargs()
-            help = str(kargs['help'])
-            del kargs["help"]
-            print(help)
-            group.add_argument(param.name , help=""+help, **kargs)
+class OptionsFuzzy(OptionsBase):
+    def __init__(self):
+        prog = "cno_fuzzy"
+        version = prog + " v1.0 (Thomas Cokelaer @2014)"
+        super(OptionsFuzzy, self).__init__(version=version, prog=prog)
+        from cno.core.params import ParamsGA
+        section = ParamsGA()
+        self.add_section(section)
 
 
-
+if __name__ == "__main__":
+    standalone()

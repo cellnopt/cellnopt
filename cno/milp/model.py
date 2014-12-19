@@ -14,10 +14,14 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
+import sys
+
 import pulp
 from numpy import isnan
 from cno.io import Reaction
 from cno.core.base import CNOBase
+
+from cno.core.params import OptionsBase
 
 
 class MILPTrain(CNOBase):
@@ -380,3 +384,48 @@ class MILPTrain(CNOBase):
         for i, i_raw in zip(self.rxn, self.rxn_raw):
             rxn_sol[i_raw] = self.y_var[i].value()
         return rxn_sol
+
+
+
+def standalone(args=None):
+    """This function is used by the standalone application called cellnopt_boolean
+
+    ::
+
+        cno_milp --help
+
+    """
+    if args is None:
+        args = sys.argv[:]
+
+    user_options = OptionsMILP()
+
+    if len(args) == 1:
+        user_options.parse_args(["prog", "--help"])
+    else:
+        options = user_options.parse_args(args[1:])
+
+    if options.onweb is True or options.report is True:
+        o = MILPTrain(options.pknmodel, options.data, verbose=options.verbose,
+            verboseR=options.verboseR, config=user_options.config)
+
+    if options.onweb is True:
+        o.optimise()
+        o.onweb()
+    elif options.report is True:
+        o.optimise()
+        o.report()
+    else:
+        from easydev.console import red
+        print(red("No report requested; nothing will be saved or shown"))
+        print("use --on-web or --report options")
+
+
+class OptionsMILP(OptionsBase):
+    def __init__(self):
+        prog = "cno_milp"
+        version = prog + " v1.0 (Thomas Cokelaer @2014)"
+        super(OptionsMILP, self).__init__(version=version, prog=prog)
+
+if __name__ == "__main__":
+    standalone()
