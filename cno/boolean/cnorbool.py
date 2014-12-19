@@ -30,6 +30,7 @@ from biokit.rtools import bool2R
 
 from cno.core.params import params_to_update
 
+import easydev
 
 __all__ = ["CNORbool"]
 
@@ -85,28 +86,19 @@ class CNORbool(CNOBase, CNORBase):
                          config=config)
         CNORBase.__init__(self, verboseR)
 
-        self._report = ReportBool()
+        self._report = ReportBool() #
         self._report.Rdependencies = []  # just to speed up report.
-        self.results = BooleanResults()
-        self.results2 = BooleanResults()
+
+        self.results = BooleanResults()  # for time T1
+        self.results2 = BooleanResults()  # for time T2
 
         self.config.General.pknmodel.value = self.pknmodel.filename
         self.config.General.data.value = self.data.filename
 
         p = ParamsGA()
-        p.name = 'GA2'
+        p.name = 'GA2'  # same parameters as GA but need to change the name
         self.config.add_section(p)
         self._called = []
-
-    def _update_config(self, section, kwargs):
-        for k, v in kwargs.items():
-            try:
-                section = getattr(self.config, section)
-                option = getattr(section, k)
-                option.value = v
-            except:
-                # additional options should be ignored.
-                pass
 
     # !! should be same default values as in paramsGA
     @params_to_update()
@@ -192,12 +184,30 @@ class CNORbool(CNOBase, CNORBase):
         results[columns_float] = results[columns_float].astype(float)
 
         # cnograph created automatically from the reactions
-        df = pd.DataFrame(self.session.all_bitstrings,
+        try:
+            print('a')
+            N = len(self.session.best_bitstring)
+            all_bs = self.session.all_bitstrings
+            df = pd.DataFrame(all_bs, columns=self.reactions_r)
+            models = BooleanModels(df)
+            # flatten to handle exhaustive
+            import numpy as np
+            models.scores = np.array(list(pylab.flatten(self.session.all_scores)))
+            models.cnograph.midas = self.data.copy()
+
+        except:
+            N = len(self.session.best_bitstring)
+            all_bs = self.session.all_bitstrings
+            if N == len(self.reactions_r):
+                df = pd.DataFrame([self.session.all_bitstrings],
                               columns=self.reactions_r)
-        models = BooleanModels(df)
-        # flatten to handle exhaustive
-        import numpy as np
-        models.scores = np.array(list(pylab.flatten(self.session.all_scores)))
+
+                models = BooleanModels(df)
+                models.scores = easydev.to_list(self.session.all_scores)
+            else:
+                print('bb')
+                df = pd.DataFrame(columns=self.reactions_r)
+
         models.cnograph.midas = self.data.copy()
 
         results = {
@@ -223,8 +233,12 @@ class CNORbool(CNOBase, CNORBase):
         self._called.append('optimise')
 
     #use same parameters as in T1
+    # must be provided specifically in the prototype
     @params_to_update()
-    def optimise2(self, reltol=0.1, time_index_2=3, best_bitstring=None, **kargs):
+    def optimise2(self, NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
+                 reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
+                 time_index_1=1, maxgens=500, maxstallgens=100,
+                  time_index_2=3, best_bitstring=None):
         # TODO assert there are 2 time indices
         # something interesting to do is to run steady stte not only
         # for the best bitstring but all those within the tolerance !
@@ -432,7 +446,6 @@ class CNORbool(CNOBase, CNORBase):
         except:return midas
         return midas
 
-
     def simulate(self, bs=None, compression=True, expansion=True):
         """Return the score of the objective function
 
@@ -531,10 +544,10 @@ class CNORbool(CNOBase, CNORBase):
 
         self.plot_optimised_model(filename=self._report._make_filename("optimised_model.png"),
                                   show=False)
+
         self.logging.info("Creating mapback model")
         self.plot_mapback_model()
         self._report.savefig("optimised_model_mapback.png")
-
 
         self.logging.info("Creating error figure")
         self.plot_errors(show=False)
@@ -550,18 +563,6 @@ class CNORbool(CNOBase, CNORBase):
         if "optimise2" in self._called:
             self.plot_fitness2(show=False, save=True)
 
-        # self._report.savefig("plot_fit.png")
-
-    def plot_fitness(self, show=True, save=False):
-        # TODO show and save parameters
-        self.results.plot_fit()
-
-        if save is True:
-            self._report.savefig("fitness.png")
-
-        if show is False:
-            pylab.close()
-
     def plot_fitness2(self, show=True, save=False):
         self.results2.plot_fit()
 
@@ -573,27 +574,10 @@ class CNORbool(CNOBase, CNORBase):
 
     def create_report(self):
         """Creates a full report with figures and HTML page"""
-        self._report._init_report()
-        self._report.directory = self._report.report_directory
-        # Save filenames and report in a section
-        fname = self._report.directory + os.sep + "PKN-pipeline.sif"
 
-        self.config.save(self._report.directory + os.sep + 'config.ini')
-        self.cnograph.to_sif(fname)
-        fname = self._report.directory + os.sep + "MD-pipeline.csv"
-        self.midas.to_midas(fname)
-        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'
-        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
-        txt += '<li><a href="config.ini">Config file</a></li>'
-        txt += '<li><a href="rerun.py">Script</a></li></ul>'
-        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
-        self._report.add_section(txt, "Input data files")
-        self._report.add_section(
-        """
-         <div class="section" id="Script_used">
-         <object height=120 width=300 type='text/x-scriptlet' border=1
-         data="description.html"></object>
-         </div>""", "Description")
+        self._create_report_header()
+
+
         txt = """<pre class="literal-block">\n"""
         # txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
 
@@ -653,7 +637,7 @@ class CNORbool(CNOBase, CNORBase):
 
         # dependencies
         self._report.add_section('<img src="dependencies.svg">', "Dependencies")
-        self._report.write(self._report.report_directory, "index.html")
+        self._report.write("index.html")
 
     def _get_model_as_df(self):
         assert "optimise" in self._called
@@ -679,7 +663,7 @@ class CNORbool(CNOBase, CNORBase):
         # res['Computation time'] = self.total_time
         try:
             res['Best Score'] = self.results.results.best_score
-            res['Total time'] = self.results.results.results.Iter_time.sum()
+            res['Total time'] = self.results.results.sults.Iter_time.sum()
             res['Best Score T2'] = self.results2.results.best_score
             res['Total time T2'] = self.results2.results.results.Iter_time.sum()
         except:
