@@ -1,4 +1,20 @@
-from cno.misc.models import Models
+
+# -*- python -*-
+#
+#  This file is part of CNO software
+#
+#  Copyright (c) 2013-2014 - EBI-EMBL
+#
+#  File author(s): Thomas Cokelaer <cokelaer@ebi.ac.uk>
+#
+#  Distributed under the GPLv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: http://github.com/cellnopt/cellnopt
+#
+##############################################################################
+from cno.core.models import Models
 
 from biokit import viz
 
@@ -87,8 +103,8 @@ class BooleanResults(Results):
          .. plot::
              :include-source:
 
-             >>> from cellnopt.optimiser import ASPBool
-             >>> from cellnopt.data import cnodata
+             >>> from cno.asp import ASPBool
+             >>> from cno import cnodata
              >>> a = ASPBool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
              >>> a.run(fit=1)
              >>> a.hist_scores()
@@ -135,6 +151,4 @@ class ODEResults(Results):
             ymax = ylim[1] * 1.5
         pylab.ylim([ymin, ymax])
         pylab.grid(True)
-
-
 
