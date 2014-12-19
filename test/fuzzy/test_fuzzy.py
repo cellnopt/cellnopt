@@ -14,7 +14,7 @@ def test_fuzzy():
 
     score = c.simulate(c.create_random_parameters())
 
-    c.report()
+    c.create_report()
 
 
 
