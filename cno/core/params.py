@@ -1,9 +1,25 @@
+# -*- python -*-
+#
+#  This file is part of CNO software
+#
+#  Copyright (c) 2013-2014 - EBI-EMBL
+#
+#  File author(s): Thomas Cokelaer <cokelaer@ebi.ac.uk>
+#
+#  Distributed under the GPLv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: http://github.com/cellnopt/cellnopt
+#
+##############################################################################
 import argparse
 from easydev import AttrDict
 import functools
 
+
 __all__ = ['Parameter', 'Parameters', 'ParamsGA', 'params_to_update',
-           'ParamsPreprocessing']
+           'ParamsPreprocessing', 'ParamsDT', 'ParamsFuzzy', 'ParamsSSM']
 
 
 # Let us create a handy named tuple to define a parameter data structure
@@ -188,7 +204,6 @@ class ParamsGA(Parameters):
         self._init()
 
     def _init(self):
-        pass
         # adding all info required
         self.add_parameter(Parameter('elitism', '--elitism', 5,
             "The elitism number (should be 10%% of the popsize)"))
@@ -219,6 +234,66 @@ class ParamsGA(Parameters):
            "second time index to optimise"))
 
 
+class ParamsDT(Parameters):
+
+    error_msg = {}
+
+
+    def __init__(self):
+        super(ParamsDT, self).__init__('DiscreteTime', 'description discrete time')
+        self._init()
+
+    def _init(self):
+        self.add_parameter(Parameter('bool_updates', "--bool-updates", 10,
+           "description todo"))
+        self.add_parameter(Parameter('lower_bound', "--lower-bound", 0.8,
+           "description todo"))
+        self.add_parameter(Parameter('upper_bound', "--upper-bound", 10,
+           "description todo"))
+
+
+class ParamsFuzzy(Parameters):
+
+    error_msg = {}
+
+    def __init__(self):
+        super(ParamsFuzzy, self).__init__('Fuzzy', 'description to be done')
+        self._init()
+
+    def _init(self):
+        self.add_parameter(Parameter('do_refinement', '--do-refinement', True,
+                                     'description to do'))
+        self.add_parameter(Parameter('optimisation_algorithm', '--optimisation-algorithm',
+                                     'NLOPT_LN_SBPLX',
+                                     'description to do'))
+
+        self.add_parameter(Parameter('optimisation_xtol_abs', '--optimisation-xtol-abs', 0.001,
+                                     'description to do'))
+        self.add_parameter(Parameter('optimisation_max_eval', '--optimisation-max-eval', 10000,
+                                     'description to do'))
+        self.add_parameter(Parameter('optimisation_max_time', '--optimisation-max-time', 300,
+                                     'description to do'))
+
+
+class ParamsSSM(Parameters):
+
+    error_msg = {}
+
+    def __init__(self):
+        super(ParamsSSM, self).__init__('SSM', 'description to be done')
+        self._init()
+
+    def _init(self):
+        self.add_parameter(Parameter("maxtime", "--maxtime", 60,
+                           "The elitism number (should be 10%% of the popsize)"))
+        self.add_parameter(Parameter("dim_ref_set", "--dim-ref-set", 10,
+                           "The elitism number (should be 10%% of the popsize)"))
+        self.add_parameter(Parameter('n_diverse', "--n-diverse",10,
+                           "The elitism number (should be 10%% of the popsize)"))
+        self.add_parameter(Parameter("sss_verbose", "--ssm-verbose", True,
+                           "The elitism number (should be 10%% of the popsize)"))
+        self.add_parameter(Parameter("transfer_function", "--transfer-function", 3,
+                           "Number of TF to be used"))
 
 
 class CNOConfigParser(AttrDict):
@@ -290,7 +365,7 @@ class CNOConfigParser(AttrDict):
 class OptionsBase(argparse.ArgumentParser):
     def __init__(self, version="1.0", prog="cellnopt"):
         super(OptionsBase, self).__init__(version=version, prog=prog)
-        from cno.core.params import CNOConfigParser
+
         self.config = CNOConfigParser()
 
         section = ParamsGeneral()
