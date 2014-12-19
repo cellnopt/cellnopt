@@ -1,10 +1,8 @@
-from cno.misc.models import Models
+from cno.core.models import Models
 import pandas as pd
 import numpy as np
 
 from easydev import TempFile
-
-
 
 
 
@@ -28,7 +26,7 @@ def test_models():
 
     columns = [u'EGF=PI3K', u'TNFa=PI3K', u'Jnk=cJun', u'PI3K=Akt', u'Raf=Mek', u'!Akt=Mek', u'Mek=p90RSK', u'Mek=Erk', u'Erk=Hsp27', u'TNFa=Jnk', u'TNFa=NFkB', u'TNFa=Hsp27', u'EGF=Raf', u'EGF^TNFa=PI3K', u'Raf^!Akt=Mek', u'Erk^TNFa=Hsp27']
 
-    df = pd.DataFrame(data,columns=columns)
+    df = pd.DataFrame(data, columns=columns)
     fh = TempFile()
     df.to_csv(fh.name)
     
