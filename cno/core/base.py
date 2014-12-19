@@ -14,14 +14,21 @@
 #
 ##############################################################################
 import os
-from biokit.rtools import RSession
+
 from cno.core.params import CNOConfig
+from cno.io.reactions import Reaction
+
+from biokit.rtools import RSession
 from easydev import Logging
+
+import pylab
+
 
 __all__ = ["CNOBase", "CNORBase"]
 
 
 class CNORBase(object):
+    """A base class to handle the R session and its verbosity"""
     def __init__(self, verboseR):
         assert verboseR in [True, False]
         self._verboseR = verboseR
@@ -36,8 +43,8 @@ class CNORBase(object):
     verboseR = property(_get_verboseR, _set_verboseR)
 
 
-class CNOBase(Logging ):
-    """Alias to CNOGraph and common class to all simulators"""
+class CNOBase(Logging):
+    """Abstract Base Class common class to all formalisms"""
 
     def __init__(self, pknmodel, data, tag=None, verbose=False, config=None):
         super(CNOBase, self).__init__(level=verbose)
@@ -67,6 +74,25 @@ class CNOBase(Logging ):
         self._cnograph = CNOGraph(pknmodel, data)
 
         self.config = CNOConfig()
+
+        self._report_directory = None
+        self.report_directory = 'report'
+
+    def _get_report_directory(self):
+        return self._report_directory
+    def _set_report_directory(self, value):
+        self._report_directory = value
+    report_directory = property(_get_report_directory, _set_report_directory)
+
+    def _update_config(self, section, kwargs):
+        for k, v in kwargs.items():
+            try:
+                this_section = getattr(self.config, section)
+                option = getattr(this_section, k)
+                option.value = v
+            except:
+                # additional options should be ignored.
+                pass
 
     def _get_pknmodel(self):
         return self._pknmodel
@@ -114,7 +140,7 @@ class CNOBase(Logging ):
 
     def _reac_cnor2cno(self, reactions):
         # CNOR ands are encoded with +
-        from cno import Reaction
+
         reactions = [r.replace('+', '^') for r in reactions]
         newreacs = []
         for i,reac in enumerate(reactions):
@@ -163,7 +189,40 @@ class CNOBase(Logging ):
 
     def create_report(self):
         raise NotImplementedError
+
     def create_report_images(self):
         raise NotImplementedError
 
+    def _create_report_header(self):
+        self._report._init_report()
+        self._report.directory = self._report.report_directory
+        # Save filenames and report in a section
+        fname = self._report.directory + os.sep + "PKN-pipeline.sif"
 
+        self.config.save(self._report.directory + os.sep + 'config.ini')
+        self.cnograph.to_sif(fname)
+        fname = self._report.directory + os.sep + "MD-pipeline.csv"
+        self.midas.to_midas(fname)
+        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'
+        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
+        txt += '<li><a href="config.ini">Config file</a></li>'
+        txt += '<li><a href="rerun.py">Script</a></li></ul>'
+        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
+        self._report.add_section(txt, "Input data files")
+
+        self._report.add_section(
+        """
+         <div class="section" id="Script_used">
+         <object height=120 width=300 type='text/x-scriptlet' border=1
+         data="description.html"></object>
+         </div>""", "Description")
+
+    def plot_fitness(self, show=True, save=False):
+        # TODO show and save parameters
+        self.results.plot_fit()
+
+        if save is True:
+            self._report.savefig("fitness.png")
+
+        if show is False:
+            pylab.close()
