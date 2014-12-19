@@ -1,3 +1,18 @@
+# -*- python -*-
+#
+#  This file is part of CNO software
+#
+#  Copyright (c) 2013-2014 - EBI-EMBL
+#
+#  File author(s): Thomas Cokelaer <cokelaer@ebi.ac.uk>
+#
+#  Distributed under the GPLv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: http://github.com/cellnopt/cellnopt
+#
+##############################################################################
 import os
 import shutil
 
@@ -9,7 +24,6 @@ from biokit.rtools import RPackageManager
 
 
 __all__ = ["Report", "ReportBool", "ReportODE", "ReportFuzzy", "ReportDT"]
-
 
 
 class HTMLTable(object):
@@ -30,7 +44,7 @@ class HTMLTable(object):
 
 class Report(easydev.Logging):
 
-    def __init__(self, formalism, tag=None, filename="index.html",
+    def __init__(self, formalism='base', directory='report', tag=None, filename="index.html",
                  overwrite=True, verbose=True, dependencies=True):
         super(Report, self).__init__(verbose)
         self.formalism = formalism
@@ -38,21 +52,20 @@ class Report(easydev.Logging):
         self.version = version
         self.tag = tag
 
-        if self.tag==None:
-            self.report_directory = "_".join(["report", self.formalism])
+        if self.tag is None:
+            self.report_directory = "_".join([directory, self.formalism])
         else:
-            self.report_directory = "_".join(["report", self.formalism, self.tag])
-        self._overwrite_report = overwrite
+            self.report_directory = "_".join([directory, self.formalism, self.tag])
 
+        self._overwrite_report = overwrite
         self.sections = []
         self.section_names = []
-        self.filename = filename
-
+        self.index = filename
         self.Rdependencies = []
 
     def show(self):
         from browse import browse as bs
-        bs(self.directory + os.sep + self.filename)
+        bs(self.report_directory + os.sep + self.index)
 
     def close_body(self):
         return "</body>"
@@ -69,25 +82,24 @@ class Report(easydev.Logging):
     def savefig(self, filename):
         pylab.savefig(self._make_filename(filename))
 
-    def _get_report_directory(self, directory=None):
-        if directory==None:
-            directory = self.report_directory
-        return directory
-
     def _init_report(self, directory=None):
         """create the report directroy and return the directory name"""
         self.sections = []
         self.section_names = []
-        directory = self._get_report_directory(directory)
+
+        if directory is None:
+            directory = self.report_directory
+
+        # if the directory already exists, print a warning
         try:
             os.mkdir(directory)
         except Exception:
+            # already exists
             txt = "Existing directory {}. Files may be overwritten".format(self.report_directory)
-
-        if self._overwrite_report == True:
-            self.warning("Overwriting report")
-        else:
-            raise IOError(txt)
+            if self._overwrite_report is True:
+                self.warning("Directory %s exists already. Files may be overwritten" % directory)
+            else:
+                raise IOError('Directory %s exists already. Set _overwrite_report to True or delete the directory' % directory)
 
         for filename in ["dana.css", "reset.css", "tools.js"]:
             filename = easydev.gsf("cno", "", filename)
@@ -243,8 +255,8 @@ class Report(easydev.Logging):
         </div>"""
         return txt
 
-    def write(self, directory, filename):
-        fh =  open(directory + os.sep + filename, "w")
+    def write(self, filename):
+        fh =  open(self.report_directory + os.sep + filename, "w")
 
         contents = self.get_header()
         #contents += self.get_toc()
