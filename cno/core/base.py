@@ -17,6 +17,7 @@ import os
 
 from cno.core.params import CNOConfig
 from cno.io.reactions import Reaction
+from cno.core.params import CNOConfigParser
 
 from biokit.rtools import RSession
 from easydev import Logging
@@ -66,14 +67,21 @@ class CNOBase(Logging):
 
         self._pknmodel = CNOGraph(pknmodel)
         self._pknmodel.midas = self._data
+        self._model = self._pknmodel.copy()
 
-        self._model = CNOGraph(pknmodel)
-        self._model.midas = self._data
+        #self._model.midas = self._data
         self._model.preprocessing() #FIXME what if one decides to preprocess differently
-
-        self._cnograph = CNOGraph(pknmodel, data)
-
+        # why another copy ?
+        self._cnograph = self._pknmodel.copy()
         self.config = CNOConfig()
+        if config is not None:
+            if isinstance(config, str):
+                self.config.read(config)
+            #elif isinstance(config, CNOConfigParser):
+            #    print("AAAAAAAA")
+            #    self.config = config  # copy() returns a dict !!
+            else:
+                raise TypeError
 
         self._report_directory = None
         self.report_directory = 'report'
@@ -177,6 +185,9 @@ class CNOBase(Logging):
         if filename is None:
             filename = self.report_directory + os.sep + "config.ini"
         self.config.save(filename)
+
+    def report(self, show=True):
+        self.onweb(show=show)
 
     def onweb(self, show=True):
         self.create_report()
