@@ -795,7 +795,7 @@ class CNOGraph(nx.DiGraph):
                     self.logging.warning(msg % ('cues', x))
             for x in self.midas.names_signals:
                 if x not in self.nodes():
-                    self.add.node(x)
+                    self.add_node(x)
                 self.logging.warning(msg % ('signals', x))
 
     @modifier

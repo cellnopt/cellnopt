@@ -61,6 +61,7 @@ References
 
     references
     ref_formalism
+    ref_core
 
 .. .. toctree::
 ..    biblio.rst

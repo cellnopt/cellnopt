@@ -218,11 +218,12 @@ def test_diamond():
 
 
 def test_check_compatible_midas():
-    try:
-        c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyMMB.csv"))
-        assert False
-    except CNOError:
-        assert True
+    #try:
+    #    c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyMMB.csv"))
+    #    assert False
+    #except CNOError:
+    #    assert True
+    c = CNOGraph(cnodata("PKN-ToyPB.sif"), cnodata("MD-ToyMMB.csv"))
 
 def test_renaming_of_ang_gates_after_compression():
     c = CNOGraph(cnodata("PKN-ToyPB_True.sif"), cnodata("MD-ToyPB_True.csv"))
