@@ -54,18 +54,26 @@ class CNORdt(CNORBase, CNOBase):
 
 
     """
-    def __init__(self, model, data, tag=None, verbose=True, verboseR=False,
-            config=None):
-        """.. rubric:: constructor
-
+    def __init__(self, model, data, tag=None, verbose=True,
+                 verboseR=False, config=None):
         """
 
+        :param model:
+        :param data:
+        :param tag:
+        :param verbose:
+        :param verboseR:
+        :param config:
+        :return:
+        """
         CNOBase.__init__(self,model, data, tag=tag, verbose=verbose,
-                config=config)
+                        config=config)
+        self.logging.info("Initialise R session")
         CNORBase.__init__(self, verboseR)
 
         self._report = ReportDT()
         self._report.Rdependencies = []  # just to speed up code
+
         self.results = DTResults()
 
         self.config.General.pknmodel.value = self.pknmodel.filename
@@ -77,9 +85,9 @@ class CNORdt(CNORBase, CNOBase):
 
     @params_to_update()
     def optimise(self, NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
-                 reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
+                 reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
                  time_index_1=1, maxgens=500, maxstallgens=100, bool_updates=10,
-                 upper_bound=10, lower_bound=0.8):
+                 upper_bound=10, lower_bound=0.8, verbose=True):
         """
 
         :param lowerB:
@@ -87,6 +95,8 @@ class CNORdt(CNORBase, CNOBase):
         :param boolUpdates:
 
         """
+        assert int(bool_updates) == len(self.midas.times), "only boolupdate==c.midas.Ntimes is implemented so far"
+        # TODO reuse the previous params
         self.logging.info("Running the optimisation. Can take a very long"
                           "time. To see the progression, set verboseR "
                           "attribute to True")
@@ -147,15 +157,13 @@ class CNORdt(CNORBase, CNOBase):
             'expansion': bool2R(expansion)
             }
 
-        gad = dict([(k, self.config.GA[k].value)
-            for k in self.config.GA._get_names()])
+        gad = self.config.GA.as_dict()
         params.update(gad)
 
-        dt_params = dict([(k, self.config.DiscreteTime[k].value)
-            for k in self.config.DiscreteTime._get_names()])
+        dt_params = self.config.DiscreteTime.as_dict()
         params.update(dt_params)
 
-        params['ga_verbose'] = bool2R(params['ga_verbose'])
+        params['ga_verbose'] = bool2R(params['verbose'])
 
         self.session.run(script % params)
 
@@ -179,7 +187,6 @@ class CNORdt(CNORBase, CNOBase):
                 self.df = df
             except:
                 self.df = pd.DataFrame()
-
 
         #df = pd.DataFrame(self.session.all_bitstrings,
         #                      columns=list(self.session.reactions))
@@ -416,27 +423,25 @@ def standalone(args=None):
     if args is None:
         args = sys.argv[:]
 
+    from cno.core.standalone import Standalone
     user_options = OptionsDT()
+    stander = Standalone(args, user_options)
 
-    if len(args) == 1:
-        user_options.parse_args(["prog", "--help"])
-    else:
-        options = user_options.parse_args(args[1:])
+    options = stander.options
 
     if options.onweb is True or options.report is True:
-        o = CNORdt(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=user_options.config)
-
-    if options.onweb is True:
-        o.optimise()
-        o.onweb()
-    elif options.report is True:
-        o.optimise()
-        o.report()
+        trainer = CNORdt(options.pknmodel, options.data, verbose=options.verbose,
+            verboseR=options.verboseR, config=options.config_file)
     else:
-        from easydev.console import red
-        print(red("No report requested; nothing will be saved or shown"))
-        print("use --on-web or --report options")
+        stander.help()
+
+    params = stander.user_options.config.GA.as_dict()
+    params.update(stander.user_options.config.DiscreteTime.as_dict())
+
+    trainer.optimise(**params)
+
+    stander.trainer = trainer
+    stander.report()
 
 
 class OptionsDT(OptionsBase):
@@ -444,11 +449,8 @@ class OptionsDT(OptionsBase):
         prog = "cno_dt"
         version = prog + " v1.0 (Thomas Cokelaer @2014)"
         super(OptionsDT, self).__init__(version=version, prog=prog)
-        from cno.core.params import ParamsGA, ParamsDT
-        section = ParamsGA()
-        self.add_section(section)
-        section = ParamsDT()
-        self.add_section(section)
+        self.add_section(ParamsGA())
+        self.add_section(ParamsDT())
 
 
 if __name__ == "__main__":
