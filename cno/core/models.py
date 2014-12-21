@@ -34,7 +34,8 @@ class Models(object):
         # all + by "^" !! Do we want a warning ?
         for reaction in self.df.columns:
             if "+" in reaction:
-                print("Warning in Models. found a + sign...")
+                # todo: use logging
+                print("Warning in Models. found a + sign... in %s. Interepreted as ^" % reaction)
         self.df.columns = [x.replace("+", "^") for x in self.df.columns]
 
         # keep this import here to avoid cycling imports
@@ -94,8 +95,8 @@ class BooleanModels(Models):
 
     ::
 
-        >>> from cno.misc import models
-        >>> m = models.Models()
+        >>> from cno.core.models import Models
+        >>> m = Models()
         >>> m.plot() # average model, whcih can be obtained with  m.get_average_model()
         >>> m.plot(model_number=0)  # indices are m.df.index
         >>> m.plot(model_number=0)  # indices are m.df.index
