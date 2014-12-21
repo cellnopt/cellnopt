@@ -438,7 +438,6 @@ class CNOGraph(nx.DiGraph):
                 self.midas = model.midas.copy()
         elif model is None:
             self.filename = None
-
         elif isinstance(model, str):
             if model.endswith('.sif'):
                 self.read_sif(model)
@@ -457,6 +456,7 @@ class CNOGraph(nx.DiGraph):
             self.midas = data
 
         self._colormap = colormap.Colormap()
+        self._changed = True
 
     def _set_verbose(self, verbose):
         self.logging.debugLevel = verbose
@@ -469,6 +469,7 @@ class CNOGraph(nx.DiGraph):
     def _get_midas(self):
         return self._midas
     def _set_midas(self, data):
+        self._changed = True
         if isinstance(data, str):
             self._midas = XMIDAS(data, cellLine=self.kargs.get("cellLine", None),
                                  verbose=self.verbose)
@@ -514,9 +515,7 @@ class CNOGraph(nx.DiGraph):
         # takes the SIF input file and build up the CNOGraph. remove all nodes
         # before
         self.clear()
-        self.logging.debug("reading the model")
-
-
+        self.logging.debug("Reading the model")
         #if isinstance(model, (str, unicode)):
         if isinstance(model, (str)):
             sif = SIF(model)
@@ -531,15 +530,15 @@ class CNOGraph(nx.DiGraph):
         # now, we need to set the attributes, only if we have a cnolist,
         # otherwise color is the default (white)
         self.set_default_node_attributes() # must be call if sif or midas modified.
-        self.logging.debug("model loaded")
+        self.logging.debug("Model loaded")
 
-    @modifier
+    #@modifier
     def _add_simple_reaction(self, reac, node_dict=None, edge_dict=None):
         """A=B or !A=B"""
 
         #reac = Reaction(reac) # validate the reaction
         #reac = reac.name
-
+        self._changed = True
         this = self.attributes.attributes['others']
         if node_dict:
             this.update(node_dict)
@@ -562,8 +561,9 @@ class CNOGraph(nx.DiGraph):
             else:
                 self.add_edge(lhs,rhs, attr_dict=edge_dict, link=link)
 
-    @modifier
+    #@modifier
     def add_reactions(self, reactions, node_dict=None, edge_dict=None):
+        self._changed = True
         for reac in reactions:
             self.add_reaction(reac, node_dict=node_dict, edge_dict=edge_dict)
 
@@ -604,18 +604,20 @@ class CNOGraph(nx.DiGraph):
             c.add_reaction("a+b^c+e+d^h=Z")
             c.plot()
 
-
         """
         # add the nodes first so that the attributes are ste properly
-        reac = Reaction(reac)
+        self._changed = True
+        # make sure that (1) there is no extra spaces and (2) this is a string, not
+        # a unicode
+        reac = Reaction(str(reac.strip()))
 
         # make sure that nodes are created with the default (or use attributes)
-        # before crearing the edges.
+        # before creating the edges.
         for node in reac.species:
             self.add_node(node, attr_dict=node_dict)
 
         # if there is an OR gate, easy, just need to add simple reactions
-        # A+!B=C is splitted into A=C and !B=C
+        # A+!B=C is split into A=C and !B=C
 
         for this_lhs in reac.lhs.split("+"):
             # + has priority upon ^ unlike in maths so we can split with +
@@ -660,10 +662,11 @@ class CNOGraph(nx.DiGraph):
             self.edge[edge[0]][edge[1]] = attrs
 
     def add_edges_from(self, ebunch, attr_dict=None, **attr):
+        self._changed = True
         for edge in ebunch:
             self.add_edge(edge[0], edge[1], attr_dict=attr_dict, **attr)
 
-    @modifier
+    #@modifier
     def add_edge(self, u, v, attr_dict=None, **attr):
         """adds an edge between node u and v.
 
@@ -730,6 +733,8 @@ class CNOGraph(nx.DiGraph):
             the color of the edge is black if link is set to "+" and red otherwie.
 
         """
+        self._changed = True
+
         self.add_node(u)
         self.add_node(v)
         link = Link(attr.get("link", "+"))
@@ -751,10 +756,11 @@ class CNOGraph(nx.DiGraph):
         else:
             super(CNOGraph, self).add_edge(u, v, attr_dict, **attr)
 
-    @modifier
+    #@modifier
     def clear(self):
         """Remove nodes and edges and MIDAS instance"""
         super(CNOGraph, self).clear()
+        self._changed = True
         self.midas = None
         self._stimuli = []
         self._signals = []
@@ -771,6 +777,7 @@ class CNOGraph(nx.DiGraph):
         However, if you manipulate the nodes/edges manually you may need to call
         this function afterwards.
         """
+        self._changed = True
         for node in self._find_and_nodes():
             if len(self.successors(node))==0 or len(self.predecessors(node))<=1:
                 self.remove_node(node)
@@ -793,6 +800,7 @@ class CNOGraph(nx.DiGraph):
     @modifier
     def remove_and_gates(self):
         """Remove the AND nodes added by :meth:`expand_and_gates`"""
+        self._changed = True
         for n in self._find_and_nodes():
             self.remove_node(n)
 
@@ -1498,6 +1506,8 @@ class CNOGraph(nx.DiGraph):
         #. if resulting graph is disconnected
 
         """
+        self._changed = True
+
         Ninh = [x[2]["link"] for x in self.edges(data=True)].count('-')
         I = sum(self.in_degree().values())
         O = sum(self.out_degree().values())
@@ -1558,7 +1568,7 @@ class CNOGraph(nx.DiGraph):
         """
         return nx.adjacency_matrix(self, nodelist=nodelist).astype(int)
 
-    @modifier
+    #@modifier
     def remove_edge(self, u, v):
         """Remove the edge between u and v.
 
@@ -1567,8 +1577,10 @@ class CNOGraph(nx.DiGraph):
 
         Calls :meth:`clean_orphan_ands` afterwards
         """
+        self._changed = True
         super(CNOGraph, self).remove_edge(u,v)
         self.clean_orphan_ands()
+
 
     @modifier
     def remove_node(self, n):
@@ -1582,12 +1594,13 @@ class CNOGraph(nx.DiGraph):
         .. seealso:: :meth:`clean_orphan_ands`
 
         """
+        self._changed = True
         super(CNOGraph, self).remove_node(n)
         if "^" not in str(n):
             self.clean_orphan_ands()
 
-
     def add_nodes_from(self, nbunch, attr_dict=None, **attr):
+        self._changed = True
         for node in nbunch:
             if isinstance(node, str):
                 self.add_node(node, attr_dict=attr_dict, **attr)
@@ -1596,7 +1609,6 @@ class CNOGraph(nx.DiGraph):
                 attr.update(node[1])
                 self.add_node(name, attr_dict=attr_dict, **attr)
 
-    @modifier
     def add_node(self, node, attr_dict=None, **attr):
         """Add a node
 
@@ -1623,12 +1635,11 @@ class CNOGraph(nx.DiGraph):
            function, they should all appear as expected.
 
         """
+        self._changed = True
         if attr_dict is None:
             attr_dict = self.get_node_attributes(node)
         super(CNOGraph, self).add_node(node, attr_dict=attr_dict, **attr)
 
-
-    @modifier
     def preprocessing(self, expansion=True, compression=True, cutnonc=True,
                       maxInputsPerGate=2):
         """Performs the 3 preprocessing steps (cutnonc, expansion, compression)
@@ -1648,6 +1659,7 @@ class CNOGraph(nx.DiGraph):
             c.plot()
 
         """
+        self._changed = True
         if cutnonc:
             self.cutnonc()
         if compression:
@@ -1655,7 +1667,6 @@ class CNOGraph(nx.DiGraph):
         if expansion:
             self.expand_and_gates(maxInputsPerGate=maxInputsPerGate)
 
-    @modifier
     def cutnonc(self):
         """Finds non-observable and non-controllable nodes and removes them.
 
@@ -1669,11 +1680,11 @@ class CNOGraph(nx.DiGraph):
             c.plot()
 
         """
+        self._changed = True
         nonc = self.nonc[:]
         for node in nonc:
             self.collapse_node(node)
 
-    @modifier
     def compress(self, recursive=True, iteration=1, max_iteration=5):
         """Finds compressable nodes and removes them from the graph
 
@@ -1697,6 +1708,7 @@ class CNOGraph(nx.DiGraph):
 
         .. seealso:: :meth:`compressable_nodes`, :meth:`is_compressable`
         """
+        self._changed = True
         assert max_iteration >=1
         #Patched to proceed on sorted lists and provide always the same results.
         #for node in self.compressable_nodes:
@@ -1778,10 +1790,8 @@ class CNOGraph(nx.DiGraph):
             attrs['link'] = "-"
             attrs['color'] = "red"
             attrs['arrowhead'] = "tee"
-
         return attrs
 
-    @modifier
     def collapse_node(self, node):
         """Collapses a node (removes a node but connects input nodes to output nodes)
 
@@ -1800,6 +1810,7 @@ class CNOGraph(nx.DiGraph):
         """
         # Removing a node that has several entries and several outputs is not
         # implemented because there is no such situation in CNO.
+        self._changed = True
         successors = self.successors(node)
         predecessors = self.predecessors(node)
 
@@ -1940,8 +1951,6 @@ class CNOGraph(nx.DiGraph):
                     e0, e1 = edge[0], edge[1]
                     self.edge[e0][e1][name] = values[reaction]
 
-
-
     def reac2edges(self, reaction):
         """Here no informatiom about links is returned"""
         if reaction not in self.reactions:
@@ -1955,8 +1964,6 @@ class CNOGraph(nx.DiGraph):
             e0 = reac.lhs
             e1 = reac.rhs
             return [(e0.replace("!",""), e1.replace("!",""))]
-
-
 
     def set_edge_visibility_from_reactions(self, reactions):
         # First, reset the style, which may have been set already
@@ -2152,7 +2159,6 @@ class CNOGraph(nx.DiGraph):
         andNodes = [node for node in self.nodes() if self.isand(node)]
         return andNodes
 
-    @modifier
     def expand_or_gates(self):
         """Expand OR gates given AND gates
 
@@ -2188,6 +2194,7 @@ class CNOGraph(nx.DiGraph):
         .. seealso:: :meth:`~cno.io.cnograph.CNOGraph.expand_and_gates`
 
         """
+        self._changed = True
         for this in self._find_and_nodes():
             p = self.predecessors(this)
             s = self.successors(this)
@@ -2196,7 +2203,6 @@ class CNOGraph(nx.DiGraph):
                 link = self.edge[node][this]['link']
                 self.add_edge(node, s[0], link=link)
 
-    @modifier
     def expand_and_gates(self, maxInputsPerGate=2):
         """Expands the network to incorporate AND gates
 
@@ -2257,11 +2263,11 @@ class CNOGraph(nx.DiGraph):
 
         .. note:: propagate data from edge on the AND gates.
         """
+        self._changed = True
         nodes2expand = self._find_nodes_with_multiple_inputs()
         for node in nodes2expand:
             self._add_and_gates(node, maxInputsPerGate)
 
-    @modifier
     def add_cycle(self, nodes, **attr):
         """Add a cycle
 
@@ -2284,7 +2290,7 @@ class CNOGraph(nx.DiGraph):
         .. warning:: added cycle overwrite previous edges
 
         """
-
+        self._changed = True
         if "link" not in attr.keys():
             raise KeyError("link keyword must be provided")
 
@@ -2308,17 +2314,21 @@ class CNOGraph(nx.DiGraph):
         raise NotImplementedError
 
 
-
-    @modifier
     def remove_nodes_from(self, nbunch):
         """Removes a bunch of nodes
 
         .. warning:: need to be tests with and gates."""
+        self._changed = True
         for node in nbunch:
             self.remove_node(node)
 
     def _get_compressable_nodes(self):
-        compressables = [x for x in self.nodes() if self.is_compressable(x)]
+        if self._changed is True:
+            compressables = [x for x in self.nodes() if self.is_compressable(x)]
+            self._compressable_nodes = compressables[:]
+            self._changed = False
+        else:
+            compressables = self._compressable_nodes[:]
         return [x for x in compressables if self.isand(x) is False]
     compressable_nodes = property(fget=_get_compressable_nodes,
         doc="Returns list of compressable nodes (Read-only).")
@@ -2750,6 +2760,7 @@ class CNOGraph(nx.DiGraph):
 
         .. seealso:: :meth:`cno.io.sbmlqual`
         """
+        self._changed = True
         s = SIF()
         for reac in self.reactions:
             s.add_reaction(reac)
@@ -2762,6 +2773,7 @@ class CNOGraph(nx.DiGraph):
 
         .. seealso:: :meth:`to_json`
         """
+        self._changed = True
         from networkx.readwrite import json_graph
 
         graph = json_graph.node_link_graph(json.loads(open(filename).read()))
@@ -2807,7 +2819,6 @@ class CNOGraph(nx.DiGraph):
         print("Flow hierarchy = %s (fraction of edges not participating in cycles)" % stats['flow'])
         print("Average degree = " + str(sum(self.degree().values())/float(len(self.nodes()))))
 
-    @modifier
     def merge_nodes(self, nodes, node):
         """Merge several nodes into a single one
 
@@ -2831,6 +2842,7 @@ class CNOGraph(nx.DiGraph):
 
 
         """
+        self._changed = True
         assert len(nodes)>1, "nodes must be a list of species"
         for n in nodes:
             if n not in self.nodes():
@@ -2870,7 +2882,6 @@ class CNOGraph(nx.DiGraph):
                 self._inhibitors.remove(this)
             self._inhibitors.append(node)
 
-    @modifier
     def split_node(self, node, nodes):
         """
 
@@ -2894,7 +2905,8 @@ class CNOGraph(nx.DiGraph):
             subplot(1,2,2)
             c.plot(hold=True)
 
-       """
+        """
+        self._changed = True
         for n in nodes:
             for pred in self.predecessors(node):
                 attrs = self.edge[pred][node]
@@ -2985,8 +2997,8 @@ class CNOGraph(nx.DiGraph):
         namesNONC  = list(set(namesNONC)) # required ?
         return namesNONC
 
-    @modifier
     def remove_self_loops(self):
+        self._changed = True
         for e in self.edges():
             if e[0] == e[1]:
                 self.remove_edge(e[0], e[1])
