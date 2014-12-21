@@ -57,7 +57,8 @@ class CNORode(CNOBase, CNORBase):
         c.plot_errors()
 
     """
-    def __init__(self, model=None, data=None, verbose=True, verboseR=False):
+    def __init__(self, model=None, data=None, verbose=True,
+                 verboseR=False, config=None):
         CNOBase.__init__(self,model, data, verbose=verbose)
         CNORBase.__init__(self, verboseR=verboseR)
 
@@ -87,7 +88,9 @@ class CNORode(CNOBase, CNORBase):
         self.species = self.session.species
 
     @params_to_update()
-    def optimise(self,  n_diverse=10, dim_ref_set=10, maxtime=60):
+    def optimise(self,  n_diverse=10, dim_ref_set=10, maxtime=60,
+                 verbose=False, reltol=1e-4, atol=1e-3, maxeval='Inf',
+                 transfer_function=3, maxstepsize='Inf', reuse_ode_params=False):
         """Optimise the ODE parameters using SSM algorithm 
 
         :param int maxtime: (default 10)
@@ -105,8 +108,12 @@ class CNORode(CNOBase, CNORBase):
                           "attribute to True")
         # update config GA section with user parameters
         self._update_config('SSM', self.optimise.actual_kwargs)
-        ssmd = dict([(k, self.config.SSM[k].value)
-            for k in self.config.SSM._get_names()])
+        ssmd = self.config.SSM.as_dict()
+
+        if self.session.get('ode_params') is None:
+            self.session.run('ode_params=NULL')
+        if reuse_ode_params is False:
+            self.session.run('ode_params=NULL')
 
         # todo: ode_params to be provided as input
         script = """
@@ -116,10 +123,12 @@ class CNORode(CNOBase, CNORBase):
         reactions = pknmodel$reacID
         species = colnames(cnolist@signals[[1]])
 
-        ode_params = createLBodeContPars(pknmodel)
+        if (is.null(ode_params) == TRUE){
+         ode_params = createLBodeContPars(pknmodel)
+        }
         ode_params = parEstimationLBodeSSm(cnolist, pknmodel, 
-            maxtime=%(maxtime)s, dim_refset=%(dim_refset)s, 
-            verbose=F, ndiverse=%(ndiverse)s, ode_parameters=ode_params)
+            maxtime=%(maxtime)s, dim_refset=%(dim_ref_set)s, maxeval=%(maxeval)s,
+            verbose=F, ndiverse=%(n_diverse)s, ode_parameters=ode_params)
         """
 
         expansion = True
@@ -133,13 +142,16 @@ class CNORode(CNOBase, CNORBase):
             }
 
         params.update(ssmd)
+
         self.session.run(script % params)
 
         ssm_results = self.session.ode_params['ssm_results'].copy()
+        self.ssm_results = ssm_results
         results = {
                 'best_score': ssm_results['fbest'],
                 'all_scores': ssm_results['f'],
                 'reactions': self.session.reactions[:],
+                'best_params': ssm_results['xbest']
         }
         for k,v in self.session.ode_params.items():
             results[k] = v.copy()
@@ -155,18 +167,49 @@ class CNORode(CNOBase, CNORBase):
         if show is False:
             pylab.close()
 
-    def simulate(self, bs=None, compression=True, expansion=True):
+    def simulate(self, params, verboseR=False):
+        # The first call is slow but then, it is faster but still
+        # 10 times slower than the pure R version
+        save_verboseR = self.verboseR
+        self.verboseR = verboseR
+        if self.session.get("simulator_initialised") is None:
+            script = """
+                library(CNORode)
+                pknmodel = readSIF("%(pknmodel)s")
+                cnolist = CNOlist("%(midas)s")
+                indices = indexFinder(cnolist, pknmodel,verbose=FALSE)
+                ode_params = createLBodeContPars(pknmodel)
+                objective_function = getLBodeContObjFunction(cnolist, pknmodel,
+                    ode_params, indices)
+                simulator_initialised = T
+            """
+            pars = {
+                'pknmodel': self.pknmodel.filename,
+                'midas': self.data.filename,
+            }
+            self.session.run(script % pars)
+
+        self.session['params'] = params
+        script = """
+            score = objective_function(params)
+        """
+        self.session.run(script)
+        self.verboseR = save_verboseR
+        return self.session.score
+
+    def get_sim_data(self, bs=None):
         """
 
         input could be a bitstring with correct length and same order
         OR a model
 
         """
-        if bs == None:
+        if bs is None:
             bs = self.results.results.parValues
         else:
-            # TODO echk assert length bs is correct
+            # TODO check assert length bs is correct
             pass
+
         script_template = """
         library(CNORode)
         pknmodel = readSIF("%(pknmodel)s")
@@ -190,14 +233,12 @@ class CNORode(CNOBase, CNORBase):
         self.sim = pd.concat([pd.DataFrame(x, columns=self.species) 
             for x in sim_data])
 
-        #return self.session.sim_data
-
     def _get_models(self):
         return self.results.cnorbool.models
     models = property(_get_models)
 
     def _set_simulation(self):
-        self.simulate()
+        self.get_sim_data()
         self.midas.create_random_simulation()
 
         Ntimes = len(self.midas.times)
@@ -272,7 +313,7 @@ class CNORode(CNOBase, CNORBase):
         self.plot_fitness(show=True, save=False)
         self._report.savefig("fitness.png")
 
-    def plot_fitness(self, show=False, save=True):
+    def plot_fitness(self, show=True, save=False):
         self.results.plot_fit()
 
         if save is True:
@@ -281,40 +322,8 @@ class CNORode(CNOBase, CNORBase):
         if show is False:
             pylab.close()
 
-    def create_report(self, filename='index.html', browse=True):
-        """Creates the boolean report
-        
-        Should not create any image here only the report
-        """
-        # complete the report
-        self._create_report()
-        if browse:
-            from browse import browse as bs
-            bs(self._report.report_directory + os.sep + filename)
-
-    def _create_report(self ):
-        self._report._init_report()
-        self._report.directory = self._report.report_directory
-        # Save filenames and report in a section
-        fname = self._report.directory + os.sep + "PKN-pipeline.sif"
-        self.cnograph.to_sif(fname)        
-
-        fname = self._report.directory + os.sep + "MD-pipeline.csv"
-        self.midas.to_midas(fname)
-
-        txt = '<ul><li><a href="PKN-pipeline.sif">input model (PKN)</a></li>'        
-        txt += '<li><a href="MD-pipeline.csv">input data (MIDAS)</a></li>'
-        txt += '<li><a href="config.ini">Config file</a></li>'
-        txt += '<li><a href="rerun.py">Script</a></li></ul>'
-        txt += "<bold>some basic stats about the pkn and data e.g. number of species ? or in the pkn section?</bold>"
-        
-        self._report.add_section(txt, "Input data files")
-        self._report.add_section(
-        """       
-         <div class="section" id="Script_used">
-         <object height=120 width=300 type='text/x-scriptlet' border=1
-         data="description.html"></object>
-         </div>""", "Description")
+    def create_report(self):
+        self._create_report_header()
 
         txt = """<pre class="literal-block">\n"""
         #txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
@@ -360,7 +369,7 @@ class CNORode(CNOBase, CNORBase):
         #table = self.get_table_dependencies()
         #fh.write(table.to_html())
 
-        self._report.write(self._report.report_directory, "index.html")
+        self._report.write("index.html")
 
     def _get_stats(self):
         res = {}
@@ -414,7 +423,6 @@ class ODEParameters(object):
         return res
 
 
-
 def standalone(args=None):
     """This function is used by the standalone application called cellnopt_boolean
 
@@ -426,38 +434,31 @@ def standalone(args=None):
     if args is None:
         args = sys.argv[:]
 
+    from cno.core.standalone import Standalone
     user_options = OptionsODE()
+    stander = Standalone(args, user_options)
 
-    if len(args) == 1:
-        user_options.parse_args(["prog", "--help"])
-    else:
-        options = user_options.parse_args(args[1:])
+    # just an alias
+    options = stander.options
 
     if options.onweb is True or options.report is True:
-        o = CNORode(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=user_options.config)
-
-    if options.onweb is True:
-        o.optimise()
-        o.onweb()
-    elif options.report is True:
-        o.optimise()
-        o.re
+        trainer = CNORode(options.pknmodel, options.data, verbose=options.verbose,
+            verboseR=options.verboseR, config=options.config_file)
     else:
-        from easydev.console import red
-        print(red("No report requested; nothing will be saved or shown"))
-        print("use --on-web or --report options")
+        stander.help()
+
+    trainer.optimise(**stander.user_options.config.SSM.as_dict())
+
+    stander.trainer = trainer
+    stander.report()
 
 
 class OptionsODE(OptionsBase):
-
     def __init__(self):
-        prog = "cellnopt_boolean_steady"
+        prog = "cno_ode_steady"
         version = prog + " v1.0 (Thomas Cokelaer @2014)"
         super(OptionsODE, self).__init__(version=version, prog=prog)
-
-        section = ParamsSSM()
-        self.add_section(section)
+        self.add_section(ParamsSSM())
 
 
 if __name__ == "__main__":
