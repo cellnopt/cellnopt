@@ -24,7 +24,7 @@ from cno.core import CNOBase, CNORBase
 from cno.core.results import BooleanResults
 from cno.core.models import BooleanModels
 from cno.core import ReportBool
-from cno.core.params import OptionsBase, ParamsGA
+from cno.core.params import OptionsBase, ParamsGA, ParamsGA2
 
 from biokit.rtools import bool2R
 
@@ -81,9 +81,10 @@ class CNORbool(CNOBase, CNORBase):
         :param config: a configuration file stored in :attr:`config`
         :param bool verboseR: switch on/off verbosity of the R session
         """
-
         CNOBase.__init__(self, model, data, tag=tag, verbose=verbose,
                          config=config)
+        # TODO : not info anymore...
+        self.logging.info("Initialise R session")
         CNORBase.__init__(self, verboseR)
 
         self._report = ReportBool() #
@@ -92,19 +93,20 @@ class CNORbool(CNOBase, CNORBase):
         self.results = BooleanResults()  # for time T1
         self.results2 = BooleanResults()  # for time T2
 
-        self.config.General.pknmodel.value = self.pknmodel.filename
-        self.config.General.data.value = self.data.filename
+        if config is None:
+            self.config.General.pknmodel.value = self.pknmodel.filename
+            self.config.General.data.value = self.data.filename
+            p = ParamsGA2()
+            #p.name = 'GA2'  # same parameters as GA but need to change the name
+            self.config.add_section(p)
 
-        p = ParamsGA()
-        p.name = 'GA2'  # same parameters as GA but need to change the name
-        self.config.add_section(p)
         self._called = []
 
     # !! should be same default values as in paramsGA
     @params_to_update()
     def optimise(self,  NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
-                 reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
-                 time_index_1=1, maxgens=500, maxstallgens=100):
+                 reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
+                 time_index_1=1, maxgens=500, maxstallgens=100, ga_verbose=True):
         """Perform the optimisation and save results
 
 
@@ -121,8 +123,15 @@ class CNORbool(CNOBase, CNORBase):
         self._update_config('GA', self.optimise.actual_kwargs)
 
         # keep track of the GA parameters, which may have been update above
-        gad = dict([(k, self.config.GA[k].value)
-            for k in self.config.GA._get_names()])
+        gad = self.config.GA.as_dict()
+
+        print(gad)
+
+        bs = self.session.get('best_bitstring')
+        if bs is not None:
+            bs = "c(" + ",".join([str(x) for x in list(bs)]) + ")"
+        else:
+            bs = 'NULL'
 
         script_template = """
         library(CellNOptR)
@@ -134,7 +143,7 @@ class CNORbool(CNOBase, CNORBase):
         res = gaBinaryT1(cnolist, model, popSize=%(popsize)s, maxGens=%(maxgens)s,
             maxTime=%(maxtime)s, elitism=%(elitism)s, pMutation=%(pmutation)s,
             NAFac=%(NAFac)s,  selPress=%(selpress)s, relTol=%(reltol)s, sizeFac=%(sizefactor)s,
-            stallGenMax=%(maxstallgens)s)
+            stallGenMax=%(maxstallgens)s, initBstring=%(bs)s)
 
         sim_results = cutAndPlot(cnolist, model, list(res$bString),
                                  plotParams=list(maxrow = 80, cex=0.5),
@@ -167,7 +176,8 @@ class CNORbool(CNOBase, CNORBase):
             'pkn': self.pknmodel.filename,
             'midas': self.data.filename,
             'compression': bool2R(compression),
-            'expansion': bool2R(expansion)
+            'expansion': bool2R(expansion),
+            'bs':bs
             }
         params.update(gad)
 
@@ -185,7 +195,6 @@ class CNORbool(CNOBase, CNORBase):
 
         # cnograph created automatically from the reactions
         try:
-            print('a')
             N = len(self.session.best_bitstring)
             all_bs = self.session.all_bitstrings
             df = pd.DataFrame(all_bs, columns=self.reactions_r)
@@ -193,22 +202,26 @@ class CNORbool(CNOBase, CNORBase):
             # flatten to handle exhaustive
             import numpy as np
             models.scores = np.array(list(pylab.flatten(self.session.all_scores)))
-            models.cnograph.midas = self.data.copy()
-
+            try:
+                models.cnograph.midas = self.data.copy()
+            except Exception as err:
+                # does not work with ExtLiverPCB
+                # CNOError: 'The cues IFNg was found in the MIDAS file but is not present in the model. Change your model or MIDAS file.'
+                print("something wrong in the copying of the midas into cnograph(models)")
+                print(err.message)
         except:
             N = len(self.session.best_bitstring)
             all_bs = self.session.all_bitstrings
             if N == len(self.reactions_r):
                 df = pd.DataFrame([self.session.all_bitstrings],
                               columns=self.reactions_r)
-
                 models = BooleanModels(df)
                 models.scores = easydev.to_list(self.session.all_scores)
+                self._models = models
             else:
-                print('bb')
                 df = pd.DataFrame(columns=self.reactions_r)
 
-        models.cnograph.midas = self.data.copy()
+            models.cnograph.midas = self.data.copy()
 
         results = {
                 'best_score': self.session.best_score,
@@ -236,16 +249,34 @@ class CNORbool(CNOBase, CNORBase):
     # must be provided specifically in the prototype
     @params_to_update()
     def optimise2(self, NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
-                 reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
-                 time_index_1=1, maxgens=500, maxstallgens=100,
-                  time_index_2=3, best_bitstring=None):
+                 reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
+                maxgens=500, maxstallgens=100, ga_verbose=True,
+                  time_index_2=3):
+        """
+
+        :param NAFac:
+        :param pmutation:
+        :param selpress:
+        :param popsize:
+        :param reltol:
+        :param elitism:
+        :param maxtime:
+        :param sizefactor:
+        :param maxgens:
+        :param maxstallgens:
+        :param ga_verbose:
+        :param time_index_2: indices as R expects it. 3, means third time points.
+            time_index 1 is time zero. time_index 2 is T1, time_index 3 is T2
+            TODO decrement by 1 to be Python like syntax
+        :return:
+        """
         # TODO assert there are 2 time indices
         # something interesting to do is to run steady stte not only
         # for the best bitstring but all those within the tolerance !
         self._update_config('GA2', self.optimise2.actual_kwargs)
 
-        if best_bitstring is None:
-            best_bitstring = self.results.results.best_bitstring
+        #if best_bitstring is None:
+        best_bitstring = self.results.results.best_bitstring
 
         reactions = [r for r,b in zip(self.reactions_r, best_bitstring) if b==0]
         script_template = """
@@ -655,7 +686,6 @@ class CNORbool(CNOBase, CNORBase):
             for x, y in zip(self.results2.results.best_bitstring,
                             self.results2.results.reactions):
                 df = df.set_value(y, 't2', x)
-
         return df
 
     def _get_stats(self):
@@ -682,39 +712,37 @@ def standalone(args=None):
     if args is None:
         args = sys.argv[:]
 
+    from cno.core.standalone import Standalone
     user_options = OptionsBoolean()
+    stander = Standalone(args, user_options)
 
-    if len(args) == 1:
-        user_options.parse_args(["prog", "--help"])
-    else:
-        options = user_options.parse_args(args[1:])
+    # just an alias
+    options = stander.options
 
     if options.onweb is True or options.report is True:
-        o = CNORbool(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=user_options.config)
-
-    if options.onweb is True:
-        o.optimise()
-        o.onweb()
-    elif options.report is True:
-        o.optimise()
-        o.report()
+        trainer = CNORbool(options.pknmodel, options.data, verbose=options.verbose,
+            verboseR=options.verboseR, config=options.config_file)
     else:
-        from easydev.console import red
-        print(red("No report requested; nothing will be saved or shown"))
-        print("use --on-web or --report options")
+        stander.help()
 
+
+    trainer.optimise(**stander.user_options.config.GA.as_dict())
+
+    return stander
+    if stander.user_options.config.GA2.time_index_2.value != -1:  ## need to use the time_index_2
+        trainer.optimise2(**stander.user_options.config.GA2.as_dict())
+
+    # required to call report() afterwards
+    stander.trainer = trainer
+    stander.report()
 
 class OptionsBoolean(OptionsBase):
-
     def __init__(self):
         prog = "cellnopt_boolean_steady"
         version = prog + " v1.0 (Thomas Cokelaer @2014)"
         super(OptionsBoolean, self).__init__(version=version, prog=prog)
-        from cno.core.params import ParamsGA
-        section = ParamsGA()
-        self.add_section(section)
-
+        self.add_section(ParamsGA())
+        self.add_section(ParamsGA2())
 
 if __name__ == "__main__":
     """Used by setup.py as an entry point to :func:`standalone`"""
