@@ -54,9 +54,20 @@ class CNORfuzzy(CNOBase, CNORBase):
     Optimise first time point in the cnolist and produces a report.
 
     """
-    def __init__(self, model=None, data=None, verbose=True, verboseR=False):
-        """.. rubric:: constructor"""
+    def __init__(self, model=None, data=None, verbose=True,
+                 verboseR=False, config=None):
+        """.. rubric:: constructor
+
+        :param model:
+        :param data:
+        :param verbose:
+        :param verboseR:
+        :param config:
+        :return:
+
+        """
         CNOBase.__init__(self,model, data, verbose=verbose)
+        self.logging.info("Initialise R session")
         CNORBase.__init__(self, verboseR=verboseR)
 
         self._report = ReportFuzzy()
@@ -87,14 +98,15 @@ class CNORfuzzy(CNOBase, CNORBase):
     @params_to_update()
     def optimise(self, N=2,
         NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
-        reltol=0.1, elistim=5, maxtime=60, sizefactor=0.0001,
-        time_index_1=1, maxgens=500, maxstallgens=100):
+        reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
+        time_index_1=1, maxgens=500, maxstallgens=100, ga_verbose=True, **kargs):
 
         self.logging.info("Running the optimisation. Can take a very long"
                           "time. To see the progression, set verboseR "
                           "attribute to True")
         # update config GA section with user parameters
         self._update_config('GA', self.optimise.actual_kwargs)
+        self._update_config('Fuzzy', self.optimise.actual_kwargs)
 
          # keep track of the GA parameters, which may have been update above
         gad = dict([(k, self.config.GA[k].value)
@@ -103,6 +115,8 @@ class CNORfuzzy(CNOBase, CNORBase):
         fuzzyd = dict([(k, self.config.Fuzzy[k].value)
             for k in self.config.Fuzzy._get_names()])
 
+        print(N)
+        print(fuzzyd)
         script = """
         library(CNORfuzzy)
         cnolist = CNOlist("%(midas)s")
@@ -153,8 +167,8 @@ class CNORfuzzy(CNOBase, CNORBase):
             }
         params.update(gad)
         params.update(fuzzyd)
-        params['N'] = N
 
+        print(params)
         self.session.run(script % params)
         allRes = self.session.allRes
 
@@ -177,7 +191,6 @@ class CNORfuzzy(CNOBase, CNORBase):
         reactions = res1['processedModel']['reacID']
 
         # TODO: find best MSE/bitstring amongst the N runs
-
         # redRef contains a MSE for each threshold
         res1['redRef'][8]['MSE']
         # !! several runs; should be gathered together
@@ -348,7 +361,13 @@ class CNORfuzzy(CNOBase, CNORBase):
             pylab.close()
 
     def plot_errors(self, threshold=0.01, show=False):
+        """
 
+        :param threshold: fixed to 0.01 but should be provided by looking at :meth:`plot_mses`
+        :param show:
+        :return:
+        """
+        # TODO: should use automatic selection of the threshold
         # First, we need to compute the simulation
         script = """simulation = plotMeanFuzzyFit(%(threshold)s,
         summary$allFinalMSEs, allRes)""" % {'threshold': threshold}
@@ -500,27 +519,25 @@ def standalone(args=None):
     if args is None:
         args = sys.argv[:]
 
+    from cno.core.standalone import Standalone
     user_options = OptionsFuzzy()
+    stander = Standalone(args, user_options)
 
-    if len(args) == 1:
-        user_options.parse_args(["prog", "--help"])
-    else:
-        options = user_options.parse_args(args[1:])
+    # just an alias
+    options = stander.options
 
     if options.onweb is True or options.report is True:
-        o = CNORfuzzy(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=user_options.config)
-
-    if options.onweb is True:
-        o.optimise()
-        o.onweb()
-    elif options.report is True:
-        o.optimise()
-        o.report()
+        trainer = CNORfuzzy(options.pknmodel, options.data, verbose=options.verbose,
+            verboseR=options.verboseR, config=options.config_file)
     else:
-        from easydev.console import red
-        print(red("No report requested; nothing will be saved or shown"))
-        print("use --on-web or --report options")
+        stander.help()
+
+    params = stander.user_options.config.GA.as_dict()
+    params.update(stander.user_options.config.Fuzzy.as_dict())
+    trainer.optimise(**params)
+
+    stander.trainer = trainer
+    stander.report()
 
 
 class OptionsFuzzy(OptionsBase):
@@ -528,10 +545,8 @@ class OptionsFuzzy(OptionsBase):
         prog = "cno_fuzzy"
         version = prog + " v1.0 (Thomas Cokelaer @2014)"
         super(OptionsFuzzy, self).__init__(version=version, prog=prog)
-        from cno.core.params import ParamsGA
-        section = ParamsGA()
-        self.add_section(section)
-
+        self.add_section(ParamsGA())
+        self.add_section(ParamsFuzzy())
 
 if __name__ == "__main__":
     standalone()
