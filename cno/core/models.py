@@ -32,6 +32,9 @@ class Models(object):
         # reactions and ANDS (e.g., A^B=C). If "A+B=C" is found, this is coming
         # from CellNOptR, ,which has a different conventions. So, we replace
         # all + by "^" !! Do we want a warning ?
+        for reaction in self.df.columns:
+            if "+" in reaction:
+                print("Warning in Models. found a + sign...")
         self.df.columns = [x.replace("+", "^") for x in self.df.columns]
 
         # keep this import here to avoid cycling imports
@@ -57,6 +60,17 @@ class Models(object):
 
         """
         return self.cnograph.to_sif(filename)
+
+    def __eq__(self, other):
+        if len(self.df) != len(other.df):
+            return False
+        df1 = self.df.copy()
+        df2 = other.df.copy()
+        if all(df1.columns != df2.columns):
+            return False
+        # make sure the columns are ordered similarly
+        df2 = df2[df1.columns]
+        return all(df1.sort() == df2.sort())
 
 
 class FuzzyModels(Models):
@@ -109,7 +123,6 @@ class BooleanModels(Models):
         """
         super(BooleanModels, self).__init__(data, reacID, index_col)
 
-
     def get_cv_model(self):
         """Returns the average coefficient of variation on each reaction"""
         res = self.df.std(axis=0)/self.df.mean(axis=0)
@@ -159,7 +172,6 @@ class BooleanModels(Models):
         self.cnograph.plot(edge_attribute="average", cmap=cmap,
                 colorbar=colorbar,**kargs)
 
-
     def errorbar(self):
         """Plot the average presence of reactions over all models"""
         mu = self.df.mean()
@@ -194,17 +206,6 @@ class BooleanModels(Models):
         df.drop_duplicates(inplace=True)
         return Models(df)
 
-    def __eq__(self, other):
-        if len(self.df) != len(other.df):
-            return False
-        df1 = self.df.copy()
-        df2 = other.df.copy()
-        if all(df1.columns != df2.columns):
-            return False
-        # make sure the columns are ordered similarly
-        df2 = df2[df1.columns]
-        return all(df1.sort() == df2.sort())
-
     def __len__(self):
         return len(self.df)
 
@@ -220,13 +221,9 @@ class BooleanModels(Models):
     sizes = property(_get_sizes)
 
 
-
-
 class DTModels(BooleanModels):
     def __init__(self, data, reacID=None, index_col=None):
         super(DTModels, self).__init__(data, reacID, index_col)
 
     def copy(self):
         return DTModels(self)
-
-
