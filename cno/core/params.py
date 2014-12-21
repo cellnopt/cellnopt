@@ -232,7 +232,7 @@ class ParamsGA(Parameters):
             "todo"))
         self.add_parameter(Parameter('reltol', "--relative-tolerance", 0.1,
             "todo"))
-        self.add_parameter(Parameter('ga_verbose', "--ga-verbose", True,
+        self.add_parameter(Parameter('verbose', "--ga-verbose", True,
             "verbosity in genetic algorithm"))
         # indices starts at zero.
         self.add_parameter(Parameter('time_index_1', "--time-index-1", 1,
@@ -299,6 +299,7 @@ class ParamsFuzzy(Parameters):
         self._init()
 
     def _init(self):
+
         self.add_parameter(Parameter('do_refinement', '--do-refinement', True,
                                      'description to do'))
         self.add_parameter(Parameter('optimisation_algorithm', '--optimisation-algorithm',
@@ -311,6 +312,8 @@ class ParamsFuzzy(Parameters):
                                      'description to do'))
         self.add_parameter(Parameter('optimisation_max_time', '--optimisation-max-time', 300,
                                      'description to do'))
+        self.add_parameter(Parameter('N', '--multiple-runs', 2,
+                                     'description to do'))
 
 
 class ParamsSSM(Parameters):
@@ -322,16 +325,35 @@ class ParamsSSM(Parameters):
         self._init()
 
     def _init(self):
-        self.add_parameter(Parameter("maxtime", "--maxtime", 60,
-                           "The elitism number (should be 10%% of the popsize)"))
+        self.add_parameter(Parameter("maxtime", "--max-time", 60,
+                           "maximum time for the optimisation"))
         self.add_parameter(Parameter("dim_ref_set", "--dim-ref-set", 10,
-                           "The elitism number (should be 10%% of the popsize)"))
+                           "ssm parameter"))
         self.add_parameter(Parameter('n_diverse', "--n-diverse",10,
-                           "The elitism number (should be 10%% of the popsize)"))
-        self.add_parameter(Parameter("sss_verbose", "--ssm-verbose", True,
-                           "The elitism number (should be 10%% of the popsize)"))
+                           "ssm parameter"))
+        # not to be used
+        #self.add_parameter(Parameter("verbose", "--ssm-verbose", True,
+        #                   "todo"))
         self.add_parameter(Parameter("transfer_function", "--transfer-function", 3,
-                           "Number of TF to be used"))
+                           "number of transfer function to be used by the ODE logical formalism"))
+        self.add_parameter(Parameter("reltol", "--relative-tolerance", 1e-4,
+                           "todo"))
+        self.add_parameter(Parameter("atol", "--absolute-tolerance", 1e-3,
+                           "todo"))
+        # Inf string is to be kept with this spelling and caps as in R syntax
+        self.add_parameter(Parameter("maxeval", "--max-evaluation", 'Inf',
+                           "maximum number of evaluation during the optimisation"))
+        self.add_parameter(Parameter("maxstepsize", "--max-step-size", 'Inf',
+                           "todo optimisation"))
+
+        # TODO
+        """
+        ode_parameters = NULL, indices = NULL,
+            local_solver = NULL,
+             time = 1,
+             mmaxNumSteps = 1e+05, maxErrTestsFails = 50, \
+            nan_fac =1,  useVariances=F,initial_state=0.1)
+         """
 
 
 class CNOConfigParser(AttrDict):
@@ -471,10 +493,3 @@ class CNOConfig(CNOConfigParser):
         self.add_section(ParamsGeneral())
         self.add_section(ParamsGA())
         self.add_section(ParamsPreprocessing())
-
-
-
-
-
-
-
