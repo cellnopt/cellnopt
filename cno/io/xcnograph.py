@@ -14,16 +14,13 @@
 #
 ##############################################################################
 from __future__ import print_function
-import os
-import copy
 
 from matplotlib import colors
 import pylab
 import networkx as nx
 import numpy as np
+import pandas as pd
 
-# cellnopt modules
-from colormap import Colormap
 from cno.io.cnograph import CNOGraph
 
 __all__ = ["XCNOGraph"]
@@ -31,7 +28,7 @@ __all__ = ["XCNOGraph"]
 
 
 class XCNOGraph(CNOGraph):
-    """extra plotting and statistical tools"""
+    """Extra plotting and statistical tools related to CNOGraph"""
     def __init__(self, model=None, midas=None, verbose=False):
         super(XCNOGraph, self).__init__(model, midas, verbose=verbose)
 
@@ -63,8 +60,6 @@ class XCNOGraph(CNOGraph):
         hierarchy.dendrogram(hier)
 
         pylab.xticks(pylab.xticks()[0], nodes)
-
-
 
     def plot_degree_rank(self, loc='upper right', alpha=0.8, markersize=10,
             node_size=25, layout='spring', marker='o', color='b'):
@@ -132,7 +127,6 @@ class XCNOGraph(CNOGraph):
 
 
         """
-        import pandas as pd
         ts1 = pd.TimeSeries(self.in_degree())
         ts2 = pd.TimeSeries(self.out_degree())
         df = pd.DataFrame([ts1, ts2]).transpose()
@@ -263,7 +257,8 @@ class XCNOGraph(CNOGraph):
                       fontsize=fontsize)
         pylab.yticks([0.5+x for x in pylab.arange(N)], nodeNamesY, rotation=0,
                       fontsize=fontsize)
-        pylab.tight_layout()
+        try:pylab.tight_layout()
+        except:pass
 
     def dependency_matrix(self, fontsize=12):
         r"""Return dependency matrix
@@ -372,4 +367,3 @@ class XCNOGraph(CNOGraph):
         self._stimuli = sources[0:Nstim]
         self._signals = sinks[0:Nsignals]
         self.set_default_node_attributes()
-
