@@ -42,6 +42,7 @@ def test_models():
     except:
         assert True
 
+    return m1, m2
     assert m1 == m2
     assert m1 == m3
 

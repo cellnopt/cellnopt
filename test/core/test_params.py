@@ -52,7 +52,6 @@ def test_parameters_eq():
     assert p1 == p2
     assert (p1 != p3) is True
 
-
 def test_config_parser():
     s1 = ParamsGA()
     s2 = ParamsGeneral()
