@@ -87,9 +87,9 @@ class Feeder(CNORBase):
 
         if verbose:
             print(cmd)
-        self.rsession.run(cmd)
-        self.alllinks = self.rsession.get('alllinks')
-        self.newlinks = self.rsession.get('newlinks')
+        self.session.run(cmd)
+        self.alllinks = self.session.get('alllinks')
+        self.newlinks = self.session.get('newlinks')
         self.newlinks = [x for x in self.newlinks if x is not None]
 
     def __str__(self):
