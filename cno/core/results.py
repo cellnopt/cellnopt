@@ -103,11 +103,11 @@ class BooleanResults(Results):
          .. plot::
              :include-source:
 
-             >>> from cno.asp import ASPBool
+             >>> from cno.boolean.cnorbool import CNORbool
              >>> from cno import cnodata
-             >>> a = ASPBool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-             >>> a.run(fit=1)
-             >>> a.hist_scores()
+             >>> a = CNORbool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+             >>> a.optimise()
+             >>> a.results.hist_scores()
 
         """
         pylab.clf()

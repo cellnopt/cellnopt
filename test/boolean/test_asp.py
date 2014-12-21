@@ -13,7 +13,7 @@ class TestCASPO(object):
         klass.caspo.optimise(klass.pkn, klass.midas, fit=0.5, size=10)
 
 
-    def test_plot(self):
+    def _test_plot(self):
         self.caspo.hist_mse()
         self.caspo.hist_model_size()
 
