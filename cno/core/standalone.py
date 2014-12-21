@@ -13,7 +13,7 @@
 #  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
-import sys
+
 
 class Standalone(object):
     """Common class for all standalone applications"""
@@ -36,7 +36,6 @@ class Standalone(object):
                     value = getattr(options, option)
                     setattr(getattr( getattr(self.user_options.config, key), option ), 'value', value)
             self.options = options
-
 
     def help(self):
         self.user_options.parse_args(["prog", "--help"])
