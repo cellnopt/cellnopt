@@ -7,8 +7,8 @@ import glob
 
 
 _MAJOR               = 0
-_MINOR               = 0
-_MICRO               = 7
+_MINOR               = 1
+_MICRO               = 0
 version              = '%d.%d.%d' % (_MAJOR, _MINOR, _MICRO)
 release              = '%d.%d' % (_MAJOR, _MINOR)
 
@@ -81,9 +81,12 @@ setup(
         'console_scripts': [
             'cno_plotmodel=cno.apps.plotmodel:plotmodel',
             'cno_boolean=cno.boolean.cnorbool:standalone',
+            'cno_dt=cno.boolean.cnordt:standalone',
+            'cno_fuzzy=cno.fuzzy.cnorfuzzy:standalone',
+            'cno_ode=cno.ode.cnorode:standalone',
+            'cno_milp=cno.milp.model:standalone',
             ]
         },
-
     )
 
 
