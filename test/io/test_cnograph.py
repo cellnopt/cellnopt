@@ -2,7 +2,6 @@ from cno.io import CNOGraph, XMIDAS, SIF
 from cno import cnodata, getdata, CNOError
 import tempfile
 import random
-from cno.io import XCNOGraph
 import os
 
 
