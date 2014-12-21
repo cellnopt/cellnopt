@@ -788,14 +788,15 @@ class CNOGraph(nx.DiGraph):
         the graph, i.e. species are found in the model."""
         if self.midas:
             msg = "The %s %s was found in the MIDAS file but is "
-            msg += "not present in the model. Change your model or "
-            msg += "MIDAS file."
+            msg += "not present in the model. Adding that node to your model"
             for x in self.midas.names_cues:
                 if x not in self.nodes():
-                    raise CNOError(msg % ('cues', x))
+                    self.add_node(x)
+                    self.logging.warning(msg % ('cues', x))
             for x in self.midas.names_signals:
                 if x not in self.nodes():
-                    raise CNOError(msg % ('signals', x))
+                    self.add.node(x)
+                self.logging.warning(msg % ('signals', x))
 
     @modifier
     def remove_and_gates(self):
