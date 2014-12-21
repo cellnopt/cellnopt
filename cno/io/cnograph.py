@@ -2500,7 +2500,7 @@ class CNOGraph(nx.DiGraph):
 
         :param dict mapping: a dictionary mapping old names (keys) to new names
             (values )
-        :return: new cnograph object
+        :return: new :class:`CNOGraph` object
 
 
         if we take this example::
@@ -2524,14 +2524,14 @@ class CNOGraph(nx.DiGraph):
 
         This function calls relabel_node taking care of the AND nodes as well.
 
-        .. warning:: this is not inplace modifications.
+        .. warning:: inplace modifications
 
         .. todo:: midas must also be modified
 
         """
         # keep names of the AND gates for book keeping
-        #ands_before = self._find_and_nodes()
-        mapping_ands = {}
+        # ands_before = self._find_and_nodes()
+        # mapping_ands = {}
         for this in self._find_and_nodes():
             reac = Reaction(this)
             reac.rename_species(mapping)
@@ -2539,25 +2539,65 @@ class CNOGraph(nx.DiGraph):
             if reac.name != this:
                 mapping.update({this:reac.name})
 
-        # rename all species now, updating the stimuli/inhibitors/signals if needed
-        _stimuli = self._stimuli[:]
-        _inhibitors = self._inhibitors[:]
-        _signals = self._signals[:]
-        _compressed = self._compressed[:]
+        self.mapping = mapping
 
-        # TODO: revisit with Reactions
+        # ideally, nx.relabels_nodes(self, mapping, copy=False) could
+        # do the work but somehow loses the edge data dictionary.,,
+        # so, we will do it ourself:
+        edge_data = [x for x in self.edges(data=True) if x[0] in mapping.keys()
+            or x[1] in mapping.keys()]
 
-        # This is losing the edge attributes
-        self = nx.relabel_nodes(self, mapping, copy=False)
-        self._stimuli = [mapping[x] if x in mapping.keys() else x for x in _stimuli]
-        self._signals = [mapping[x] if x in mapping.keys() else x for x in _signals]
-        self._inhibitors = [mapping[x] if x in mapping.keys() else x for x in _inhibitors]
-        self._compressed = [mapping[x] if x in mapping.keys() else x for x in _compressed]
+        self.edge_data = edge_data
+        for edge in edge_data:
+            # do not remove the edge first otherwise AND may be lost
+            # since clean_orphans may be called.
 
-        try:
-            self.midas = self.midas.copy()
-        except:
-            pass
+            # now add new edges. First,
+            if "=" in edge[0]:  # an AND gate
+                r = Reaction(edge[0])
+                r.rename_species(mapping)
+                e0 = r.name
+            elif edge[0] in mapping.keys():
+                e0 = mapping[edge[0]]
+            else:
+                # normal node
+                e0 = edge[0]
+
+            if "=" in edge[1]:  # an AND gate
+                r = Reaction(edge[1])
+                r.rename_species(mapping)
+                e1 = r.name
+            elif edge[1] in mapping.keys():
+                e1 = mapping[edge[1]]
+            else:
+                e1 = edge[1]
+            self.add_edge(e0, e1, **edge[2])
+
+        # Now, handle the MIDAS file if any by renaming all species updating
+        # the stimuli/inhibitors/signals if needed. Need to keep track of user
+        # defined names
+        self._stimuli = [mapping[x] if x in mapping.keys() else x for x in self._stimuli]
+        self._signals = [mapping[x] if x in mapping.keys() else x for x in self._signals]
+        self._inhibitors = [mapping[x] if x in mapping.keys() else x for x in self._inhibitors]
+        self._compressed = [mapping[x] if x in mapping.keys() else x for x in self._compressed]
+
+        # copy the node data
+        for k, v in mapping.items():
+            self.node[v] = self.node[k]
+
+        if self.midas is not None:
+            for k, v in mapping.items():
+                if "^" in k:
+                    del mapping[k]
+            try: self.midas.rename_species(mapping)
+            except: pass
+            try: self.midas.rename_inhibitors(mapping)
+            except: pass
+            try: self.midas.rename_stimuli(mapping)
+            except: pass
+
+        # finally remove the old nodes
+        self.remove_nodes_from(mapping.keys())
 
     def centrality_eigenvector(self, max_iter=1000, tol=0.1):
         res = nx.eigenvector_centrality(self,max_iter,tol=tol)
