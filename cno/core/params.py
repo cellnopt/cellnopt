@@ -18,7 +18,8 @@ from easydev import AttrDict
 import functools
 
 
-__all__ = ['Parameter', 'Parameters', 'ParamsGA', 'params_to_update',
+__all__ = ['Parameter', 'Parameters', 'CNOConfig', 'ParamsGA', 'ParamsGA2',
+           'params_to_update',
            'ParamsPreprocessing', 'ParamsDT', 'ParamsFuzzy', 'ParamsSSM']
 
 
@@ -114,6 +115,11 @@ class Parameters(AttrDict):
             raise ValueError("The name of a parameter cannot be one of the reserved word %s" % self.reserved)
         self[params.name] = params
 
+    def as_dict(self):
+        d =  dict([(k, self[k].value)
+            for k in self._get_names()])
+        return d
+
     def _get_names(self):
         # + ['value'] is required. see tests
         return [x for x in self.keys() if x not in self.reserved + ['value']]
@@ -155,7 +161,7 @@ class Parameters(AttrDict):
             p1 = other[key]
             p2 = self[key]
             if (p1 == p2) is False:
-                print("False 2" + key)
+                print("False 2 " + key)
                 return False
         return True
 
@@ -175,8 +181,9 @@ class ParamsGeneral(Parameters):
             ("report", "--report", True,  "create report"),
             ("onweb", "--on-web", True, "open report in a browser. This option also set --report "),
             ("verbose", "--verbose", True,  "verbosity"),
-            ("verboseR", "--verbose-R", True,  "verbosity of R scripts")]:
-
+            ("verboseR", "--verbose-R", True,  "verbosity of R scripts"),
+            ("config_file", "--config-file", None,  "todo")
+        ]:
             self.add_parameter(Parameter(*data))
 
 
@@ -230,14 +237,45 @@ class ParamsGA(Parameters):
         # indices starts at zero.
         self.add_parameter(Parameter('time_index_1', "--time-index-1", 1,
            "first time index to optimise"))
-        self.add_parameter(Parameter('time_index_2', "--time-index-2", 2,
-           "second time index to optimise"))
+
+
+class ParamsGA2(ParamsGA):
+    def __init__(self):
+        super(ParamsGA, self).__init__('GA2', 'Genetic algorithm')
+        self._init()
+
+    def _init(self):
+        # adding all info required
+        self.add_parameter(Parameter('elitism', '--elitism2', 5,
+            "The elitism number (should be 10%% of the popsize)"))
+        self.add_parameter(Parameter('sizefactor', '--size-factor2', 0.0001,
+            "The penalty factor (if NaN values)"))
+        self.add_parameter(Parameter("popsize", "--population-size2", 50,
+            "The population size"))
+        self.add_parameter(Parameter('maxtime', "--max-time2", 60,
+            "Maximum time of the simulation (seconds)"))
+        self.add_parameter(Parameter('NAFac', "--na-factor2", 1,
+            "The penalty factor (if NaN values)"))
+        self.add_parameter(Parameter('pmutation', "--pmutation2", 0.5,
+            "Mutation rate"))
+        self.add_parameter(Parameter("maxgens", "--max-generations2", 500,
+            "maximum number of generation"))
+        self.add_parameter(Parameter('maxstallgens', "--max-stall-generations2", 100,
+            "Max number of stall generation"))
+        self.add_parameter(Parameter('selpress', "--selection-pressure2", 1.2,
+            "todo"))
+        self.add_parameter(Parameter('reltol', "--relative-tolerance2", 0.1,
+            "todo"))
+        self.add_parameter(Parameter('ga_verbose', "--ga-verbose2", True,
+            "verbosity in genetic algorithm"))
+        # indices starts at zero.
+        self.add_parameter(Parameter('time_index_2', "--time-index-2", -1,
+           "first time index to optimise"))
 
 
 class ParamsDT(Parameters):
 
     error_msg = {}
-
 
     def __init__(self):
         super(ParamsDT, self).__init__('DiscreteTime', 'description discrete time')
@@ -309,6 +347,12 @@ class CNOConfigParser(AttrDict):
     def add_section(self, section):
         self[section.name] = section
 
+    def as_dict(self):
+        d = {}
+        for name in self.keys():
+            d[name] = self[name].as_dict().copy()
+        return d
+
     def read(self, filename):
         # clean the sections
         for section in self.keys():
@@ -316,13 +360,30 @@ class CNOConfigParser(AttrDict):
 
         from ConfigParser import ConfigParser
         config = ConfigParser()
+        config.optionxform = str
         config.read(filename)
         for this in config.sections():
             sec = eval("Params" + this + "()")
             options = config.options(this)
             for option in options:
                 value = config.get(this, option)
-                setattr(sec, 'value', value)
+                # HERE, we need to interpret the content of the config file.
+                # values could be int or float, in which case we want to cast the string
+                # to a float. If the string is True/False, we want also a cast
+                try:
+                    try:
+                        value = int(value)
+                    except:
+                        value = float(value)
+                except:
+                    if isinstance(value, str):
+                        if value == 'True':
+                            value = True
+                        elif value == 'False':
+                            value = False
+                        elif value.strip() == '':
+                            value = None
+                setattr(getattr(sec, option), 'value', value)
             self[this] = sec
 
         return config
@@ -363,6 +424,7 @@ class CNOConfigParser(AttrDict):
 
 
 class OptionsBase(argparse.ArgumentParser):
+    """An ArgumentParser with a CNOConfig file as attribute"""
     def __init__(self, version="1.0", prog="cellnopt"):
         super(OptionsBase, self).__init__(version=version, prog=prog)
 
@@ -394,7 +456,13 @@ class OptionsBase(argparse.ArgumentParser):
 
 
 class CNOConfig(CNOConfigParser):
+    """A minimalist configuration class for the various formalisms
 
+    This includes the :class:`ParamsGeneral <General>` section,
+    the Genetic Algorithm section and
+    the preprocessing section.
+
+    """
     def __init__(self, filename=None):
         super(CNOConfig, self).__init__(filename)
         self.init_config()
