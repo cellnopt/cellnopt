@@ -2,7 +2,6 @@
 # source: https://zapier.com/engineering/profiling-python-boss/
 try:
     from line_profiler import LineProfiler
-
     def do_profile(follow=[]):
         def inner(func):
             def profiled_func(*args, **kwargs):
@@ -17,7 +16,6 @@ try:
                     profiler.print_stats()
             return profiled_func
         return inner
-
 except ImportError:
     def do_profile(follow=[]):
         "Helpful if you accidentally leave in production!"
