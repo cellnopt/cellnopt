@@ -80,10 +80,11 @@ class CNORbool(CNOBase, CNORBase):
         :param tag: not yet used
         :param config: a configuration file stored in :attr:`config`
         :param bool verboseR: switch on/off verbosity of the R session
+        :return:
+
         """
         CNOBase.__init__(self, model, data, tag=tag, verbose=verbose,
                          config=config)
-        # TODO : not info anymore...
         self.logging.info("Initialise R session")
         CNORBase.__init__(self, verboseR)
 
@@ -641,7 +642,6 @@ class CNORbool(CNOBase, CNORBase):
             self._report.add_section('<img class="figure" src="fitness.png"><img class="figure" src="fitness2.png">',
             "Fitness (T1 and T2)")
 
-
         else:
             self._report.add_section('<img class="figure" src="fitness.png">',
             "Fitness")
@@ -725,10 +725,8 @@ def standalone(args=None):
     else:
         stander.help()
 
-
     trainer.optimise(**stander.user_options.config.GA.as_dict())
 
-    return stander
     if stander.user_options.config.GA2.time_index_2.value != -1:  ## need to use the time_index_2
         trainer.optimise2(**stander.user_options.config.GA2.as_dict())
 
@@ -736,13 +734,15 @@ def standalone(args=None):
     stander.trainer = trainer
     stander.report()
 
+
 class OptionsBoolean(OptionsBase):
     def __init__(self):
-        prog = "cellnopt_boolean_steady"
+        prog = "cno_boolean_steady"
         version = prog + " v1.0 (Thomas Cokelaer @2014)"
         super(OptionsBoolean, self).__init__(version=version, prog=prog)
         self.add_section(ParamsGA())
         self.add_section(ParamsGA2())
+
 
 if __name__ == "__main__":
     """Used by setup.py as an entry point to :func:`standalone`"""
