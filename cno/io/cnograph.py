@@ -1914,7 +1914,7 @@ class CNOGraph(nx.DiGraph):
         """
         for node in self.nodes():
             attrs = self.get_node_attributes(node)
-            for k,v in attrs.items():
+            for k, v in attrs.items():
                 self.node[node][k] = v
 
     def set_node_attributes(self, attr_dict ):
@@ -1929,7 +1929,7 @@ class CNOGraph(nx.DiGraph):
         could set default values may be ?
         """
 
-        for node in nodes:
+        for node in attr_dict.keys():
             if node in self.nodes():
                 for k,v in attr_dict[node].items():
                     self.node[node][k] = v
@@ -2555,7 +2555,7 @@ class CNOGraph(nx.DiGraph):
         self._compressed = [mapping[x] if x in mapping.keys() else x for x in _compressed]
 
         try:
-            c.midas = self.midas.copy()
+            self.midas = self.midas.copy()
         except:
             pass
 
