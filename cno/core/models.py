@@ -1,3 +1,19 @@
+# -*- python -*-
+#
+#  This file is part of the CNO package
+#
+#  Copyright (c) 2012-2013 - EMBL-EBI
+#
+#  File author(s): Thomas Cokelaer (cokelaer@ebi.ac.uk)
+#
+#  Distributed under the GLPv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: github.com/cellnopt/cellnopt
+#
+##############################################################################
+import numpy as np
 import pylab
 import pandas as pd
 from easydev import precision
@@ -5,7 +21,9 @@ from easydev import precision
 and_symbol = "^"
 
 
-__all = ["Models", "BooleanModels", "DTModels", "FuzzyModels"]
+__all = ["Models", "BooleanModels", "DTModels", "FuzzyModels", "CompareModels"]
+
+
 
 
 class Models(object):
@@ -228,3 +246,82 @@ class DTModels(BooleanModels):
 
     def copy(self):
         return DTModels(self)
+
+
+class CompareTwoModels(object):
+    """
+
+    """
+    def __init__(self, m1, m2):
+        """
+
+        :param m1: first model as a Pandas time series e.g. row of BooleanModels
+        :param m2: first model as a Pandas time series e.g. row of BooleanModels
+        :return:
+        """
+        
+        self.m1 = m1
+        self.m2 = m2
+
+        assert all(self.m1.index == self.m2.index) == True
+
+
+    def get_intersection(self):
+        return self.m1[self.m1 & self.m2]
+
+    def get_union(self):
+        return self.m1[self.m1 | self.m2]
+
+    def get_both(self):
+        return self.get_intersection()
+
+    def get_m1_only(self):
+        return self.m1[np.logical_and(self.m1==1, self.m2==0)]
+
+    def get_m2_only(self):
+         return self.m2[np.logical_and(self.m1==0, self.m2==1)]
+
+    def get_both_off(self):
+         return self.m2[np.logical_and(self.m1==0, self.m2==0)]
+
+    def plot_multigraph(self, cmap='jet'):
+        from cno.io.multigraph import  CNOGraphMultiEdges
+        from cno import Reaction
+
+        c = CNOGraphMultiEdges()
+
+        for reaction in self.get_both().index:
+            r = Reaction(reaction)
+            r.sort()
+            for edge in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], edgecolor=.1, penwidth=4, label='both')
+
+        for reaction in self.get_m1_only().index:
+            r = Reaction(reaction)
+            r.sort()
+            for edge in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], edgecolor=.3, label='m1')
+
+        for reaction in self.get_m2_only().index:
+            r = Reaction(reaction)
+            r.sort()
+            for edge in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], edgecolor=.5, label='m2')
+
+        for reaction in self.get_both_off().index:
+            r = Reaction(reaction)
+            r.sort()
+            for edge in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], edgecolor=.9, label='off')
+
+        c.plot(edge_attribute='edgecolor', cmap=cmap)
+        return c
+
+
+
+
+
+
+
+
+

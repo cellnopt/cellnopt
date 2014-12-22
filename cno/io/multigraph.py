@@ -14,18 +14,9 @@
 #
 ##############################################################################
 from __future__ import print_function
-import copy
-import tempfile
-import itertools
-import subprocess
-import shutil
-import json
 
 import pylab
 import networkx as nx
-import numpy as np
-import easydev
-from easydev import Logging
 
 # cellnopt modules
 from cno.io.sif import SIF
@@ -48,7 +39,8 @@ class CNOGraphMultiEdges(CNOGraph, nx.MultiDiGraph):
         :width: 50%
         :include-source:
 
-         >>> from cno import cnodata, CNOGraphMultiEdges
+         >>> from cno import cnodata
+         >>> from cno.io.multigraph import CNOGraphMultiEdges
          >>> c = CNOGraphMultiEdges(cnodata("PKN-ToyPCB.sif"), cnodata("MD-ToyPCB.csv"))
          >>> c.add_edge("PAK", "Mek", link="-")
          >>> c.plot()
@@ -57,8 +49,7 @@ class CNOGraphMultiEdges(CNOGraph, nx.MultiDiGraph):
         :width: 50%
         :include-source:
 
-        >>> from cno import cnodata
-        >>> from cno import cnograph
+        >>> from cno.io.multigraph import CNOGraphMultiEdges
         >>> c2 = cnograph.CNOGraphMultiEdges()
         >>> c2.add_edge("A","B", link="+", edgecolor=.1)
         >>> c2.add_edge("A","B", link="+", edgecolor=.2)

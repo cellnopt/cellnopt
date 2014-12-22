@@ -65,4 +65,54 @@ def test_models():
     # m1 and m2 are identical. Adding them gets rid of duplicates so it should be
     # equal to itself.
     m1 == m1 + m2
-    
+
+
+
+
+def test_compare_two_models():
+    from cno.core.models import CompareTwoModels
+    import pandas as pd
+    m1 = pd.TimeSeries({'!erk=sos': 0,
+         '!ikb=nfkb': 1,
+          '!pi3k=gsk3': 1,
+           '!tnfa=ikb': 1,
+            '!tnfa^nfkb=ikb': 0,
+             'egf=pi3k': 0,
+              'egf=sos': 1,
+               'egf^!erk=sos': 0,
+                'map3k1=ap1': 0,
+                 'map3k1=p38': 0,
+                  'map3k1^tnfa=p38': 1,
+                   'nfkb=ikb': 1,
+                    'pi3k=map3k1': 0,
+                     'pi3k^sos=map3k1': 0,
+                      'raf1=erk': 1,
+                       'sos=map3k1': 0,
+                        'sos=raf1': 1,
+                         'tnfa=p38': 0,
+                          'tnfa=pi3k': 0,
+                           'tnfa^egf=pi3k': 1}
+                           )
+    m2 = pd.TimeSeries({'!erk=sos': 0,
+                     '!ikb=nfkb': 1,
+                      '!pi3k=gsk3': 1,
+                       '!tnfa=ikb': 1,
+                        '!tnfa^nfkb=ikb': 0,
+                         'egf=pi3k': 0,
+                          'egf=sos': 1,
+                       'egf^!erk=sos': 0,
+                        'map3k1=ap1': 1,
+                         'map3k1=p38': 1,
+                      'map3k1^tnfa=p38': 1,
+                       'nfkb=ikb': 1,
+                        'pi3k=map3k1': 1,
+                         'pi3k^sos=map3k1': 0,
+                          'raf1=erk': 1,
+                           'sos=map3k1': 0,
+                            'sos=raf1': 1,
+                             'tnfa=p38': 0,
+                              'tnfa=pi3k': 0,
+                               'tnfa^egf=pi3k': 0})
+    cm = CompareTwoModels(m1,m2)
+    cm.plot_multigraph()
+

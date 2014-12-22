@@ -1,4 +1,3 @@
-
 # -*- python -*-
 #
 #  This file is part of CNO software

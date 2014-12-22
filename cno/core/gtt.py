@@ -1,9 +1,25 @@
+# -*- python -*-
+#
+#  This file is part of the CNO package
+#
+#  Copyright (c) 2012-2013 - EMBL-EBI
+#
+#  File author(s): Thomas Cokelaer (cokelaer@ebi.ac.uk)
+#
+#  Distributed under the GLPv3 License.
+#  See accompanying file LICENSE.txt or copy at
+#      http://www.gnu.org/licenses/gpl-3.0.html
+#
+#  website: github.com/cellnopt/cellnopt
+#
+##############################################################################
 import numpy as np
 import pylab
 import pandas as pd
-from biokit.rtools import RSession
 from cno.core import CNORBase
 from easydev import TempFile
+
+
 __all__ = ['GTTBool']
 
 
@@ -32,10 +48,6 @@ class GTTBool(CNORBase):
         :param data: an instance of :class:`XMIDAS`
         :param models: an instance of compatible :class:`Models`
         :param scores: the scores of each model.
-
-
-
-
 
         """
         CNORBase.__init__(self, verboseR)

@@ -41,7 +41,6 @@ from .misc import CNOError
 # DATA for TESTING package
 from .testing import getdata
 
-
 # CORE package
 from .core import *
 

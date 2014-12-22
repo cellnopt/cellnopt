@@ -1,6 +1,6 @@
 # -*- python -*-
 #
-#  This file is part of the cinapps.tcell package
+#  This file is part of the CNO package
 #
 #  Copyright (c) 2012-2013 - EMBL-EBI
 #
@@ -10,7 +10,7 @@
 #  See accompanying file LICENSE.txt or copy at
 #      http://www.gnu.org/licenses/gpl-3.0.html
 #
-#  website: www.cellnopt.org
+#  website: github.com/cellnopt/cellnopt
 #
 ##############################################################################
 """.. topic:: **One of the main data structures of cellnopt to manipulate networks**"""
@@ -1954,8 +1954,8 @@ class CNOGraph(nx.DiGraph):
 
     def reac2edges(self, reaction):
         """Here no informatiom about links is returned"""
-        if reaction not in self.reactions:
-            raise CNOError("Unknown reaction {0}".format(reaction))
+        #if reaction not in self.reactions:
+        #    raise CNOError("Unknown reaction {0}".format(reaction))
         reac = Reaction(reaction)
         if "^" in reaction:
             inputs = reac.lhs_species
