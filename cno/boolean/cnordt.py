@@ -83,7 +83,7 @@ class CNORdt(CNORBase, CNOBase):
         self.config.add_section(p)
         self._called = []
 
-    @params_to_update()
+    @params_to_update
     def optimise(self, NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
                  reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
                  time_index_1=1, maxgens=500, maxstallgens=100, bool_updates=10,
@@ -111,7 +111,7 @@ class CNORdt(CNORBase, CNOBase):
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
-            expansion=%(expansion)s, maxInputsPerGate=3)
+            expansion=%(expansion)s, maxInputsPerGate=%(maxInputsPerGate)s)
 
         optbs = NULL
 
@@ -153,8 +153,11 @@ class CNORdt(CNORBase, CNOBase):
         params = {
             'pkn': self.pknmodel.filename,
             'midas': self.data.filename,
-            'compression': bool2R(compression),
-            'expansion': bool2R(expansion)
+             'compression': bool2R(self._compression),
+             'expansion': bool2R(self._expansion),
+             'cutnonc': bool2R(self._cutnonc),
+             'maxInputsPerGate': self._max_inputs_per_gate,
+
             }
 
         gad = self.config.GA.as_dict()

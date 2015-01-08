@@ -104,7 +104,7 @@ class CNORbool(CNOBase, CNORBase):
         self._called = []
 
     # !! should be same default values as in paramsGA
-    @params_to_update()
+    @params_to_update
     def optimise(self,  NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
                  reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
                  time_index_1=1, maxgens=500, maxstallgens=100, ga_verbose=True):
@@ -134,12 +134,15 @@ class CNORbool(CNOBase, CNORBase):
         else:
             bs = 'NULL'
 
+        # do we want to pre process the data ?
+
         script_template = """
         library(CellNOptR)
         pknmodel = readSIF("%(pkn)s")
         cnolist = CNOlist("%(midas)s")
         model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
-            expansion=%(expansion)s, maxInputsPerGate=3)
+                expansion=%(expansion)s, cutNONC=%(cutnonc)s,
+                maxInputsPerGate=%(maxInputsPerGate)s)
 
         res = gaBinaryT1(cnolist, model, popSize=%(popsize)s, maxGens=%(maxgens)s,
             maxTime=%(maxtime)s, elitism=%(elitism)s, pMutation=%(pmutation)s,
@@ -170,14 +173,14 @@ class CNORbool(CNOBase, CNORBase):
         species = colnames(cnolist@signals[[1]])
         optim1 = T
         """
-        expansion = True
-        compression = True
 
         params = {
             'pkn': self.pknmodel.filename,
             'midas': self.data.filename,
-            'compression': bool2R(compression),
-            'expansion': bool2R(expansion),
+            'compression': bool2R(self._compression),
+            'expansion': bool2R(self._expansion),
+            'cutnonc': bool2R(self._cutnonc),
+            'maxInputsPerGate': self._max_inputs_per_gate,
             'bs':bs
             }
         params.update(gad)
@@ -248,7 +251,7 @@ class CNORbool(CNOBase, CNORBase):
 
     #use same parameters as in T1
     # must be provided specifically in the prototype
-    @params_to_update()
+    @params_to_update
     def optimise2(self, NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
                  reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
                 maxgens=500, maxstallgens=100, ga_verbose=True,

@@ -87,7 +87,7 @@ class CNORode(CNOBase, CNORBase):
         self.session.run(script_template % params)
         self.species = self.session.species
 
-    @params_to_update()
+    @params_to_update
     def optimise(self,  n_diverse=10, dim_ref_set=10, maxtime=60,
                  verbose=False, reltol=1e-4, atol=1e-3, maxeval='Inf',
                  transfer_function=3, maxstepsize='Inf', reuse_ode_params=False):

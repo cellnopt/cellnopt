@@ -70,16 +70,20 @@ class CNOBase(Logging):
         self._model = self._pknmodel.copy()
 
         #self._model.midas = self._data
-        self._model.preprocessing() #FIXME what if one decides to preprocess differently
+        #self._model.preprocessing() #FIXME what if one decides to preprocess differently
+
+        # Default PKN is not preprocessed
+        self._expansion = False
+        self._compression = False
+        self._cutnonc = False
+        self._max_inputs_per_gate = 3
+
         # why another copy ?
         self._cnograph = self._pknmodel.copy()
         self.config = CNOConfig()
         if config is not None:
             if isinstance(config, str):
                 self.config.read(config)
-            #elif isinstance(config, CNOConfigParser):
-            #    print("AAAAAAAA")
-            #    self.config = config  # copy() returns a dict !!
             else:
                 raise TypeError
 
@@ -118,9 +122,13 @@ class CNOBase(Logging):
     def preprocessing(self, expansion=True, compression=True, cutnonc=True,
             maxInputsPerGate=2):
         """Apply preprocessing on the PKN model"""
-        # FIXME if used, the pknmodel is changed
-        self._pknmodel.preprocessing(expansion, compression, cutnonc,
+        self._model = self._pknmodel.copy()
+        self._model.preprocessing(expansion, compression, cutnonc,
                 maxInputsPerGate=maxInputsPerGate)
+        self._expansion = expansion
+        self._compression = compression
+        self._cutnonc = cutnonc
+        self._max_inputs_per_gate = maxInputsPerGate
 
     def plot_pknmodel(self):
         """Plot the original PKN model

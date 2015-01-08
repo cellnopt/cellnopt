@@ -95,7 +95,7 @@ class CNORfuzzy(CNOBase, CNORBase):
                 'midas': self.data.filename}
         self.session.run(script)
 
-    @params_to_update()
+    @params_to_update
     def optimise(self, N=2,
         NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
         reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,

@@ -1445,7 +1445,7 @@ class XMIDAS(MIDASReader):
                             fontsize=self._params['plot_fontsize_species'])
 
         # the stimuli
-        if len(self.names_stimuli)>0:
+        if len(self.names_stimuli) > 0:
             pylab.sca(ax_stim)
             stimuli = np.where(np.isnan(self.stimuli)==False, self.stimuli, 0.5)
             pylab.pcolor(1-pylab.flipud(stimuli), edgecolors='gray', cmap='gray',
