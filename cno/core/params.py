@@ -29,11 +29,19 @@ Params = namedtuple('Params',
         ['name', 'argname', 'default', 'description'])
 
 
-def params_to_update():
+import wrapt
+@wrapt.decorator
+def params_to_update(wrapped, instance, args, kwargs):
     """
     Decorator that provides the wrapped function with an attribute 'actual_kwargs'
     containing just those keyword arguments actually passed in to the function.
     """
+    vars(wrapped)['actual_kwargs'] = kwargs
+    return wrapped(*args, **kwargs)
+
+
+
+"""def params_to_update():
     def decorator(function):
         @functools.wraps(function)
         def inner(self, *args, **kwargs):
@@ -41,7 +49,7 @@ def params_to_update():
             return function(self, *args, **kwargs)
         return inner
     return decorator
-
+"""
 
 class Parameter(Params):
     """Define a user parameter
