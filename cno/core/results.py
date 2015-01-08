@@ -83,13 +83,29 @@ class BooleanResults(Results):
             fontsize=16, contour=False, Nlevels=10):
         df = self._get_scores_vs_model_size_df()
         h = viz.Hist2d(df)
-        if bins == None:
+        min_size, max_size = df.size.min(), df.size.max()
+
+        if bins is None:
             scores_range = 20
-            size_range = df.size.max() - df.size.min() + 1
-            bins = (scores_range, size_range)
-        h.plot(bins=bins, Nlevels=Nlevels, cmap=cmap, contour=contour)
+            size_range = max_size - min_size + 1
+            _bins = (scores_range, size_range)
+            # todo: bins and size_range >0
+            _range_mse = df['score'].min(), df['score'].max()
+            _range=[_range_mse,[min_size - 0.5, max_size + 0.5]]
+        else:
+            _range = None
+            _bins = bins
+
+        h.plot(bins=_bins, Nlevels=Nlevels, cmap=cmap, contour=contour, 
+                range=_range)
         pylab.xlabel("Score", fontsize=fontsize)
         pylab.ylabel("Model size", fontsize=fontsize)
+
+        # fix y/xticks
+        # make sure the yticks are integer only
+        if max_size > min_size and bins is None:
+            ls = pylab.linspace(min_size, max_size, max_size-min_size+1)
+            yt = pylab.yticks(ls, [int(x) for x in ls])
 
     def scatter_scores_vs_model_size(self):
         """Scatter plot of the model size and scores"""
