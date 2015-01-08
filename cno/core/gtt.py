@@ -24,8 +24,7 @@ __all__ = ['GTTBool']
 
 
 class GTTBool(CNORBase):
-    """
-
+    """Works for boolean steady state (1 time point)
 
     ::
 
@@ -56,8 +55,13 @@ class GTTBool(CNORBase):
         self.model = model
         self.data = data # a MIDAS file
 
-
     def _init(self):
+        """
+
+        preprocessing in R and Python may lead to different labels (not logic)
+        So, we need to reprocess unfortunately.
+
+        """
         fhmodel = TempFile()
         fhdata = TempFile()
         self.model.to_sif(fhmodel.name)
@@ -78,7 +82,7 @@ class GTTBool(CNORBase):
         res = list(res['t0'].flatten() ) + list(res['t1'].flatten())
         return res
 
-    def get_gtt(self):
+    def compute_gtts(self):
         print("init R library")
         self._init()
         N = len(self.models)
@@ -93,6 +97,13 @@ class GTTBool(CNORBase):
         df = pd.DataFrame(d).transpose()
         grouped = df.groupby(list(df.columns))
         pylab.hist([len(this) for this in grouped.groups.values()], 100)
-        return {'simulation': d, 'grouped':grouped}
+        res =  {'df':df, 'simulation': d, 'grouped':grouped}#
+        self.gtts = res
+        return self.gtts
 
+    def plot_gtt(self, bins=100):
+        grouped = self.gtts
+        pylab.hist([len(this) for this in grouped.groups.values()], bins)
 
+    def __len__(self):
+        return len(self.scores)

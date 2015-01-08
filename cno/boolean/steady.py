@@ -34,7 +34,6 @@ class Steady(CNOBase):
 
         self.init(self.time)
 
-
         self.measures = {}
         self.measures[0] = self.data.df.query("time==0").reset_index(drop=True).values
         self.measures[self.time] = self.data.df.query("time==@self.time").reset_index(drop=True).values
@@ -68,7 +67,6 @@ class Steady(CNOBase):
         self.model.preprocessing(expansion=expansion, compression=compression, 
                 cutnonc=cutnonc)
         self.init(self.time)
-
 
     #@do_profile()
     def simulate(self, tick, debug=False, reactions=None):

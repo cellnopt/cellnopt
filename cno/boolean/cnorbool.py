@@ -116,6 +116,10 @@ class CNORbool(CNOBase, CNORBase):
 
         Parameters are those of a Genetic Algorithm used to perform
         the analysis.
+
+        If you run again, it uses the previous best bitstirng.
+        Set self.session.best_bitstring = None to start from the
+        full network.
         """
         self.logging.info("Running the optimisation. Can take a very long"
                           "time. To see the progression, set verboseR "
