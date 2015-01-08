@@ -1,5 +1,5 @@
-cellnopt
-========
+cellnopt/cno
+=============
 
 .. image:: https://badge.fury.io/py/cellnopt.svg
     :target: https://pypi.python.org/pypi/cno
