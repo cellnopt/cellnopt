@@ -1005,7 +1005,6 @@ class XMIDAS(MIDASReader):
     def scale_max_across_experiments(self, inplace=True):
         r"""Rescale each species column across all experiments
 
-
         .. math::
 
             X_s = \frac{X}{M_s}
@@ -1015,10 +1014,12 @@ class XMIDAS(MIDASReader):
         set to 1 (if the max is unique). The minimum values may not be set to 0.
 
         """
-        newdf = self.df.divide(self.df.max(), level="experiment")
-        # TODO: divide errors by max as well but across experiments
+        M = self.df.max()
+        newdf = self.df.divide(M, level="experiment")
         if inplace:
              self.df = newdf.copy()
+             for col in M.index:
+                 self.errors[col] /= M.ix[col]
         else:
              return newdf
 
@@ -1029,7 +1030,7 @@ class XMIDAS(MIDASReader):
 
             X_s = \frac{X-m_s}{M-m_s}
 
-         where :math:`m = min_{e,s,t} X` and :math:`M = max_{e,s,t} X`,
+        where :math:`m = min_{e,s,t} X` and :math:`M = max_{e,s,t} X`,
         with :math:`e` the experiment, with :math:`s` the species,
         with :math:`t` the time.
 
@@ -1039,6 +1040,8 @@ class XMIDAS(MIDASReader):
         data = (self.df - m)/(M-m.astype(np.float64))
         if inplace:
             self.df = data.copy()
+            for col in M.index:
+                self.errors[col] /= M.ix[col] - m.ix[col]
         else:
             return data
 
@@ -1058,9 +1061,14 @@ class XMIDAS(MIDASReader):
         m = self.df.min().min()
         M = self.df.max().max()
 
+        # if X is normal distributed, 
+        # new errors of X-a is unchanged
+        # new errors of (X-a)/(b-a) is to be divided by b-a
+
         if inplace:
             self.df -= m
             self.df /= (M-m)
+            self.errors /= (M-m)
         else:
             newdf = self.df - m
             newdf /= (M-m)
@@ -1198,13 +1206,9 @@ class XMIDAS(MIDASReader):
                 # sometimes we may want to get rid of all NA and show the lines.
                 data = data.dropna()
                 times = np.array(list(data.index))
-                simtimes = times/float(M)
+                simtimes = times / float(M)
 
                 Xtimes = simtimes + j
-                delta_t = Xtimes[-1] - Xtimes[0]
-                delta_t/=20.
-                Xtimes[0] += delta_t
-                Xtimes[-1] -= delta_t
 
                 pylab.plot(Xtimes, data/1.05+(self.nExps-i-1), marker=marker, color=color,
                         linestyle=linestyle,
@@ -1240,7 +1244,7 @@ class XMIDAS(MIDASReader):
             else:
                 raise ValueError('data must be between 0 and 1 for simulation')
 
-        if logx == False:
+        if logx is False:
             # a tick at x = 0, 0.5 in each box (size of 1) + last x=1 in last box
             xt = pylab.linspace(0, self.nSignals, self.nSignals*2+1)
             times = times/max_time
@@ -1263,7 +1267,7 @@ class XMIDAS(MIDASReader):
         errors = self.errors.copy()
         errors /= vmax  # V(X/vmax) = V(X)/vmax
         errors.fillna(0, inplace=True)
-        if errors.sum().sum()>0:
+        if errors.sum().sum() > 0:
             show_error = True
         else:
             show_error = False
@@ -1279,14 +1283,11 @@ class XMIDAS(MIDASReader):
                 yerr = list(pylab.flatten(yerr.values))
                 trend.set(y)
                 Y = y
-
+                # y-axis ratio
                 ratio = 0.95
-                        
-                Xtimes = trend.normed_times+j
-                delta_t = Xtimes[-1] - Xtimes[0]
-                delta_t/=20.
-                Xtimes[0] += delta_t
-                Xtimes[-1] -= delta_t
+                       
+                Xtimes = trend.normed_times 
+                Xtimes += j
 
                 if mode == "data":
                     color = trend.get_bestfit_color()
