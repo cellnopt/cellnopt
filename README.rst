@@ -1,5 +1,5 @@
-cellnopt
-========
+cellnopt/cno
+=============
 
 .. image:: https://badge.fury.io/py/cellnopt.svg
     :target: https://pypi.python.org/pypi/cno
@@ -29,8 +29,9 @@ models and data sets used in CellNOpt project. The sub-package cno.io is ready a
 is a replacement for `cellnopt.core <https://pypi.python.org/pypi/cellnopt.core>`_ package.
 cno.datasets sub-package is a replacement for `cellnopt.data <https://pypi.python.org/pypi/cellnopt.data>`_ package.
 
-As for the formalism, the boolean implementation is available and more are
-coming. Please, have a look at 
+
+As for the formalisms, pipelines are provided for each formalism and are available in the 
+boolean, ode and fuzzy packages. 
 
 :See also: http://www.cellnopt.org for the context.
 
