@@ -1337,6 +1337,56 @@ class XMIDAS(MIDASReader):
             pass
         return diffs
 
+    def imshow(self, time, colorbar=True, cmap='cool', vmin=None, vmax=None):
+        """vmax and vmin are replaced so that we have a symmetric colorbar centered around 0
+        """
+        pylab.clf()
+        ax = self.plot_layout(cmap=cmap, colorbar=colorbar, mode='mse')
+
+        # now replaces the main images with the data at a given time
+        data = pylab.flipud(self.df.query('time==@time').as_matrix())
+
+
+        # should be 
+        ax_cb = pylab.gcf().axes[5]
+        if vmax is None:
+            vmax = data.max().max()
+        if vmin is None:
+            vmin = data.min().min()
+        # we make the cb symmetric around 0
+        if abs(vmin) > vmax:
+            vmax = abs(vmin)
+        else:
+            vmin = -vmax
+        ax.pcolor(data,  vmin=vmin, vmax=vmax, cmap=cmap, edgecolors='k')
+        self._set_colorbar(ax_cb, vmin, vmax, cmap=cmap)
+
+    def _set_colorbar(self, ax_cb, vmin, vmax, cmap='jet'):
+        N = self._params['plot_colorbar_N']
+        cbar = pylab.linspace(0, 1, N)
+        indices = [int(x) for x in cbar*(N-1)]
+        cbar = [cbar[i] for i in indices]
+    
+        ax_cb.pcolor(np.array([cbar, cbar]).transpose(), cmap=cmap,
+                         vmin=0, vmax=1)
+        ax_cb.yaxis.tick_right()
+        ticks = np.array(ax_cb.get_yticks())
+        M = max(ticks)
+        indices = [int(N*x) for x in ticks/(float(M))]
+        ax_cb.set_yticks(indices)
+
+        print(indices)
+        print(vmin)
+        print(vmax)
+        tic = vmin + np.array(indices)/float(N)*(vmax-vmin)
+        tic = [int(x*100)/100. for x in tic]
+        ax_cb.set_yticklabels(tic)
+        ax_cb.set_xticks([],[])
+
+
+
+
+
     def plot_layout(self, cmap="heat",
         rotation=90, colorbar=True, vmax=None, vmin=0.,
         mode="data", **kargs):
