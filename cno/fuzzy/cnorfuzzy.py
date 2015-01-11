@@ -54,8 +54,8 @@ class CNORfuzzy(CNOBase, CNORBase):
     Optimise first time point in the cnolist and produces a report.
 
     """
-    def __init__(self, model=None, data=None, verbose=True,
-                 verboseR=False, config=None):
+    def __init__(self, model=None, data=None, tag=None, verbose=True,
+                 verboseR=False, config=None, use_cnodata=False):
         """.. rubric:: constructor
 
         :param model:
@@ -66,7 +66,8 @@ class CNORfuzzy(CNOBase, CNORBase):
         :return:
 
         """
-        CNOBase.__init__(self,model, data, verbose=verbose)
+        CNOBase.__init__(self,model, data, verbose=verbose, 
+                config=config, use_cnodata=use_cnodata)
         self.logging.info("Initialise R session")
         CNORBase.__init__(self, verboseR=verboseR)
 
@@ -528,7 +529,9 @@ def standalone(args=None):
 
     if options.onweb is True or options.report is True:
         trainer = CNORfuzzy(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=options.config_file)
+            verboseR=options.verboseR, config=options.config_file,  
+            use_cnodata=options.cnodata)
+        trainer.preprocessing()
     else:
         stander.help()
 

@@ -57,9 +57,10 @@ class CNORode(CNOBase, CNORBase):
         c.plot_errors()
 
     """
-    def __init__(self, model=None, data=None, verbose=True,
-                 verboseR=False, config=None):
-        CNOBase.__init__(self,model, data, verbose=verbose)
+    def __init__(self, model=None, data=None, tag=None, verbose=True,
+                 verboseR=False, config=None, use_cnodata=False):
+        CNOBase.__init__(self,model, data, verbose=verbose, tag=tag, 
+                config=config, use_cnodata=use_cnodata)
         CNORBase.__init__(self, verboseR=verboseR)
 
         self._report = ReportODE()
@@ -443,7 +444,9 @@ def standalone(args=None):
 
     if options.onweb is True or options.report is True:
         trainer = CNORode(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=options.config_file)
+            verboseR=options.verboseR, config=options.config_file, 
+             use_cnodata=options.cnodata)
+        trainer.preprocessing()
     else:
         stander.help()
 

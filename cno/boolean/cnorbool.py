@@ -72,7 +72,7 @@ class CNORbool(CNOBase, CNORBase):
     """
     # params = BooleanParameters.default
     def __init__(self, model, data, tag=None, verbose=True,
-                 verboseR=False, config=None):
+                 verboseR=False, config=None, use_cnodata=False):
         """.. rubric:: Constructor
 
         :param model: model in SIF or SBMLqual format
@@ -84,7 +84,7 @@ class CNORbool(CNOBase, CNORBase):
 
         """
         CNOBase.__init__(self, model, data, tag=tag, verbose=verbose,
-                         config=config)
+                         config=config, use_cnodata=use_cnodata)
         self.logging.info("Initialise R session")
         CNORBase.__init__(self, verboseR)
 
@@ -129,8 +129,6 @@ class CNORbool(CNOBase, CNORBase):
 
         # keep track of the GA parameters, which may have been update above
         gad = self.config.GA.as_dict()
-
-        print(gad)
 
         bs = self.session.get('best_bitstring')
         if bs is not None:
@@ -494,7 +492,7 @@ class CNORbool(CNOBase, CNORBase):
 
         """
         if bs is None:
-            bs = ",".join([str(x) for x in self.results.best_bitstring])
+            bs = ",".join([str(x) for x in self.results.results.best_bitstring])
         else:
             bs = ",".join([str(x) for x in bs])
 
@@ -728,7 +726,8 @@ def standalone(args=None):
 
     if options.onweb is True or options.report is True:
         trainer = CNORbool(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=options.config_file)
+            verboseR=options.verboseR, config=options.config_file, use_cnodata=options.cnodata)
+        trainer.preprocessing() # should be called
     else:
         stander.help()
 

@@ -55,7 +55,7 @@ class CNORdt(CNORBase, CNOBase):
 
     """
     def __init__(self, model, data, tag=None, verbose=True,
-                 verboseR=False, config=None):
+                 verboseR=False, config=None, use_cnodata=False):
         """
 
         :param model:
@@ -67,7 +67,7 @@ class CNORdt(CNORBase, CNOBase):
         :return:
         """
         CNOBase.__init__(self,model, data, tag=tag, verbose=verbose,
-                        config=config)
+                        config=config, use_cnodata=use_cnodata)
         self.logging.info("Initialise R session")
         CNORBase.__init__(self, verboseR)
 
@@ -87,7 +87,7 @@ class CNORdt(CNORBase, CNOBase):
     def optimise(self, NAFac=1, pmutation=0.5, selpress=1.2, popsize=50,
                  reltol=0.1, elitism=5, maxtime=60, sizefactor=0.0001,
                  time_index_1=1, maxgens=500, maxstallgens=100, bool_updates=10,
-                 upper_bound=10, lower_bound=0.8, verbose=True):
+                 upper_bound=10, lower_bound=0.8, ga_verbose=True):
         """
 
         :param lowerB:
@@ -95,7 +95,14 @@ class CNORdt(CNORBase, CNOBase):
         :param boolUpdates:
 
         """
-        assert int(bool_updates) == len(self.midas.times), "only boolupdate==c.midas.Ntimes is implemented so far"
+
+        if int(bool_updates) != len(self.midas.times):
+            msg = "boolupdate must be set to number of time points. "
+            msg += "Other cases not implemented so far"
+            msg += "number time points s %s" % len(self.midas.times)
+            print(self.midas.filename)
+            raise ValueError(msg)
+
         # TODO reuse the previous params
         self.logging.info("Running the optimisation. Can take a very long"
                           "time. To see the progression, set verboseR "
@@ -166,7 +173,7 @@ class CNORdt(CNORBase, CNOBase):
         dt_params = self.config.DiscreteTime.as_dict()
         params.update(dt_params)
 
-        params['ga_verbose'] = bool2R(params['verbose'])
+        params['ga_verbose'] = bool2R(params['ga_verbose'])
 
         self.session.run(script % params)
 
@@ -434,7 +441,8 @@ def standalone(args=None):
 
     if options.onweb is True or options.report is True:
         trainer = CNORdt(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=options.config_file)
+            verboseR=options.verboseR, config=options.config_file, use_cnodata=options.cnodata)
+        trainer.preprocessing()
     else:
         stander.help()
 

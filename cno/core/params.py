@@ -190,6 +190,7 @@ class ParamsGeneral(Parameters):
             ("onweb", "--on-web", True, "open report in a browser. This option also set --report "),
             ("verbose", "--verbose", True,  "verbosity"),
             ("verboseR", "--verbose-R", True,  "verbosity of R scripts"),
+            ("cnodata", "--use-cnodata", True,  "search for data/model in cnodata repository"),
             ("config_file", "--config-file", None,  "todo")
         ]:
             self.add_parameter(Parameter(*data))
@@ -240,7 +241,7 @@ class ParamsGA(Parameters):
             "todo"))
         self.add_parameter(Parameter('reltol', "--relative-tolerance", 0.1,
             "todo"))
-        self.add_parameter(Parameter('verbose', "--ga-verbose", True,
+        self.add_parameter(Parameter('ga_verbose', "--ga-verbose", True,
             "verbosity in genetic algorithm"))
         # indices starts at zero.
         self.add_parameter(Parameter('time_index_1', "--time-index-1", 1,

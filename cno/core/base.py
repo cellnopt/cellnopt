@@ -18,6 +18,7 @@ import os
 from cno.core.params import CNOConfig
 from cno.io.reactions import Reaction
 from cno.core.params import CNOConfigParser
+from cno.datasets import cnodata
 
 from biokit.rtools import RSession
 from easydev import Logging
@@ -47,8 +48,30 @@ class CNORBase(object):
 class CNOBase(Logging):
     """Abstract Base Class common class to all formalisms"""
 
-    def __init__(self, pknmodel, data, tag=None, verbose=False, config=None):
+    def __init__(self, pknmodel, data, tag=None, verbose=False, use_cnodata=False, config=None):
         super(CNOBase, self).__init__(level=verbose)
+
+        # DON'T MOVE those imports to prevent import cycling
+        from cno.io import CNOGraph
+        from cno.io import XMIDAS
+
+        # Default PKN is not preprocessed by default
+        self._expansion = False
+        self._compression = False
+        self._cutnonc = False
+        self._max_inputs_per_gate = 3
+
+        # Now reads the config file if any.
+        # Do we want to call preprocessing()
+        # TODO 
+        self.config = CNOConfig()
+        if config is not None:
+            if isinstance(config, str):
+                self.config.read(config)
+            else:
+                raise TypeError
+
+        self.config.General.cnodata.value = use_cnodata
 
         # TODO: check that files do exist and raise an error otherwise
         self._pknmodel = None
@@ -59,33 +82,19 @@ class CNOBase(Logging):
         else:
             self.tag = ""
 
-        # DON'T MOVE those imports to prevent import cycling
-        from cno.io import CNOGraph
-        from cno.io import XMIDAS
-        #
+        # data and model may not be found. If cnodata provided, search in the package
+        if self.config.General.cnodata.value is True:
+            data = cnodata(data)
+            pknmodel = cnodata(pknmodel)
+            
         self._data = XMIDAS(data)
-
         self._pknmodel = CNOGraph(pknmodel)
         self._pknmodel.midas = self._data
         self._model = self._pknmodel.copy()
 
-        #self._model.midas = self._data
-        #self._model.preprocessing() #FIXME what if one decides to preprocess differently
-
-        # Default PKN is not preprocessed
-        self._expansion = False
-        self._compression = False
-        self._cutnonc = False
-        self._max_inputs_per_gate = 3
-
         # why another copy ?
         self._cnograph = self._pknmodel.copy()
-        self.config = CNOConfig()
-        if config is not None:
-            if isinstance(config, str):
-                self.config.read(config)
-            else:
-                raise TypeError
+
 
         self._report_directory = None
         self.report_directory = 'report'
