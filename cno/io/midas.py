@@ -34,7 +34,6 @@ from cno.misc import CNOError
 __all__ = ["XMIDAS", "Trend", 'MIDASReader']
 
 
-
 class MIDAS(object):
     """This is s a description of the MIDAS format (let us call it 1.0)
 
@@ -1337,14 +1336,25 @@ class XMIDAS(MIDASReader):
             pass
         return diffs
 
-    def imshow(self, time, colorbar=True, cmap='cool', vmin=None, vmax=None):
-        """vmax and vmin are replaced so that we have a symmetric colorbar centered around 0
-        """
+    def imshow(self, time, colorbar=True, cmap=None, vmin=None, vmax=None):
+        """vmax and vmin are replaced so that we have a symmetric colorbar
+        centered around 0"""
+
+        if cmap is None:
+            import colormap
+            cmap = colormap.cmap_builder('#ff0d90', 'white', '#0DDFFF')
+
         pylab.clf()
         ax = self.plot_layout(cmap=cmap, colorbar=colorbar, mode='mse')
 
         # now replaces the main images with the data at a given time
-        data = pylab.flipud(self.df.query('time==@time').as_matrix())
+
+        # can not select in a given order of experiments a multi index 
+        # so, we first use xs to get a dtaframe. Then, we select the experiments
+        # in the order found in self.experiments
+        df = self.df.xs((self.cellLine, slice(None), time)).ix[self.experiments.index]
+
+        data = pylab.flipud(df.as_matrix())
 
 
         # should be 
