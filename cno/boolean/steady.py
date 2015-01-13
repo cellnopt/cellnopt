@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import pylab
 from cno.misc.profiler import do_profile
+from cno.io.reactions import Reaction
 import time
 
 
@@ -11,8 +12,8 @@ class Steady(CNOBase):
     """Naive implementation of Steady state to help in 
     designing the API"""
     
-    def __init__(self, model, data, verbose=True):
-        super(Steady, self).__init__(model, data, verbose)
+    def __init__(self, pknmodel, data, verbose=True):
+        super(Steady, self).__init__(pknmodel, data, verbose)
 
         self.model = self.pknmodel.copy()
         self.time = self.data.times[1]
@@ -68,8 +69,20 @@ class Steady(CNOBase):
                 cutnonc=cutnonc)
         self.init(self.time)
 
+    def reactions_to_predecessors(self, reactions):
+    
+        predecessors = dict(((k, []) for k in self.predecessors.keys()))
+        for r in reactions:
+            reac = Reaction(r)
+            if "^" in reac.lhs:
+                predecessors[r].extend(reac.lhs_species)
+            else:
+                predecessors[reac.rhs].append(reac.lhs.replace("!",""))
+        return predecessors
+            
+
     #@do_profile()
-    def simulate(self, tick, debug=False, reactions=None):
+    def simulate(self, tick=1, debug=False, reactions=None):
         # pandas is very convenient but slower than numpy
         # The dataFrame instanciation is costly as well.
         # For small models, it has a non-negligeable cost.
@@ -81,6 +94,8 @@ class Steady(CNOBase):
         # what about a species that is both inhibited and measured
         testVal = 1e-3
 
+        values = self.values.copy()
+
         self.debug_values = []
         #self.X0 = pd.DataFrame(self.values)
         #self.debug_values.append(self.X0.copy())
@@ -88,7 +103,7 @@ class Steady(CNOBase):
         self.penalties = []
 
         self.count = 0
-        self.nSp = len(self.values.keys())
+        self.nSp = len(values.keys())
         residual = 1
 
         frac = 1.2
@@ -96,38 +111,52 @@ class Steady(CNOBase):
         # It means that if due to the cycles, you may not end up with same results.
         # this happends if you have cyvles with inhbititions
         # and an odd number of edges. 
-        
+        if reactions is None:
+            reactions = self.model.reactions[:]
+            predecessors = self.predecessors.copy()
+        else:
+            predecessors = self.reactions_to_predecessors(reactions)
+       
+        values = self.values.copy()
+        for inh in self.inhibitors:
+            if len(predecessors[inh]) == 0:
+                values[inh] = np.array([np.nan for x in range(0,self.N)])
+
+ 
         while (self.count < self.nSp * frac +1) and residual > testVal: 
-            self.previous = self.values.copy()
+            self.previous = values.copy()
             #self.X0 = pd.DataFrame(self.values)
             #self.X0 = self.values.copy()
             # compute AND gates first. why
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
-                self.values[node] = np.nanmin(np.array([self.values[x].copy() for x in 
-                        self.predecessors[node]]), axis=0)
+                if len(predecessors[node]) != 0:
+                    values[node] = np.nanmin(np.array([values[x].copy() for x in 
+                        predecessors[node]]), axis=0)
+                else:
+                    values[node] = self.previous[node]
 
             for node in self.tochange:
                 # easy one, just the value of predecessors
                 #if len(self.predecessors[node]) == 1:
                 #    self.values[node] = self.values[self.predecessors[node][0]].copy()
-                if len(self.predecessors[node]) == 0:
+                if len(predecessors[node]) == 0:
                     pass # nothing to change
                 else:
-                    self.values[node] = np.nanmax(
-                            np.array([self.values[x] if (x,node) not in self.toflip 
-                        else 1-self.values[x] for x in 
-                        self.predecessors[node]]),
+                    values[node] = np.nanmax(
+                            np.array([values[x] if (x,node) not in self.toflip 
+                        else 1. - values[x] for x in 
+                        predecessors[node]]),
                             axis=0)
                 # take inhibitors into account
                 if node in self.inhibitors_names:
-                    self.values[node] *= 1 - self.inhibitors[node].values
+                    values[node] *= 1 - self.inhibitors[node].values
             # 30 % of the time is here 
             # here NAs are set automatically to zero because of the int16 cast
             # but it helps speeding up a nit the code by removig needs to take care
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
             self.m1 = np.array([self.previous[k] for k in self.previous.keys() ], dtype=np.int16)
-            self.m2 = np.array([self.values[k] for k in self.previous.keys() ], dtype=np.int16)
+            self.m2 = np.array([values[k] for k in self.previous.keys() ], dtype=np.int16)
             residual = np.nansum(np.square(self.m1 - self.m2))
 
             self.debug_values.append(self.previous.copy())
@@ -136,11 +165,11 @@ class Steady(CNOBase):
             self.count += 1
 
         # add the latest values simulated in the while loop
-        self.debug_values.append(self.values.copy())
+        self.debug_values.append(values.copy())
 
         # Need to set undefined values to NAs
 
-        self.simulated[self.time] = np.array([self.values[k] 
+        self.simulated[self.time] = np.array([values[k] 
             for k in self.data.df.columns ], dtype=float).transpose()
         self.prev = {}
         self.prev[self.time] = np.array([self.previous[k] 
@@ -165,6 +194,9 @@ class Steady(CNOBase):
         #[1] 0.2574948
         # found 0.27
 
+
+
+
         # time 1 only is taken into account
         diff = np.square(self.measures[self.time] - self.simulated[self.time])
         #debugging
@@ -188,6 +220,8 @@ class Steady(CNOBase):
 
         # CellNOptR on ToyMMB      : 0.22        ; 0.22s in cno
         # 0.09467
+        # process and  "EGF=Raf"        "EGF+TNFa=PI3K"  "Erk+TNFa=Hsp27" off
+        # then MSE is 0.10838/2
 
         # CellNOptR on ExtLiverPCB : 1.4 seconds ; 1.7s in cno
         # 0.29199
@@ -211,20 +245,31 @@ class Steady(CNOBase):
         t1 = time.time()
         for i in range(0,N):
             self.init(self.time)
-            self.simulate(1)
+            self.simulate()
             self.score()
         t2 = time.time()
         print(str(t2-t1) + " seconds")        
 
-    def plotsim(self):
-        # What do we use here: self.values
-        import simulator
-        sor = simulator.Simulator()
-
-        #if time is None:
-        #    time = len(self.debug_values) - 1
-        sor.plot_time_course(self.values)
-
+    def plotsim(self, fontsize=16):
+        cm = pylab.get_cmap('gray')
+        pylab.clf()
+        data = pd.DataFrame(self.debug_values[-1]).fillna(0.5)
+        pylab.pcolor(data, cmap=cm, vmin=0, vmax=1,
+                shading='faceted')
+        pylab.colorbar()
+        ax1 = pylab.gca()
+        ax1.set_xticks([])
+        Ndata = len(data.columns)
+        ax1.set_xlim(0, Ndata)
+        ax = pylab.twiny()
+        ax.set_xticks(pylab.linspace(0.5, Ndata+0.5, Ndata ))
+        ax.set_xticklabels(data.columns, fontsize=fontsize, rotation=90)
+        times = list(data.index)
+        Ntimes = len(times)
+        ax1.set_yticks([x+0.5 for x in times])
+        ax1.set_yticklabels(times[::-1],
+                    fontsize=fontsize)
+        pylab.sca(ax1)
         pylab.title("Steady state for all experiments(x-axis)\n\n\n\n")
         pylab.tight_layout()
 
@@ -234,7 +279,7 @@ class Steady(CNOBase):
 
         if columns is None:
             columns = self.data.df.columns
-        X1 = pd.DataFrame(self.values)[columns].copy()
+        X1 = pd.DataFrame(self.debug_values[-1])[columns].copy()
         N = X1.shape[0]
 
         X1['time'] = [self.time] * N
@@ -360,53 +405,17 @@ $simResults[[1]]$t1
 [10,]    0    0    1    0    1    0
 
 
-SIMPLE LOOP on PB sub pkn
-
-'tnfr=ikk',
- 'tnfr=pi3k',
-  'pi3k=raf1',
-   'nfkb=ex',
-    '!ikb=nfkb',
-     'ex=ikb',
-      '!ikk=ikb',
-       'tnfa=tnfr']
-
-and data       
-
-nfkb  raf1
-cell experiment   time            
-Cell experiment_0   0     0.93  0.13
-                    2     0.91  0.10
-    experiment_1    0     0.11  0.13
-                    2     0.74  0.94
-    experiment_2    0     0.12  0.25
-                    2     0.70  0.25
-
-
-
-
-
-
-
-$mse
-[,1]    [,2]
-[1,] 0.00500 0.41405
-[2,] 0.00180      NA
-[3,] 0.03125      NA
-
-$simResults
-$simResults[[1]]
-$simResults[[1]]$t0
-[,1] [,2]
-[1,]    0    0
-[2,]    0    0
-[3,]    0    0
-
-$simResults[[1]]$t1
-[,1] [,2]
-[1,]    0    0
-[2,]    1   NA
-[3,]    0   NA
+imResults[[1]]$t1
+      [,1] [,2] [,3] [,4] [,5] [,6] [,7]
+ [1,]    1    0    0    0    0    0    0
+ [2,]    1    1    1    0    0    1    1
+ [3,]    1    1    1    0    0    1    1
+ [4,]    1    0    0    0    0    0    0
+ [5,]    1    1    1    0    0    1    1
+ [6,]    1    1    1    0    0    1    1
+ [7,]    0    1    0    1    1    0    0
+ [8,]    0    1    1    1    1    1    1
+ [9,]    0    1    1    1    1    1    1
 
 
 
