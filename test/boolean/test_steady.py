@@ -32,10 +32,28 @@ def test_steady():
          'p38': array([0, 1, 1, 0, 1, 1, 0, 1, 1]),
          'p90RSK': array([1, 0, 1, 0, 0, 0, 1, 1, 1])}
 
-    for k in s.values.keys():
-        assert numpy.all(solutions[k] == s.values[k])
+    for k in s.debug_values[-1].keys():
+        assert numpy.all(solutions[k] == s.debug_values[-1][k])
 
     assert s.score()/2. == 0.094674603174603175
+
+
+    s = Steady(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+    s.preprocessing()
+    reactions = ['!Akt=Mek', '!Akt^Raf=Mek', 'EGF=PI3K', 'Erk=Hsp27',
+            'Jnk=cJun','Mek=Erk', 'Mek=p90RSK', 'PI3K=Akt',
+                'Raf=Mek',  'TNFa=Hsp27', 'TNFa=Jnk', 'TNFa=NFkB', 'TNFa=PI3K']
+    s.simulate(reactions)
+    s.score()/2. == 0.10832539682539682
+
+
+
+
+
+
+
+
+
 
     """
 [,1]  [,2]   [,3] [,4]   [,5]    [,6] [,7]
