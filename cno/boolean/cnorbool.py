@@ -505,6 +505,7 @@ class CNORbool(CNOBase, CNORBase):
         mse = computeScoreT1(cnolist, model, %(bs)s)
         """
 
+        # FIXME: should re-use the user preprocess options
         script = script_template % {
                 'pkn': self.pknmodel.filename,
                 'midas': self.data.filename,

@@ -131,7 +131,6 @@ class CNORode(CNOBase, CNORBase):
             maxtime=%(maxtime)s, dim_refset=%(dim_ref_set)s, maxeval=%(maxeval)s,
             verbose=F, ndiverse=%(n_diverse)s, ode_parameters=ode_params)
         """
-
         expansion = True
         compression = True
 

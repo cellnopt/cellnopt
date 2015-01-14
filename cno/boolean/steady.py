@@ -16,6 +16,8 @@ class Steady(CNOBase):
         super(Steady, self).__init__(pknmodel, data, verbose)
 
         self.model = self.pknmodel.copy()
+        # to speed up code later on
+        self.model.buffer_reactions = self.model.reactions
         self.time = self.data.times[1]
 
         # just a reference to the conditions
@@ -68,6 +70,7 @@ class Steady(CNOBase):
         self.model.preprocessing(expansion=expansion, compression=compression, 
                 cutnonc=cutnonc)
         self.init(self.time)
+        self.model.buffer_reactions = self.model.reactions
 
     def reactions_to_predecessors(self, reactions):
     
@@ -112,7 +115,9 @@ class Steady(CNOBase):
         # this happends if you have cyvles with inhbititions
         # and an odd number of edges. 
         if reactions is None:
-            reactions = self.model.reactions[:]
+            # takes some time:
+            # reactions = self.model.reactions
+            reactions = self.model.buffer_reactions
             predecessors = self.predecessors.copy()
         else:
             predecessors = self.reactions_to_predecessors(reactions)
@@ -186,16 +191,18 @@ class Steady(CNOBase):
 
     #@do_profile()
     def score(self):
-        # on ExtLiverPCB
-        # computeScoreT1(cnolist, pknmodel, rep(1,113))
+        # We need also to include NAFac, number of reactions in the model
+        # for the sizeFac
 
+        # on ExtLiverPCB
+        # computeScoreT1(cnolist, pknmodel, rep(1,116))
+        # 0.29199 from cellnoptr
+        # found 0.2945
         # liverDREAM
         #computeScoreT1(cnolist, pknmodel, rep(1,58))
         #[1] 0.2574948
         # found 0.27
-
-
-
+        # 0.2902250932121212
 
         # time 1 only is taken into account
         diff = np.square(self.measures[self.time] - self.simulated[self.time])
@@ -204,7 +211,7 @@ class Steady(CNOBase):
         N = diff.shape[0] * diff.shape[1]
         Nna = np.isnan(diff).sum()
         N-= Nna
-        print(N)
+        #print(N)
         S = np.nansum(self.diff) / float(N)
         return S
 
