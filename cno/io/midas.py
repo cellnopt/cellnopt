@@ -329,9 +329,17 @@ class MIDASReader(MIDAS):
         stim = [x for x in self._experiments.columns if x.endswith(":i") is False]
 
         # Finally, build up the dataframe for experiments
+
+        # which one are inhibtiors/stimuli ?
+        columns = []
+        for this in self._experiments.columns:
+            if this.endswith(':i'):
+                columns.append('Inhibitors')
+            else:
+                columns.append('Stimuli')
+
         self._experiments = pd.DataFrame(self._experiments.values,
-                     columns=[['Stimuli']*len(stim) + ['Inhibitors']*len(inh),
-                              [x.replace(":i","") for x in self._experiments.columns]],
+                     columns=[columns, [x.replace(":i","") for x in self._experiments.columns]],
                         index= self._experiments.index)
 
         self._experiments.sortlevel(axis=1, inplace=True)
