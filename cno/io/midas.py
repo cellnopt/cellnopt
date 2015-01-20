@@ -1812,7 +1812,7 @@ class XMIDAS(MIDASReader):
         """
         if self.df.max().max() <=1  and self.df.min.min()>=0:
             raise CNOError("data already between 0 and 1")
-        assert mode in ["time", "control"], "mode must be control or time"
+        assert mode in ["fold_change", "time", "control"], "mode must be control,fold_change or time"
         kargs['changeThreshold'] = changeThreshold
         if mode == "time":
             n = normalisation.XMIDASNormalise(self, **kargs)
@@ -1820,6 +1820,8 @@ class XMIDAS(MIDASReader):
         elif mode == "control":
             n = normalisation.XMIDASNormalise(self, **kargs)
             normed_midas = n.control_normalisation()
+        elif mode == 'fold_change':
+            raise NotImplementedError
 
         if inplace is False:
             return normed_midas
