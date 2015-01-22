@@ -1,4 +1,5 @@
-# -*- python -*-
+#
+#-*- python -*-
 #
 #  This file is part of the cellnopt package
 #
@@ -330,17 +331,42 @@ class MIDASReader(MIDAS):
 
         # Finally, build up the dataframe for experiments
 
-        # which one are inhibtiors/stimuli ?
-        columns = []
+        # which one are inhibitors / stimuli ?
+        columns_is = []
         for this in self._experiments.columns:
             if this.endswith(':i'):
-                columns.append('Inhibitors')
+                columns_is.append('Inhibitors')
             else:
-                columns.append('Stimuli')
+                columns_is.append('Stimuli')
 
-        self._experiments = pd.DataFrame(self._experiments.values,
-                     columns=[columns, [x.replace(":i","") for x in self._experiments.columns]],
-                        index= self._experiments.index)
+        columns = [x.replace(":i","") for x in self._experiments.columns]
+
+        # add dummy columns that we will delete afterwards just to create the structure of th emultiindex
+        data = self._experiments.values
+        if 'Inhibitors' not in columns_is:
+            # let us add  an inhibitors
+            columns_is += ['Inhibitors']
+            columns += ['__dummy__inhibitor']
+            N = len(self._experiments.values)
+            data = np.concatenate([self._experiments.values, np.array([[None]] * N)], axis=1)
+
+        if 'Stimuli' not in columns_is:
+            columns_is = ['Stimuli'] + columns_is
+            columns = ['__dummy__stimulus'] + columns
+            N = len(self._experiments.values)
+            data = np.concatenate([self._experiments.values, np.array([[None]] * N)], axis=1)
+
+
+        self._experiments = pd.DataFrame(data, columns=[columns_is, columns],
+                    index= self._experiments.index)
+        try:
+            self._experiments.drop(('Inhibitors', '__dummy__inhibitor'), axis=1, inplace=True)
+        except:
+            pass
+        try:
+            self._experiments.drop(('Stimuli', '__dummy__stimulus'), axis=1, inplace=True)
+        except:
+            pass
 
         self._experiments.sortlevel(axis=1, inplace=True)
         #self.df = self.df.sort_index(axis=1)
@@ -738,18 +764,13 @@ class XMIDAS(MIDASReader):
     times = property(_get_times, doc="Getter to the different times")
 
     def _get_names_inhibitors(self):
-        try:
-            return list(self.experiments.Inhibitors.columns)
-        except:
-            return []
+        return list(self.experiments.Inhibitors.columns)
+
     names_inhibitors = property(_get_names_inhibitors,
                                 doc="return list of inhibitors")
 
     def _get_names_stimuli(self):
-        try:
-            return list(self.experiments.Stimuli.columns)
-        except:
-            return []
+        return list(self.experiments.Stimuli.columns)
     names_stimuli = property(_get_names_stimuli,
                              doc="returns list of stimuli")
 
@@ -759,7 +780,6 @@ class XMIDAS(MIDASReader):
 
     def _check_consistency_data(self):
         # times consistency all times must have same length
-        #
         pass
 
     def reset_index(self):
@@ -1254,7 +1274,7 @@ class XMIDAS(MIDASReader):
         if logx is False:
             # a tick at x = 0, 0.5 in each box (size of 1) + last x=1 in last box
             xt = pylab.linspace(0, self.nSignals, self.nSignals*2+1)
-            times = times/max_time
+            times = times / max_time
             xtlabels = self._get_xtlabels(logx=True)
         else:
             M = max_time
@@ -1280,16 +1300,20 @@ class XMIDAS(MIDASReader):
             show_error = False
 
         # start at zero
-        for i in range(0, len(self.experiments)):
+        for i in range(0, self.nExps):
             for j in range(0, self.nSignals):
-                y = df[self.names_species[j]][self.cellLine][self.experiments.index[i]]
+
+                signal = self.names_signals[j]
+                exp = self.experiments.index[i]
+                data = df[signal][self.cellLine][exp]
                 try:
-                    yerr = errors[self.names_species[j]].ix['average'].ix[self.experiments.index[i]]
+                    yerr = errors[signal].ix['average'].ix[exp]
                 except:
-                    yerr = errors[self.names_species[j]].ix[self.cellLine].ix[self.experiments.index[i]]
+                    yerr = errors[signal].ix[self.cellLine].ix[exp]
                 yerr = list(pylab.flatten(yerr.values))
-                trend.set(y)
-                Y = y
+
+                trend.set(data)
+
                 # y-axis ratio
                 ratio = 0.95
                        
@@ -1298,26 +1322,32 @@ class XMIDAS(MIDASReader):
 
                 if mode == "data":
                     color = trend.get_bestfit_color()
+                    if color is None and bool(np.isnan(data.sum())) is True:
+                        pylab.fill_between(Xtimes, ratio * np.array([1] * len(Xtimes)) + self.nExps-i-1,
+                                           self.nExps-i-1,
+                                           color='grey')
+                        continue
 
                     pylab.plot(Xtimes,
-                               ratio*Y + self.nExps-i-1 ,
+                               ratio*data + self.nExps-i-1 ,
                                'k-o', markersize=markersize, color=color, mfc='gray')
                     if show_error is True:
                         pylab.errorbar(Xtimes,
-                               ratio*Y + self.nExps-i-1,
+                               ratio*data + self.nExps-i-1,
                                yerr=yerr, color='k', ecolor='k', elinewidth=3, linewidth=3)
 
+                    # if data are NA, do not use
                     pylab.fill_between(Xtimes,
-                                       ratio*Y + self.nExps-1-i ,
+                                       ratio*data + self.nExps-1-i ,
                                        self.nExps-1-i, alpha=trend.alpha/1.1,
                                        color=color)
                 else:
                     pylab.plot(Xtimes,
-                               ratio*Y + self.nExps-i-1 , 'k-o',
+                               ratio*data + self.nExps-i-1 , 'k-o',
                                markersize=markersize, color="k", mfc='gray')
                     if show_error is True:
                         pylab.errorbar(Xtimes,
-                               ratio*Y + self.nExps-i-1,
+                               ratio*data + self.nExps-i-1,
                                yerr=yerr, ecolor='k', elinewidth=3, linewidth=3, color='k')
 
 
@@ -1393,13 +1423,13 @@ class XMIDAS(MIDASReader):
         indices = [int(N*x) for x in ticks/(float(M))]
         ax_cb.set_yticks(indices)
 
-        print(indices)
-        print(vmin)
-        print(vmax)
         tic = vmin + np.array(indices)/float(N)*(vmax-vmin)
-        tic = [int(x*100)/100. for x in tic]
-        ax_cb.set_yticklabels(tic)
-        ax_cb.set_xticks([],[])
+        try:
+            tic = [int(x*100)/100. for x in tic]
+            ax_cb.set_yticklabels(tic)
+            ax_cb.set_xticks([],[])
+        except:
+            pass
 
 
 
@@ -1770,28 +1800,30 @@ class XMIDAS(MIDASReader):
             # better to use experiments df so that order is same as in experiments
             for exp in self.experiments.index:
 
-                #FIXME: if we drop an experiment, this fails. do we want to
+                # FIXME: if we drop an experiment, this fails. do we want to
+                # probably related to https://github.com/cellnopt/cellnopt/issues/77
                 # update the labels when calling remove_experiment method
                 measurements = self.df.xs((self.cellLine, exp, time))
                 measurements = measurements[self.df.columns] # maybe not needed
                 # keep it for now to be sure that order of measurements is same as in the header
                 experiment = self.experiments.ix[exp]
 
-                #FIXME use isinstance
+
+                values = list(experiment.Stimuli.values) + list(experiment.Inhibitors.values)
+                # FIXME use instance
                 if type(measurements) == pd.core.series.Series:
                     if expand_time_column == False:
-                        rowdata = [1] + list(experiment.values) + [time] + list(measurements)
+                        rowdata = [1] + values + [time] + list(measurements)
                     else:
-                        rowdata = [1] + list(experiment.values) +\
-                            [time]*len(self.df.columns) + list(measurements)
+                        rowdata = [1] + values + [time]*len(self.df.columns) + list(measurements)
                     f.write(",".join(["{}".format(x) for x in rowdata]) + "\n")
 
                 elif type(measurements) == pd.core.frame.DataFrame:
                     for measurement in measurements.values:
                         if expand_time_column == False:
-                            rowdata = [1] + list(experiment.values) + [time] + list(measurement)
+                            rowdata = [1] + values + [time] + list(measurement)
                         else:
-                            rowdata = [1] + list(experiment.values) +\
+                            rowdata = [1] + values +\
                                 [time]*len(self.df.columns) + list(measurement)
                         f.write(",".join(["{}".format(x) for x in rowdata]) + "\n")
                 else:
@@ -2376,6 +2408,11 @@ class Trend(object):
         return keys[np.argmax(values)]
 
     def get_bestfit_color(self):
+
+        # somehow must cast to python bool...
+        if bool(np.isnan(self.data.sum())) is True:
+            return None
+
         corrs = self._get_correlation(self.normed_values)
         keys,values = (corrs.keys(), corrs.values())
         # M  = max(values)
