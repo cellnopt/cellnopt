@@ -1489,20 +1489,22 @@ class XMIDAS(MIDASReader):
         ax_main.set_xticks([], [])
 
         # stimuli
-        ax_stim = fig.add_subplot(gs[shift_top:, layout_width:w1])
-        ax_stim.set_yticks([], [])
-        ax_stim.set_xticks([], [])
-        ax_stim_top = fig.add_subplot(gs[0:shift_top, layout_width:w1])
-        ax_stim_top.set_yticks([], [])
-        ax_stim_top.set_xticks([], [])
+        if len(self.names_stimuli) > 0:
+            ax_stim = fig.add_subplot(gs[shift_top:, layout_width:w1])
+            ax_stim.set_yticks([], [])
+            ax_stim.set_xticks([], [])
+            ax_stim_top = fig.add_subplot(gs[0:shift_top, layout_width:w1])
+            ax_stim_top.set_yticks([], [])
+            ax_stim_top.set_xticks([], [])
 
         # inhibitors
-        ax_inh = fig.add_subplot(gs[shift_top:, w1:w2])
-        ax_inh.set_yticks([], [])
-        ax_inh.set_xticks([], [])
-        ax_inh_top = fig.add_subplot(gs[0:shift_top, w1:w2])
-        ax_inh_top.set_yticks([], [])
-        ax_inh_top.set_xticks([], [])
+        if len(self.names_inhibitors) > 0:
+            ax_inh = fig.add_subplot(gs[shift_top:, w1:w2])
+            ax_inh.set_yticks([], [])
+            ax_inh.set_xticks([], [])
+            ax_inh_top = fig.add_subplot(gs[0:shift_top, w1:w2])
+            ax_inh_top.set_yticks([], [])
+            ax_inh_top.set_xticks([], [])
 
         # colorbar
         if colorbar and mode == 'mse':
@@ -1546,7 +1548,8 @@ class XMIDAS(MIDASReader):
         # the stimuli
         if len(self.names_stimuli) > 0:
             pylab.sca(ax_stim)
-            stimuli = np.where(np.isnan(self.stimuli)==False, self.stimuli, 0.5)
+            #stimuli = np.where(np.isnan(self.stimuli)==False, self.stimuli, 0.5)
+            stimuli = self.stimuli
             pylab.pcolor(1-pylab.flipud(stimuli), edgecolors='gray', cmap='gray',
                      vmin=0,vmax=1);
             #ax_stim.set_yticks([], [])
@@ -1558,8 +1561,9 @@ class XMIDAS(MIDASReader):
         # the inhibitors
         if len(self.names_inhibitors)>0:
             pylab.sca(ax_inh)
-            inhibitors = np.where(np.isnan(self.inhibitors)==False,
-                                  self.inhibitors, 0.5)
+            #inhibitors = np.where(np.isnan(self.inhibitors)==False,
+            #                    self.inhibitors, 0.5)
+            inhibitors = self.inhibitors
             pylab.pcolor(1-pylab.flipud(inhibitors), edgecolors='gray',
                          cmap='gray',
                          vmin=0,vmax=1);
@@ -1772,14 +1776,9 @@ class XMIDAS(MIDASReader):
 
         header = ["TR:%s:CellLine"%self.cellLine]
 
-        try:
-            header += ['TR:'+this for this in self.experiments.Stimuli.columns]
-        except:
-            pass
-        try:
-            header += ['TR:'+this+'i' for this in self.experiments.Inhibitors.columns]
-        except:
-            pass
+
+        header += ['TR:'+this for this in self.experiments.Stimuli.columns]
+        header += ['TR:'+this+'i' for this in self.experiments.Inhibitors.columns]
 
         if expand_time_column == False:
             header += ["DA:ALL"]
