@@ -27,7 +27,8 @@ __all = ["Models", "BooleanModels", "DTModels", "FuzzyModels", "CompareModels"]
 
 
 class Models(object):
-    def __init__(self, data, reacID=None, index_col=None):
+    def __init__(self, data, reacID=None, index_col=None, verbose=True):
+        self.verbose = verbose
         # FIXME interpret the first columns automatically ?
         if isinstance(data, str):
             self.filename = data
@@ -53,14 +54,25 @@ class Models(object):
         for reaction in self.df.columns:
             if "+" in reaction:
                 # todo: use logging
-                print("Warning in Models. found a + sign... in %s. Interepreted as ^" % reaction)
+                if self.verbose:
+                    print("Warning in Models. found a + sign... in %s. Interepreted as ^" % reaction)
         self.df.columns = [x.replace("+", "^") for x in self.df.columns]
 
         # keep this import here to avoid cycling imports
         from cno.io.cnograph import CNOGraph
+        from cno.io import Reaction
         self.cnograph = CNOGraph()
+        non_reactions = []
         for this in self.df.columns:
-            self.cnograph.add_reaction(this)
+            try:
+                reac = Reaction(str(this))
+                self.cnograph.add_reaction(str(this))
+            except:
+                if self.verbose:
+                    print('Skipping column %s (not valid reaction ?)' % this)
+                non_reactions.append(this)
+        self.non_reactions = non_reactions
+        self.df_non_reactions = self.df[non_reactions].copy()
 
     def get_average_model(self):
         """Returns the average model (on each reaction)"""
