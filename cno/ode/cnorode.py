@@ -128,7 +128,7 @@ class CNORode(CNOBase, CNORBase):
          ode_params = createLBodeContPars(pknmodel)
         }
         ode_params = parEstimationLBodeSSm(cnolist, pknmodel, 
-            maxtime=%(maxtime)s, dim_refset=%(dim_ref_set)s, maxeval=%(maxeval)s,
+            maxtime=%(maxtime)s, maxStepSize=%(maxstepsize)s, dim_refset=%(dim_ref_set)s, maxeval=%(maxeval)s,
             verbose=F, ndiverse=%(n_diverse)s, ode_parameters=ode_params)
         """
         expansion = True
