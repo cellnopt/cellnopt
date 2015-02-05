@@ -23,7 +23,7 @@ cellnopt/cno
 :Contributions: Please join `cellnopt github project <https://github.com/cellnopt/cellnopt>`_ and share your
                  `notebooks <https://github.com/cellnopt/cellnopt/tree/master/notebooks>`_
 :Issues: Please use `cellnopt issues and bug report <https://github.com/cellnopt/cellnopt/issues>`_
-:Documentation: Some `pypi <http://pythonhosted.org//cno/>`_
+:Documentation: Some documentation (mostly API) are also available on `pypi <http://pythonhosted.org//cno/>`_
 
 This is a stable version that contains datasets and tools to manipulate
 models and data sets used in CellNOpt project. The sub-package cno.io is ready and 
