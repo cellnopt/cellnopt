@@ -317,6 +317,11 @@ class XCNOGraph(CNOGraph):
 
         nodeNames = np.array(nodeNames)[indices]
         nodeNamesY = np.array(nodeNamesY)[indices[::-1]]
+        X = [0.5+x for x in range(0, len(nodeNames))]
+        pylab.xticks(X,  nodeNames, rotation=90, fontsize=fontsize)
+        pylab.yticks(X,  nodeNamesY, fontsize=fontsize)
+        pylab.xlim([0, len(X)])
+        pylab.ylim([0, len(X)])
 
     def random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
             remove_unconnected=True, Nsignals=5, Nstimuli=5, 
