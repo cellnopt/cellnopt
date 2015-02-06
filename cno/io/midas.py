@@ -2180,6 +2180,7 @@ class XMIDAS(MIDASReader):
                     count += 1
         elif mode in ["signal", "species",  "column"]:
             # m.df.sum() is constant
+            raise NotImplementedError
             for c in self.df.columns:
                 self.df[c] = np.random.permutation(self.df[c].values)
         elif mode in ["index", "experiment"]:

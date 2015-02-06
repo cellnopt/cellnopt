@@ -190,7 +190,7 @@ class Steady(CNOBase):
         # loops are handle diffenty
 
     #@do_profile()
-    def score(self):
+    def score(self, NAFac=1, sizeFac=1e-4):
         # We need also to include NAFac, number of reactions in the model
         # for the sizeFac
 
@@ -212,6 +212,10 @@ class Steady(CNOBase):
         Nna = np.isnan(diff).sum()
         N-= Nna
         #print(N)
+
+        # NAPen = NAFac * sum(self.simulated.isnull())
+        # sizePen = nDataPts * sizeFac * nInputs / nIntTot
+
         S = np.nansum(self.diff) / float(N)
         return S
 

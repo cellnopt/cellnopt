@@ -404,6 +404,8 @@ class CNOGraph(nx.DiGraph):
 
         #: nodes and edges attributes. See :class:`CNOGraphAttributes`
         self.attributes = CNOGraphAttributes()
+        self._set_default_node_attribute = 'cno'
+
 
         self.and_symbol = "^"
         self.or_symbol = "+"
@@ -1913,10 +1915,11 @@ class CNOGraph(nx.DiGraph):
 
         .. seealso:: :meth:`get_node_attributes`
         """
-        for node in self.nodes():
-            attrs = self.get_node_attributes(node)
-            for k, v in attrs.items():
-                self.node[node][k] = v
+        if self._set_default_node_attribute == 'cno':
+            for node in self.nodes():
+                attrs = self.get_node_attributes(node)
+                for k, v in attrs.items():
+                    self.node[node][k] = v
 
     def set_node_attributes(self, attr_dict ):
         """Experimental
