@@ -178,6 +178,7 @@ class MIDASReader(MIDAS):
             if self.cellLine == None or self.cellLine not in celltype_names:
                 txt = "More than 1 celline was found.\n"
                 txt += "You must select one amongst: {}".format([this.split(":")[1] for this in cellLines])
+                txt += "\n Use the keyword cellLine (note the capital L). e.g. cellLine='HepG2'"
                 raise CNOError(txt)
             else:
                 # we could remove columns and rows where cell type is not correct.
