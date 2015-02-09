@@ -1851,14 +1851,11 @@ class XMIDAS(MIDASReader):
             # better to use experiments df so that order is same as in experiments
             for exp in self.experiments.index:
 
-                # FIXME: if we drop an experiment, this fails. do we want to
-                # probably related to https://github.com/cellnopt/cellnopt/issues/77
-                # update the labels when calling remove_experiment method
+                #
                 measurements = self.df.xs((self.cellLine, exp, time))
                 measurements = measurements[self.df.columns] # maybe not needed
                 # keep it for now to be sure that order of measurements is same as in the header
                 experiment = self.experiments.ix[exp]
-
 
                 values = list(experiment.Stimuli.values) + list(experiment.Inhibitors.values)
                 # FIXME use instance
