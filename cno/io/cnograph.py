@@ -767,6 +767,7 @@ class CNOGraph(nx.DiGraph):
         self._stimuli = []
         self._signals = []
         self._inhibitors = []
+        self._ranks = None
 
     @modifier
     def clean_orphan_ands(self):
@@ -1536,7 +1537,6 @@ class CNOGraph(nx.DiGraph):
 
             # ignore self loop:
             if (e1[0] == e2[1] or e2[0] == e1[1]) and self_loop is False:
-                print("self loop ignored")
                 status['selfloop']+=1
                 continue
 
