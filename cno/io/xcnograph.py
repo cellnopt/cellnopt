@@ -323,6 +323,77 @@ class XCNOGraph(CNOGraph):
         pylab.xlim([0, len(X)])
         pylab.ylim([0, len(X)])
 
+
+    def random_cnograph(self, nStimuli=5, nSignals=14, fraction_activation=0.9, nTranscript=5, 
+            nExtraNode=10):
+        """
+
+        Create the nodes first. and then fill the edges
+
+        no self loop
+        """
+        assert fraction_activation >=0 and fraction_activation<=1
+        assert nStimuli>=1
+        assert nExtraNode >= 1
+        assert nSignals >= 1
+        assert nTranscript >=1 and nTranscript <= nSignals
+
+        self.clear()
+
+        # add stimuli
+        stimuli = ['L' + str(i) for i in range(1, nStimuli+1)]
+        self.add_nodes_from(stimuli)
+        self._stimuli = stimuli[:]
+
+        signals = ['S' + str(i) for i in range(1, nSignals+1)]
+        self.add_nodes_from(signals)
+        self._signals = signals[:]
+        
+        self.add_nodes_from(['N'+str(i) for i in range(1,nExtraNode+1)])
+        nodes = self.nodes()
+
+        # select the transcript:
+        transcripts = [x for x in self.nodes() if x not in self.stimuli]
+        transcripts = transcripts[0:nTranscript]
+
+        def get_link():
+            link = np.random.uniform()
+            if link < fraction_activation:
+                return "+"
+            else:
+                return "-"
+
+        count = 0
+        N = len(self.nodes())
+        while nx.is_connected(self.to_undirected()) is False and count <N*2:
+            np.random.shuffle(nodes)
+            n1 = nodes[0]
+            n2 = nodes[1]
+            if n2 in self.stimuli or n1 in transcripts:
+                continue
+            # ignore self loop
+            if n1 == n2:
+                continue
+            self.add_edge(n1, n2, link=get_link())
+            count += 1
+
+
+        # some nodes (non-stimuli/non-signals) may have no input connections, which is
+        # not wanted.
+        tofix = [x for x in self.nodes() if self.in_degree()[x] == 0 and x.startswith('N')]
+        for nodetofix in tofix:
+            nodes = [node for node in self.nodes() if node !=tofix]
+            np.random.shuffle(nodes)
+            self.add_edge(nodes[0], nodetofix, link=get_link())
+
+        if count == 100:
+            print("warning: reached 100 iterations")
+        # Now add random edges until all nodes are connected
+
+
+
+        
+
     def random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
             remove_unconnected=True, Nsignals=5, Nstimuli=5, 
             remove_self_loops=True, maxtrials=50):
