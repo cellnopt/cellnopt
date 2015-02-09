@@ -69,8 +69,8 @@ class MultiMIDAS(object):
 
 
         """
-        raise NotImplementedError
         m = XMIDAS(filename)
+        
         self.addMIDAS(m)
 
 
