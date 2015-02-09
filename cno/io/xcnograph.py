@@ -366,7 +366,7 @@ class XCNOGraph(CNOGraph):
 
         count = 0
         N = len(self.nodes())
-        while nx.is_connected(self.to_undirected()) is False and count < N * 2:
+        while nx.is_connected(self.to_undirected()) is False and count < N * 3:
             np.random.shuffle(nodes)
             n1 = nodes[0]
             n2 = nodes[1]
@@ -395,15 +395,6 @@ class XCNOGraph(CNOGraph):
                 np.random.shuffle(nodes)
                 self.add_edge(stimulus, nodes[0])
 
-
-
-        if count == 100:
-            print("warning: reached 100 iterations")
-        # Now add random edges until all nodes are connected
-
-
-
-        
 
     def random_poisson_graph(self, n=10, mu=2.5, ratio=0.9, 
             remove_unconnected=True, Nsignals=5, Nstimuli=5, 
