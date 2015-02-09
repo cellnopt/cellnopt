@@ -1005,6 +1005,57 @@ class XMIDAS(MIDASReader):
         self.df.replace({"time": to_replace}, inplace=True)
         self.set_index()
 
+    def reset_experiments(self):
+        """remove duplicated experiments and rename them from 0 to N
+        
+        If experiments are duplicated for some reasons (e.g., you removed 
+        an entire column with a given inibitor), then experiments may be duplicated.
+        In which case, you may want to (1) remove the duplicated experiments (2)
+        rename the name so that it goes from 0 to the new number of unique experiments
+        and (3) reflect those changes into the **df** dataframe. 
+
+        There could be replicares in the resulting **df** attribute, which 
+        should be averaged by the user using :meth:`average_replicates` method.
+
+        """
+
+        # figure out the list of experiments in terms of column labels.
+        levels = self.experiments.columns.levels
+        labels = self.experiments.columns.labels
+
+        to_replace = {}
+        list_exps = [(levels[0][l1], levels[1][l2]) for l1,l2  in zip(labels[0], labels[1])]
+        groups = self.experiments.groupby(list_exps).groups
+        for k,v in groups.items():
+            # if we have duplicated experiments,
+            if len(v)>1:
+                # let us rename them:
+                for this in v:
+                    to_replace[this] = v[0]
+        self.rename_experiments(to_replace) # in df and experiments dataframes
+        #self.experiments.drop_duplicated()
+        self.df.sortlevel(inplace=True)
+        self.experiments.drop_duplicates(inplace=True)
+        # finally rename of experiment names to make sure it goes from 0 to N
+        to_replace = [(k,'experiment_%s' %i) for i,k in enumerate(self.experiments.index)]
+        self.rename_experiments(dict(to_replace)) 
+
+    def rename_experiments(self, to_replace):
+        """Rename experiments in the **df** and **experiments** dataframes
+        
+        :param dict to_replace: a dictionary mapping old values (key) to new values (value)
+        """
+        # the **df** attribute
+        self.reset_index()
+        to_replace = dict([(k,v) for k,v in to_replace.items() if k!=v])
+        self.df.replace({"experiment": to_replace}, inplace=True)
+        self.set_index()
+
+        # the experiments attribute:
+        self.experiments.index = [to_replace[x] if x in to_replace.keys() else x 
+                for x in self.experiments.index]
+
+
     def merge_times(self, how="mean"):
         """Not implemented yet"""
         raise NotImplementedError
