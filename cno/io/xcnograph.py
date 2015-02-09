@@ -328,7 +328,8 @@ class XCNOGraph(CNOGraph):
             nExtraNode=10):
         """
 
-        Create the nodes first. and then fill the edges
+        Create the nodes first (stimuli, signals, transcripts, extra nodes). Them
+        add edges such that the ratio of activation/inhibition is fixed.
 
         no self loop
         """
@@ -365,7 +366,7 @@ class XCNOGraph(CNOGraph):
 
         count = 0
         N = len(self.nodes())
-        while nx.is_connected(self.to_undirected()) is False and count <N*2:
+        while nx.is_connected(self.to_undirected()) is False and count < N * 2:
             np.random.shuffle(nodes)
             n1 = nodes[0]
             n2 = nodes[1]
@@ -385,6 +386,16 @@ class XCNOGraph(CNOGraph):
             nodes = [node for node in self.nodes() if node !=tofix]
             np.random.shuffle(nodes)
             self.add_edge(nodes[0], nodetofix, link=get_link())
+
+        # make sure the ligands are connected:
+        for stimulus in self._stimuli:
+            if len(self.successors(stimulus)) == 0:
+                print("fixing stimulus %s" % stimulus)
+                nodes = [node for node in self.nodes() if node not in self._stimuli]
+                np.random.shuffle(nodes)
+                self.add_edge(stimulus, nodes[0])
+
+
 
         if count == 100:
             print("warning: reached 100 iterations")
