@@ -1483,46 +1483,63 @@ class CNOGraph(nx.DiGraph):
     species = property(fget=_get_namesSpecies,
         doc="Return sorted list of species (ignoring and gates) Read-only attribute.")
 
-    def swap_edges(self, nswap=1, inplace=True):
+    def swap_edges(self, nswap=1, inplace=True, self_loop=False):
         """Swap two edges in the graph while keeping the node degrees fixed.
 
-        A double-edge swap removes two randomly chosen edges u-v and x-y
-        and creates the new edges u-x and v-y::
+        A double-edge swap removes two randomly chosen edges u-x and v-y
+        and creates the new edges u-y and v-x::
 
-            u--v                u  v
-                    becomes     |  |
-            x--y                x  y
+            u  v                u  v
+            |  |     becomes    |  |
+            x  y                y  x
 
-        If either the edge u-  x or v-y already exist no swap is performed
-        and another attempt is made to find a suitable edge pair.
+        If either the edge u-x or v-y already exist no swap is performed
+        and another atempt is made to find a suitable edge pair.
 
         :param int nswap: number of swaps to perform (Defaults to 1)
         :return: nothing
 
         .. warning:: the graph is modified in place.
 
-        .. warning:: and gates are currently unchanged
+        .. warning:: and gates are removed at the beginning since they do not make sense
+            with the new topolgy. They can easily be added back 
 
         a proposal swap is ignored in 3 cases:
         #. if the summation of in_degree is changed
         #. if the summation of out_degree is changed
         #. if resulting graph is disconnected
 
+        .. note:: what about self loop ? if proposed, there are ignored except 
+            if required to be kept
+
         """
         self._changed = True
-
+        self.remove_and_gates()
         Ninh = [x[2]["link"] for x in self.edges(data=True)].count('-')
         I = sum(self.in_degree().values())
         O = sum(self.out_degree().values())
 
         # find 2 nodes that have at least one successor
         count = 0
-        for i in range(0, nswap):
+        trials = 0
+        status = {'and':0, 'selfloop':0,'linkexists':0, 'unconnected':0}
+        while count < nswap and trials<nswap*5:
+            trials += 1
             edges = self.edges()
             np.random.shuffle(edges)
             e1, e2 = edges[0:2]
+
+            # should not appear since we remove and gates
             if "^" in e1[0] or "^" in e1[1] or "^" in e2[0] or "^" in e2[1]:
+                status['and']
                 continue
+
+            # ignore self loop:
+            if (e1[0] == e2[1] or e2[0] == e1[1]) and self_loop is False:
+                print("self loop ignored")
+                status['selfloop']+=1
+                continue
+
             d1 = self.edge[e1[0]][e1[1]].copy()
             d2 = self.edge[e2[0]][e2[1]].copy()
 
@@ -1533,9 +1550,12 @@ class CNOGraph(nx.DiGraph):
             G.remove_edge(e2[0], e2[1])
 
             if nx.is_connected(G.to_undirected()) == False:
+                status['unconnected'] += 1
                 continue
+
             if sum(G.in_degree().values()) != I:
                 # the link already exists
+                status['linkexists'] +=1
                 continue
 
             if sum(G.out_degree().values()) != O:
@@ -1551,6 +1571,9 @@ class CNOGraph(nx.DiGraph):
 
             assert nx.is_connected(self.to_undirected()) == True
             count +=1
+        status['count'] = count
+        status['trials'] = trials
+        return status
 
     def adjacency_matrix(self, nodelist=None, weight=None):
         """Return adjacency matrix.
