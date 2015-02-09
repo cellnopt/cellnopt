@@ -5,11 +5,12 @@
 
 .. image:: https://github.com/cellnopt/cellnopt/blob/master/cno/datasets/EGFR-ErbB_PCB2009/EGFR-ErbB_PCB2009.png
 
+::
 
-del c.graph_options['graph']['ratio']
-c.graph_options['graph']['ranksep'] = 0.2
-c.graph_options['graph']['size']= '15,15'
-c.plot()
+    del c.graph_options['graph']['ratio']
+    c.graph_options['graph']['ranksep'] = 0.2
+    c.graph_options['graph']['size']= '15,15'
+    c.plot()
 
 
 References
