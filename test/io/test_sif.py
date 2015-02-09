@@ -25,9 +25,9 @@ def test_sifreader():
     s1 = SIF(simple)
     s2 = SIF(double)
 
-    assert s1.nodes1 == ['A', 'B', 'A']
-    assert s1.nodes2 == ['B', 'C', 'C']
-    assert s1.edges == ['1', '1', '1']
+    assert s1.nodes1 == ['A', 'B', 'A', 'E']
+    assert s1.nodes2 == ['B', 'C', 'C', 'F']
+    assert s1.edges == ['1', '1', '1', '-1']
 
     assert s1 == s2
 
@@ -229,3 +229,7 @@ def test_notedge():
     s.add_reaction("a=b")
     assert s.notedge("-1") == "!"
     assert s.notedge("1") == ""
+
+def test_to_sif():
+    pass
+
