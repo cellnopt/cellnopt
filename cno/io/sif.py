@@ -19,7 +19,7 @@ import csv
 import os
 import re
 
-from cno.io.reactions import Reactions
+from cno.io.reactions import Reactions, Reaction
 from cno.misc import CNOError
 
 import numpy as np
@@ -181,7 +181,7 @@ class SIF(Reactions):
         # are converted to A^B=C
         dont_remove = []
         for and_node in self.and_nodes:
-            if self.and_symbol in and_node: # if already if ^+ format, notthing to do
+            if self.and_symbol in and_node: # if ^ in name, nothing to do
                 continue
 
             # otherwise, this is the original cno format that needs some mangling
@@ -254,7 +254,6 @@ class SIF(Reactions):
     edges = property(fget=_get_edges,
         doc="returns list of edges found in the reactions")
 
-
     def add_reaction(self, reaction):
         """Adds a reaction into the network.
 
@@ -292,11 +291,10 @@ class SIF(Reactions):
             reac = lhs + "=" + rhs
             super(SIF, self).add_reaction(reac)
 
-    def save(self, filename, order="predecessors"):
+    def save(self, filename):
         """Save the reactions (sorting with respect to order parameter)
 
         :param str filename: where to save the nodes1 edges node2
-        :param str order: can be predecessors, successors, edges
 
         """
         rhs = [x.rhs for x in self._reactions]
@@ -305,22 +303,35 @@ class SIF(Reactions):
         # It assumes there is only 1 item in the lhs, 
         # which should be true in the SIF format.
         lhs = [x.lhs_species[0] for x in self._reactions]
-        signs = [x.sign for x in self._reactions]
+        
         f = open(filename, "w")
-        if order == 'predecessors':
-            for i in np.argsort(lhs):
-                f.write("%s %s %s\n" % (lhs[i], signs[i], rhs[i]))
-        elif order == 'successors':
-            for i in np.argsort(lhs):
-                f.write("%s %s %s\n" % (lhs[i], signs[i], rhs[i]))
-        else:
-            raise CNOError("valid order are successors or predecessors")
+        sign2int = self.sign_operator_to_number
+
+        counter = 1
+        for reac in self._reactions:
+            r = Reaction(reac)
+            lhs_species = r.get_signed_lhs_species()
+            if self.and_symbol in r.lhs:
+                # create the and gate
+                andname = "and%s" % counter
+                for sign, species in lhs_species.items():
+                    for this in species:
+                        f.write("%s %s %s\n" % (this, sign2int(sign), andname))
+                f.write("%s 1 %s\n" % (andname,r.rhs ))
+                counter += 1
+            else: # OR gate
+                for sign, species in lhs_species.items():
+                    for this in species:
+                        f.write("%s %s %s\n" % (this, sign2int(sign), r.rhs))
+
         f.close()
 
-
-    def _underline(self, msg):
-        import easydev
-        return easydev.underline(msg)
+    def sign_operator_to_number(self, operator):
+        assert operator in ['+', '-']
+        if operator == '+':
+            return 1
+        else:
+            return -1
 
     def to_reactions(self):
         """Returns a Reactions instance generated from the SIF file.
