@@ -171,12 +171,12 @@ class Reaction(str, ReactionBase):
     rhs = property(_get_rhs,
                    doc="Getter for the right hand side of the = character")
 
+    # FIXME does not make sense if A^!B^C=D ?? 
     def _get_sign(self):
         if "!" in self.name and self.and_symbol not in self.name:
             return "-1"
         else:
             return "1"
-
     sign = property(_get_sign, doc="return sign of the reaction")
 
     def _valid_reaction(self, reaction):
