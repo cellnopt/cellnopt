@@ -389,6 +389,10 @@ class CNOGraph(nx.DiGraph):
             'edge': {
                 'minlen':1,
                 'color':'black'
+                },
+            'ipython': {
+                'width': 500,
+                'rank_method': 'cno'
                 }
             }
 
@@ -1311,7 +1315,8 @@ class CNOGraph(nx.DiGraph):
     def _repr_png_(self):
         """Returns an Image for display in an IPython console"""
         fh = TempFile(suffix='.png')
-        self.plot(show=False, filename=fh.name)
+        self.plot(show=False, filename=fh.name, 
+                rank_method=self.graph_options['ipython']['rank_method'])
         return fh.name
 
     def _repr_svg_(self):
@@ -1324,7 +1329,8 @@ class CNOGraph(nx.DiGraph):
     @property
     def png(self):
         from IPython.display import Image
-        data = Image(self._repr_png_(), embed=True, width=200)
+        data = Image(self._repr_png_(), embed=True, 
+                width=self.graph_options['ipython']['width'])
         return data
 
     @property
