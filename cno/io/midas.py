@@ -238,6 +238,9 @@ class MIDASReader(MIDAS):
         """Builds the dataframe"""
         # select only data that matches the cell line choice made by the user.
         cellLine = 'TR:%s:CellLine' % self.cellLine
+
+        if len(self._data) == 0:
+            return
         # select data for the cell line provided by the user.
         _data = self._data[self._data[cellLine] == 1]
 
@@ -342,7 +345,7 @@ class MIDASReader(MIDAS):
 
         columns = [x.replace(":i","") for x in self._experiments.columns]
 
-        # add dummy columns that we will delete afterwards just to create the structure of th emultiindex
+        # add dummy columns that we will delete afterwards just to create the structure of themultiindex
         data = self._experiments.values
         if 'Inhibitors' not in columns_is:
             # let us add  an inhibitors
