@@ -39,6 +39,7 @@ from cno.io.reactions import Reaction
 from cno.misc import CNOError
 import colormap
 
+from cno.misc.profiler import do_profile
 __all__ = ["CNOGraph", "CNOGraphAttributes"]
 
 
@@ -1484,6 +1485,7 @@ class CNOGraph(nx.DiGraph):
     species = property(fget=_get_namesSpecies,
         doc="Return sorted list of species (ignoring and gates) Read-only attribute.")
 
+    #@do_profile()
     def swap_edges(self, nswap=1, inplace=True, self_loop=False):
         """Swap two edges in the graph while keeping the node degrees fixed.
 
@@ -1523,17 +1525,12 @@ class CNOGraph(nx.DiGraph):
         # find 2 nodes that have at least one successor
         count = 0
         trials = 0
-        status = {'and':0, 'selfloop':0,'linkexists':0, 'unconnected':0}
+        status = {'and':0, 'selfloop':0, 'indegree':0, 'outdegree':0, 'unconnected':0}
         while count < nswap and trials<nswap*5:
             trials += 1
             edges = self.edges()
             np.random.shuffle(edges)
             e1, e2 = edges[0:2]
-
-            # should not appear since we remove and gates
-            if "^" in e1[0] or "^" in e1[1] or "^" in e2[0] or "^" in e2[1]:
-                status['and']
-                continue
 
             # ignore self loop:
             if (e1[0] == e2[1] or e2[0] == e1[1]) and self_loop is False:
@@ -1543,33 +1540,42 @@ class CNOGraph(nx.DiGraph):
             d1 = self.edge[e1[0]][e1[1]].copy()
             d2 = self.edge[e2[0]][e2[1]].copy()
 
-            G = self.copy()
+            G = nx.DiGraph(self)
+            #self.copy()
             G.add_edge(e1[0], e2[1], None, **d1)
             G.add_edge(e2[0], e1[1], None, **d2)
             G.remove_edge(e1[0], e1[1])
             G.remove_edge(e2[0], e2[1])
 
-            if nx.is_connected(G.to_undirected()) == False:
+            if sum(G.in_degree().values()) != I:
+                # the link already exists
+                status['indegree'] +=1
+                continue
+
+            # This is slow, let us use something different
+            #if nx.is_connected(G.to_undirected()) == False:
+            #    status['unconnected'] += 1
+            #    continue
+            if 0 in G.degree().values():
                 status['unconnected'] += 1
                 continue
 
-            if sum(G.in_degree().values()) != I:
-                # the link already exists
-                status['linkexists'] +=1
-                continue
 
             if sum(G.out_degree().values()) != O:
+                status['outdegree'] +=1
                 continue
 
+            # seems okay , so let us swap the edges now.
             self.add_edge(e1[0], e2[1], None, **d1)
             self.add_edge(e2[0], e1[1], None, **d2)
             self.remove_edge(e1[0], e1[1])
             self.remove_edge(e2[0], e2[1])
 
+            # number of inhibitory link must remain identical
             Ninh2 = [x[2]["link"] for x in self.edges(data=True)].count('-')
             assert Ninh2 == Ninh
-
-            assert nx.is_connected(self.to_undirected()) == True
+            # seems to be true 
+            #assert nx.is_connected(self.to_undirected()) == True
             count +=1
         status['count'] = count
         status['trials'] = trials

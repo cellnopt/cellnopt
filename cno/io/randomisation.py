@@ -47,16 +47,27 @@ class RandomGraph(object):
         for common in self.commons:
             plot(common)    
 
+        import pylab
         import pandas as pd
+        N = len(self.commons[0])
         df = pd.DataFrame(self.commons)
-        df = plot(df.mean(), lw=2, color='r')
+        #df = plot(df.mean(), lw=2, color='r')
+
+        pylab.clf()
+        if N>200:
+            pylab.errorbar(range(0,N)[::int(N/20)], df.mean()[::int(N/20)], df.std()[::int(N/20)])
+        else:
+            pylab.errorbar(range(0,N), df.mean(), df.std())
+        pylab.plot(df.mean(), lw=2, color='r')
 
     def run(self, N=10, Nswaps=100, verbose=True):
         self.commons = []
-        for i in range(0,10):
+        for i in range(0, N):
             if verbose:
-                print(i)
+                print("Creating graph %s " % i)
             self.create_graph()
+            if verbose:
+                print('Now the swapping')
             self.swap(N=Nswaps)
         self.plot()
         import pylab
