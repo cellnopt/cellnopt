@@ -231,5 +231,15 @@ def test_notedge():
     assert s.notedge("1") == ""
 
 def test_to_sif():
-    pass
+    fh = easydev.TempFile()
+    s1 = SIF(getdata('PKN-test_all.sif'))
+    s1.save(fh.name)
+
+    s2 = SIF(fh.name)
+    fh.delete()
+
+    assert s1 == s2
+
+
+
 
