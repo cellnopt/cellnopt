@@ -306,7 +306,6 @@ class SIF(Reactions):
         # which should be true in the SIF format.
         lhs = [x.lhs_species[0] for x in self._reactions]
         signs = [x.sign for x in self._reactions]
-        print(lhs)
         f = open(filename, "w")
         if order == 'predecessors':
             for i in np.argsort(lhs):
