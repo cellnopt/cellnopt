@@ -1486,14 +1486,14 @@ class CNOGraph(nx.DiGraph):
     def swap_edges(self, nswap=1, inplace=True):
         """Swap two edges in the graph while keeping the node degrees fixed.
 
-        A double-edge swap removes two randomly chosen edges u-v and x-y
+        A double-edge swap two randomly chosen edges u-v and x-y
         and creates the new edges u-x and v-y::
 
             u--v                u  v
                     becomes     |  |
             x--y                x  y
 
-        If either the edge u-  x or v-y already exist no swap is performed
+        If either the edge u-x or v-y already exist no swap is performed
         and another attempt is made to find a suitable edge pair.
 
         :param int nswap: number of swaps to perform (Defaults to 1)
@@ -1550,7 +1550,7 @@ class CNOGraph(nx.DiGraph):
             assert Ninh2 == Ninh
 
             assert nx.is_connected(self.to_undirected()) == True
-            count +=1
+            count += 1
 
     def adjacency_matrix(self, nodelist=None, weight=None):
         """Return adjacency matrix.
