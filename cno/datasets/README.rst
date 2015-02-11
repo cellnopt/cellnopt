@@ -95,9 +95,9 @@ Examples of other files that can be provided are:
 
 
 :Note: When using **cnodata** function provided in CellNOpt, all sub-directories with an 
-__init__.py file are scanned automatically and the SIF, MIDAS and SBML-qual files with their full path 
-are known. Type **cnodata()** without argument to get the list of
-filenames that are available. Type **cnodata(identifier)** to retrieve the full path of the file (see below)
+    __init__.py file are scanned automatically and the SIF, MIDAS and SBML-qual files with their full path 
+    are known. Type **cnodata()** without argument to get the list of
+    filenames that are available. Type **cnodata(identifier)** to retrieve the full path of the file (see below)
 
 3. Usage
 --------------

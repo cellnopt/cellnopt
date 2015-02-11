@@ -39,6 +39,7 @@ from cno.io.reactions import Reaction
 from cno.misc import CNOError
 import colormap
 
+from cno.misc.profiler import do_profile
 __all__ = ["CNOGraph", "CNOGraphAttributes"]
 
 
@@ -388,6 +389,10 @@ class CNOGraph(nx.DiGraph):
             'edge': {
                 'minlen':1,
                 'color':'black'
+                },
+            'ipython': {
+                'width': 500,
+                'rank_method': 'cno'
                 }
             }
 
@@ -767,6 +772,7 @@ class CNOGraph(nx.DiGraph):
         self._stimuli = []
         self._signals = []
         self._inhibitors = []
+        self._ranks = None
 
     @modifier
     def clean_orphan_ands(self):
@@ -1309,7 +1315,8 @@ class CNOGraph(nx.DiGraph):
     def _repr_png_(self):
         """Returns an Image for display in an IPython console"""
         fh = TempFile(suffix='.png')
-        self.plot(show=False, filename=fh.name)
+        self.plot(show=False, filename=fh.name, 
+                rank_method=self.graph_options['ipython']['rank_method'])
         return fh.name
 
     def _repr_svg_(self):
@@ -1322,7 +1329,8 @@ class CNOGraph(nx.DiGraph):
     @property
     def png(self):
         from IPython.display import Image
-        data = Image(self._repr_png_(), embed=True, width=200)
+        data = Image(self._repr_png_(), embed=True, 
+                width=self.graph_options['ipython']['width'])
         return data
 
     @property
@@ -1483,15 +1491,16 @@ class CNOGraph(nx.DiGraph):
     species = property(fget=_get_namesSpecies,
         doc="Return sorted list of species (ignoring and gates) Read-only attribute.")
 
-    def swap_edges(self, nswap=1, inplace=True):
+    #@do_profile()
+    def swap_edges(self, nswap=1, inplace=True, self_loop=False):
         """Swap two edges in the graph while keeping the node degrees fixed.
 
         A double-edge swap two randomly chosen edges u-v and x-y
         and creates the new edges u-x and v-y::
 
-            u--v                u  v
-                    becomes     |  |
-            x--y                x  y
+            u  v                u  v
+            |  |     becomes    |  |
+            x  y                y  x
 
         If either the edge u-x or v-y already exist no swap is performed
         and another attempt is made to find a suitable edge pair.
@@ -1501,56 +1510,82 @@ class CNOGraph(nx.DiGraph):
 
         .. warning:: the graph is modified in place.
 
-        .. warning:: and gates are currently unchanged
+        .. warning:: and gates are removed at the beginning since they do not make sense
+            with the new topolgy. They can easily be added back 
 
         a proposal swap is ignored in 3 cases:
         #. if the summation of in_degree is changed
         #. if the summation of out_degree is changed
         #. if resulting graph is disconnected
 
+        .. note:: what about self loop ? if proposed, there are ignored except 
+            if required to be kept
+
         """
         self._changed = True
-
+        self.remove_and_gates()
         Ninh = [x[2]["link"] for x in self.edges(data=True)].count('-')
         I = sum(self.in_degree().values())
         O = sum(self.out_degree().values())
 
         # find 2 nodes that have at least one successor
         count = 0
-        for i in range(0, nswap):
+        trials = 0
+        status = {'and':0, 'selfloop':0, 'indegree':0, 'outdegree':0, 'unconnected':0}
+        while count < nswap and trials<nswap*5:
+            trials += 1
             edges = self.edges()
             np.random.shuffle(edges)
             e1, e2 = edges[0:2]
-            if "^" in e1[0] or "^" in e1[1] or "^" in e2[0] or "^" in e2[1]:
+
+            # ignore self loop:
+            if (e1[0] == e2[1] or e2[0] == e1[1]) and self_loop is False:
+                status['selfloop']+=1
                 continue
+
             d1 = self.edge[e1[0]][e1[1]].copy()
             d2 = self.edge[e2[0]][e2[1]].copy()
 
-            G = self.copy()
+            G = nx.DiGraph(self)
+            #self.copy()
             G.add_edge(e1[0], e2[1], None, **d1)
             G.add_edge(e2[0], e1[1], None, **d2)
             G.remove_edge(e1[0], e1[1])
             G.remove_edge(e2[0], e2[1])
 
-            if nx.is_connected(G.to_undirected()) == False:
-                continue
             if sum(G.in_degree().values()) != I:
                 # the link already exists
+                status['indegree'] +=1
                 continue
+
+            # This is slow, let us use something different
+            #if nx.is_connected(G.to_undirected()) == False:
+            #    status['unconnected'] += 1
+            #    continue
+            if 0 in G.degree().values():
+                status['unconnected'] += 1
+                continue
+
 
             if sum(G.out_degree().values()) != O:
+                status['outdegree'] +=1
                 continue
 
+            # seems okay , so let us swap the edges now.
             self.add_edge(e1[0], e2[1], None, **d1)
             self.add_edge(e2[0], e1[1], None, **d2)
             self.remove_edge(e1[0], e1[1])
             self.remove_edge(e2[0], e2[1])
 
+            # number of inhibitory link must remain identical
             Ninh2 = [x[2]["link"] for x in self.edges(data=True)].count('-')
             assert Ninh2 == Ninh
-
-            assert nx.is_connected(self.to_undirected()) == True
-            count += 1
+            # seems to be true 
+            #assert nx.is_connected(self.to_undirected()) == True
+            count +=1
+        status['count'] = count
+        status['trials'] = trials
+        return status
 
     def adjacency_matrix(self, nodelist=None, weight=None):
         """Return adjacency matrix.

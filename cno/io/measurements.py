@@ -208,10 +208,11 @@ class MIDASBuilder(object):
     More sophisticated builders can be added.
 
     .. note:: a bit slow but can scale up to 20 species, 20 conditions
-        60 time points and 2 replicates that is 2280 points in less than 0.2 seconds
-        so good enough for now.
+        60 time points and 2 replicates that is 2280 points in less than 
+        0.2 seconds so good enough for now.
 
-    If an inhibitor or stimuli is not provided, we assume ti is absent (set to zero).
+    If an inhibitor or stimuli is not provided, we assume ti is absent (set 
+    to zero).
 
 
     """
@@ -237,7 +238,6 @@ class MIDASBuilder(object):
         self.add_list_measurements([e1,e2,e3,e4,e5,e6, e7])"""
 
         species = ['AKT' + str(i) for i in range(1,Nspecies)]
-
 
         stimuli = ['S'+str(i) for i in range(1, N)]
         inhibitors = ['I'+str(i) for i in range(1, N)]
@@ -285,7 +285,8 @@ class MIDASBuilder(object):
         Nrows = len(self)
         N = Ns+Ni
 
-        df = pd.DataFrame(np.zeros(N*Nrows).reshape(Nrows, N), index=range(0,Nrows),
+        df = pd.DataFrame(np.zeros(N*Nrows).reshape(Nrows, N), 
+                index=range(0,Nrows),
                 columns=[['Stimuli']*Ns + ['Inhibitors']*Ni, stimuli + inhibitors])
         df.sortlevel(axis=1, inplace=True)
 
@@ -295,8 +296,9 @@ class MIDASBuilder(object):
              df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] if stimulus
                      in x.stimuli.keys() else 0 for x in  self.measurements]
         for inhibitor in inhibitors:
-             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] if inhibitor
-                     in x.inhibitors.keys() else 0 for x in  self.measurements]
+             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] 
+                     if inhibitor in x.inhibitors.keys() else 0 
+                     for x in  self.measurements]
 
         df['time'] = self.measurements.get_time()
         df['cell'] = self.measurements.get_cell()
@@ -311,13 +313,23 @@ class MIDASBuilder(object):
 
         df = df.drop_duplicates()
 
-        experiment_names = ['experiment_%s' % i for i in range(0, len(groups.keys()))]
+        experiment_names = ['experiment_%s' % i for i in 
+                range(0, len(groups.keys()))]
 
         df.reset_index(inplace=True)
+        self._df = df
+
+        # add dummy inhibitors and stimuli columns to create the
+        # strucuture, then remove them
+        df['Inhibitors', '__dummy__'] = [1] * df.shape[0]
+        df['Stimuli', '__dummy__'] = [1] * df.shape[0]
         df = df[['experiment', 'Inhibitors', 'Stimuli']]
+        del df['Inhibitors', '__dummy__']
+        del df['Stimuli', '__dummy__']
+
         # drop time and cell info
-        #
-        df['experiment'] = experiment_names
+        # FIXMEL warning raised from call here below
+        df.loc[:,'experiment'] = experiment_names
         #df.set_index(['cell', 'experiment', 'time'], inplace=True)
         df.set_index(['experiment'], inplace=True)
         return df, groups
@@ -332,15 +344,10 @@ class MIDASBuilder(object):
         df.reset_index(inplace=True)
         df.rename(columns={'index':'experiment'}, inplace=True)
         return df
-        # NOTE the pivot method does not allow multi index in the pandas
-        # version used during the development of this method. So, we use
-        # the pivot_table function instead
-        #return pd.pivot_table(df,
-        #                    index=['cell', 'experiment', 'time'],
-        #                    columns='protein', values='data')
 
     def _get_xmidas(self):
-        # FIXME if no time zero provided, assumes this is a fold change and set values to zero.
+        # FIXME if no time zero provided, assumes this is a fold change 
+        # and set all values to zero.
 
         from cno.io.midas import XMIDAS
         xm = XMIDAS()
@@ -348,9 +355,7 @@ class MIDASBuilder(object):
             return xm
 
         xm.df = self.get_df_data()
-
         df_exps, groups = self.get_df_exps()
-
         # set the name of the experiments in the first df (df_exps)
         xm._experiments = df_exps
 
@@ -376,18 +381,16 @@ class MIDASBuilder(object):
         xm.df  = pd.pivot_table(xm.df,
                             index=['cell', 'experiment', 'time'],
                             columns='protein', values='data')
-
         #xm.df.reset_index(inplace=True)
         #xm.df['experiment'] = [mapping[x] for x in xm.df['experiment'].values]
         #xm.df.set_index(['cell', 'experiment', 'time'], inplace=True)
 
         xm.create_empty_simulation()
         # TODO
-        #xm._cellLine = x.cellLines[0]
+        print(xm.cellLines)
+        xm.cellLine = xm.cellLines[0]
 
-        # FIXME do we need this raw attribute
-        #x._rawdf = x.copy()
-        #x._rawexp = x._measurements.copy()
+        xm.errors = xm.df * 0
 
         return xm
     xmidas = property(_get_xmidas)
