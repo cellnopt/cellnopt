@@ -72,12 +72,10 @@ class Reaction(str, ReactionBase):
         >>> r.sort(inplace=False)
         '!A+!B^D+F=Z'
 
-    Simple operator (e.g., equality) are available. The equality will sort the species
-    internally so equality should be done on the instance (not the attribute :attr:`name`)::
+    Simple operator (e.g., equality) are available. Note that equality will sort the species
+    internally so A+B=C would be equal to B+A=C and there is no need to call :meth:`sort`::
 
         >>> r = Reaction("F+D^!B+!A=Z")
-        >>> r.name == '!A+!B^D+F=Z'
-        False
         >>> r == '!A+!B^D+F=Z'
         True
 
@@ -225,7 +223,7 @@ class Reaction(str, ReactionBase):
 
             >>> r = Reaction("F+D^!B+!A=Z")
             >>> r.sort()
-            >>> r.name
+            >>> r
             '!A+!B^D+F=Z'
 
         """
@@ -263,7 +261,7 @@ class Reaction(str, ReactionBase):
 
             >>> r = Reaction("A+A=B")
             >>> r.simplify()
-            >>> r.name
+            >>> r
             "A=B"
 
         Other cases (with ANDs) are not simplified.  Even though **A+A^B=C** truth table
@@ -313,7 +311,7 @@ class Reaction(str, ReactionBase):
         return self._name
 
     def __eq__(self, other):
-        # The reaction may not be sorted and user may not want to it to be sorted,
+        # The reaction may not be sorted and user may not want it to be sorted,
         # so we create a new instance and sort it
         r1 = Reaction(self)
         r1.sort()

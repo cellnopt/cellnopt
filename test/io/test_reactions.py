@@ -53,7 +53,8 @@ def test_reaction():
     r = Reaction("F+D^!B+!A=Z")
     assert r.sort(inplace=False) == '!A+!B^D+F=Z'
 
-    assert (Reaction("A=B") == "C=B") == False
+    assert (Reaction("A=B") == "C=B") is False
+
     assert Reaction("A=B") != Reaction("C=B")
 
 
@@ -95,7 +96,6 @@ class test_Reactions():
         c.add_reaction("A=B")
         c.add_reaction("A=B")
         assert len(c) == 1
-        print(c)
         c.reactions
         c.remove_reaction("A=B")
         assert len(c) == 0
@@ -150,5 +150,6 @@ class test_Reactions():
             assert False
         except:
             assert True
+
 
 
