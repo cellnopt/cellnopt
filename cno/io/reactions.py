@@ -119,11 +119,10 @@ class Reaction(str, ReactionBase):
         if reaction is not None:
             reaction = self._valid_reaction(reaction)
         self._name = reaction[:]
-
     def _get_name(self):
         return self._name
-
-    name = property(_get_name, _set_name, doc="Getter/Setter for the reaction name")
+    name = property(_get_name, _set_name, 
+            doc="Getter/Setter for the reaction name")
 
     def _get_species(self, reac=None):
         """
@@ -141,7 +140,6 @@ class Reaction(str, ReactionBase):
         species = re.split("[+|=|^|!]", reac)
         species = [x for x in species if x]
         return species
-
     species = property(_get_species)
 
     def get_signed_lhs_species(self):
@@ -253,7 +251,7 @@ class Reaction(str, ReactionBase):
         species = "+".join(species)
 
         new_reac = "=".join([species, self.rhs])
-        if inplace:
+        if inplace is True:
             self.name = new_reac
         else:
             return new_reac
@@ -307,6 +305,12 @@ class Reaction(str, ReactionBase):
     def rename_species(self, mapping={}):
         for k, v in mapping.items():
             self.name = self._rename_one_species(self.name, k, v)
+
+    def __repr__(self):
+        # str needs to be overwritten otherwise, _name is not used but the default __repr__
+        # if one call sort(), then, calling the variable name raise the wrong values, 
+        # _name but the internal attribute from the str object.
+        return self._name
 
     def __eq__(self, other):
         # The reaction may not be sorted and user may not want to it to be sorted,
