@@ -1752,12 +1752,13 @@ class CNOGraph(nx.DiGraph):
         #for node in self.compressable_nodes:
         for node in sorted(self.compressable_nodes):
             if self.is_compressable(node) == True:
-                # update the graph G as well and interMat/notMat
+                # update the graph G 
                 self._compressed.append(node)
                 self.collapse_node(node)
 
-        #Patched to proceed on a sorted list and provide always the same results.
-        #for node in self.nodes():
+        # proceed on a sorted list and provide 
+        # always the same results in theory.
+        #
         for node in sorted(self.nodes()):
             if self.degree(node) == 0 and node not in self.stimuli and \
                 node not in self.signals and node not in self.inhibitors:
@@ -1774,7 +1775,6 @@ class CNOGraph(nx.DiGraph):
 
                 I was afraid to touch the code because I am not sure
                 whether this is the intended behaviour."""
-                print("SECONDE LOOP" + node)
                 self.logging.info("Found an orphan, which has been removed (%s)" % node)
                 self.remove_node(node)
 
@@ -1793,15 +1793,25 @@ class CNOGraph(nx.DiGraph):
         return attr
 
     def _update_and_gate_names(self):
+        """Update and gates
+        
+        names are updated. Individual names are sorted alphabetically
+        """
         ands_before = self._find_and_nodes()
-        #to_remove = []
+        #
         for node in ands_before:
             preds = self.signed_predecessors(node)
             succs = self.successors(node)
             if len(succs) == 1:
                 succ = succs[0]
+                # build new AND gate and sort it alphabetically
                 newname = Reaction("=".join(["^".join(preds), succ]))
-                if newname != node:
+                newname.sort()
+                # sort the current node alphabetically as well.
+                r1 = Reaction(node)
+                r1.sort()
+                
+                if newname != r1.name:
                     attr = self._get_and_attribute(node)
                     attr2 = self.attributes.attributes['and']
                     self.add_reaction(newname.name)
