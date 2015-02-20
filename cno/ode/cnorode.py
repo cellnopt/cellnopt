@@ -74,16 +74,27 @@ class CNORode(CNOBase, CNORBase):
         p = ParamsSSM()
         self.config.add_section(p)
 
+        self._library = 'CNORode'
+        #CNORodePBMstNeu
+
     def _init(self):
         script_template = """
-        library(CNORode)
+        library(%(library)s)
         pknmodel = readSIF("%(pknmodel)s")
         cnolist = CNOlist("%(midas)s")
-        reactions = pknmodel$reacID
+        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
+                   expansion=%(expansion)s, cutNONC=%(cutnonc)s,
+                   maxInputsPerGate=%(maxInputsPerGate)s)
+        reactions = model$reacID
         species = colnames(cnolist@signals[[1]])"""
         params = {
+                'library': self._library,
                 'pknmodel': self.pknmodel.filename,
                 'midas': self.data.filename,
+            'compression': bool2R(self._compression),
+            'expansion': bool2R(self._expansion),
+            'cutnonc': bool2R(self._cutnonc),
+             'maxInputsPerGate': self._max_inputs_per_gate,
                 }
         self.session.run(script_template % params)
         self.species = self.session.species
@@ -118,27 +129,38 @@ class CNORode(CNOBase, CNORBase):
 
         # todo: ode_params to be provided as input
         script = """
-        library(CNORode)
+        library(%(library)s)
         pknmodel = readSIF("%(pknmodel)s")
         cnolist = CNOlist("%(midas)s")
-        reactions = pknmodel$reacID
+
+
+        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
+                   expansion=%(expansion)s, cutNONC=%(cutnonc)s,
+                   maxInputsPerGate=%(maxInputsPerGate)s)
+
+
+
+        reactions = model$reacID
         species = colnames(cnolist@signals[[1]])
 
+
+
         if (is.null(ode_params) == TRUE){
-         ode_params = createLBodeContPars(pknmodel)
+         ode_params = createLBodeContPars(model)
         }
-        ode_params = parEstimationLBodeSSm(cnolist, pknmodel, 
+        ode_params = parEstimationLBodeSSm(cnolist, model, 
             maxtime=%(maxtime)s, maxStepSize=%(maxstepsize)s, dim_refset=%(dim_ref_set)s, maxeval=%(maxeval)s,
             verbose=F, ndiverse=%(n_diverse)s, ode_parameters=ode_params)
         """
-        expansion = True
-        compression = True
 
         params = {
+                'library': self._library,
             'pknmodel': self.pknmodel.filename,
             'midas': self.data.filename,
-            'compression': bool2R(compression),
-            'expansion': bool2R(expansion)
+            'compression': bool2R(self._compression),
+            'expansion': bool2R(self._expansion),
+            'cutnonc': bool2R(self._cutnonc),
+             'maxInputsPerGate': self._max_inputs_per_gate,
             }
 
         params.update(ssmd)
@@ -174,18 +196,26 @@ class CNORode(CNOBase, CNORBase):
         self.verboseR = verboseR
         if self.session.get("simulator_initialised") is None:
             script = """
-                library(CNORode)
+                library(%(library)s)
                 pknmodel = readSIF("%(pknmodel)s")
                 cnolist = CNOlist("%(midas)s")
-                indices = indexFinder(cnolist, pknmodel,verbose=FALSE)
-                ode_params = createLBodeContPars(pknmodel)
-                objective_function = getLBodeContObjFunction(cnolist, pknmodel,
+                model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
+                   expansion=%(expansion)s, cutNONC=%(cutnonc)s,
+                   maxInputsPerGate=%(maxInputsPerGate)s)
+                indices = indexFinder(cnolist, model,verbose=FALSE)
+                ode_params = createLBodeContPars(model)
+                objective_function = getLBodeContObjFunction(cnolist, model,
                     ode_params, indices)
                 simulator_initialised = T
             """
             pars = {
+                'library': self._library,
                 'pknmodel': self.pknmodel.filename,
                 'midas': self.data.filename,
+            'compression': bool2R(self._compression),
+            'expansion': bool2R(self._expansion),
+            'cutnonc': bool2R(self._cutnonc),
+             'maxInputsPerGate': self._max_inputs_per_gate,
             }
             self.session.run(script % pars)
 
@@ -211,18 +241,26 @@ class CNORode(CNOBase, CNORBase):
             pass
 
         script_template = """
-        library(CNORode)
+        library(%(library)s)
         pknmodel = readSIF("%(pknmodel)s")
+
+
         cnolist = CNOlist("%(midas)s")
-        sim_data = plotLBodeFitness(cnolist, pknmodel, ode_parameters=ode_params)
+        model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
+                   expansion=%(expansion)s, cutNONC=%(cutnonc)s,
+                   maxInputsPerGate=%(maxInputsPerGate)s)
+        sim_data = plotLBodeFitness(cnolist,model, ode_parameters=ode_params)
         """
-        #model = preprocessing(cnolist, pknmodel, compression=%(compression)s,
-        #    expansion=%(expansion)s, maxInputsPerGate=3)
-        #mse = simulateODE(cnolist, model, %(bs)s)
 
         params = {
+                'library': self._library,
                 'pknmodel': self.pknmodel.filename,
                 'midas': self.data.filename,
+
+            'compression': bool2R(self._compression),
+            'expansion': bool2R(self._expansion),
+            'cutnonc': bool2R(self._cutnonc),
+             'maxInputsPerGate': self._max_inputs_per_gate,
                 #'tag':tag
                 }
         script = script_template % params
