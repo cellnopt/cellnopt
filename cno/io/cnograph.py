@@ -611,12 +611,15 @@ class CNOGraph(nx.DiGraph):
             c.add_reaction("a+b^c+e+d^h=Z")
             c.plot()
 
+        .. warning:: component of AND gates are ordered alphabetically.
         """
         # add the nodes first so that the attributes are ste properly
         self._changed = True
         # make sure that (1) there is no extra spaces and (2) this is a string, not
         # a unicode
         reac = Reaction(str(reac.strip()))
+        # no need to sort the reaction here since we will split the ORs and sort the 
+        # AND gates.
 
         # make sure that nodes are created with the default (or use attributes)
         # before creating the edges.
@@ -635,13 +638,15 @@ class CNOGraph(nx.DiGraph):
                         edge_dict=edge_dict)
             else:
                 and_gate_name = this_lhs + "=" + reac.rhs
+                reac = Reaction(and_gate_name)
+                reac.sort()
                 # and gates need a little bit more work
                 # the and gate to the output
-                self.add_edge(and_gate_name, reac.rhs, attr_dict=edge_dict,
+                self.add_edge(reac.name, reac.rhs, attr_dict=edge_dict,
                         link="+")
                 # now the inputs to the and gate
                 for this in this_lhs.split(self.and_symbol):
-                    name = this + "=" + and_gate_name
+                    name = this + "=" + reac.name
                     self._add_simple_reaction(name,
                             node_dict=node_dict, edge_dict=edge_dict)
 
@@ -1619,7 +1624,6 @@ class CNOGraph(nx.DiGraph):
         super(CNOGraph, self).remove_edge(u,v)
         self.clean_orphan_ands()
 
-
     @modifier
     def remove_node(self, n):
         """Remove a node n
@@ -2173,7 +2177,6 @@ class CNOGraph(nx.DiGraph):
 
         reac = self.and_symbol.join([str(x) for x in inputs])
         reac += "=" + str(output)
-        # FIXME: what aboit sorting while doing the instanciation.
         reac = Reaction(reac)
         reac.sort()
         return reac.name
