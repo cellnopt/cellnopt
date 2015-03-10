@@ -17,7 +17,7 @@ class Steady(CNOBase):
 
         self.model = self.pknmodel.copy()
         # to speed up code later on
-        self.model.buffer_reactions = self.model.reactions
+        self.model.buffer_reactions = self.model.reactions[:]
         self.time = self.data.times[1]
 
         # just a reference to the conditions
@@ -29,6 +29,7 @@ class Steady(CNOBase):
 
         self.N = self.data.df.query('time==0').shape[0]
 
+        
         self.results = self.data.df.copy()
         self.results = self.results.query("time==@self.time")
 
@@ -37,13 +38,29 @@ class Steady(CNOBase):
 
         self.init(self.time)
 
+        # note that the order of the rows is experiments as defined in
+        # data.df not data.experiments
         self.measures = {}
-        self.measures[0] = self.data.df.query("time==0").reset_index(drop=True).values
-        self.measures[self.time] = self.data.df.query("time==@self.time").reset_index(drop=True).values
+        # FIXME No need for time zero but if so, need to re-order the experiments
+        #self.measures[0] = self.data.df.query("time==0").reset_index(drop=True).values
+        df = self.data.df.query("time==@self.time")
+        df = df.ix[self.data.cellLine]
+        df = df.ix[self.stimuli.index]
+        df = df.reset_index(drop=True).values
+        self.measures[self.time] = df
+        
+
 
         self.simulated = {}
 
     def init(self, time):
+        # Here, we define the values of the stimuli and inhibitors
+        # based on the order provided inside self.stimuli and 
+        # self.inhibitors
+
+        # Later, one has to be cautious with the measured data, which 
+        # order may be different !!
+
         assert time in self.data.times
         self.values = {}
         for node in self.model.nodes():
@@ -65,6 +82,8 @@ class Steady(CNOBase):
         for node in self.model.nodes():
             self.successors[node] = self.model.successors(node)
 
+        self.nInputs = len(self.model.reactions)
+
     def preprocessing(self, expansion=True, compression=True, cutnonc=True):
         self.model.midas = self.data
         self.model.preprocessing(expansion=expansion, compression=compression, 
@@ -73,7 +92,6 @@ class Steady(CNOBase):
         self.model.buffer_reactions = self.model.reactions
 
     def reactions_to_predecessors(self, reactions):
-    
         predecessors = dict(((k, []) for k in self.predecessors.keys()))
         for r in reactions:
             reac = Reaction(r)
@@ -121,9 +139,11 @@ class Steady(CNOBase):
             predecessors = self.predecessors.copy()
         else:
             predecessors = self.reactions_to_predecessors(reactions)
-       
+
+
+        # if there is an inhibition/drug, the node is 
         values = self.values.copy()
-        for inh in self.inhibitors:
+        for inh in self.inhibitors_names:
             if len(predecessors[inh]) == 0:
                 values[inh] = np.array([np.nan for x in range(0,self.N)])
 
@@ -158,7 +178,7 @@ class Steady(CNOBase):
                     values[node] *= 1 - self.inhibitors[node].values
             # 30 % of the time is here 
             # here NAs are set automatically to zero because of the int16 cast
-            # but it helps speeding up a nit the code by removig needs to take care
+            # but it helps speeding up a bit the code by removig needs to take care
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
             self.m1 = np.array([self.previous[k] for k in self.previous.keys() ], dtype=np.int16)
             self.m2 = np.array([values[k] for k in self.previous.keys() ], dtype=np.int16)
@@ -173,7 +193,6 @@ class Steady(CNOBase):
         self.debug_values.append(values.copy())
 
         # Need to set undefined values to NAs
-
         self.simulated[self.time] = np.array([values[k] 
             for k in self.data.df.columns ], dtype=float).transpose()
         self.prev = {}
@@ -186,7 +205,6 @@ class Steady(CNOBase):
         # set the non-resolved bits to NA
         # TODO
         #newInput[which(abs(outputPrev-newInput) > testVal)] <- NA
-
         # loops are handle diffenty
 
     #@do_profile()
@@ -198,11 +216,6 @@ class Steady(CNOBase):
         # computeScoreT1(cnolist, pknmodel, rep(1,116))
         # 0.29199 from cellnoptr
         # found 0.2945
-        # liverDREAM
-        #computeScoreT1(cnolist, pknmodel, rep(1,58))
-        #[1] 0.2574948
-        # found 0.27
-        # 0.2902250932121212
 
         # time 1 only is taken into account
         diff = np.square(self.measures[self.time] - self.simulated[self.time])
@@ -211,12 +224,49 @@ class Steady(CNOBase):
         N = diff.shape[0] * diff.shape[1]
         Nna = np.isnan(diff).sum()
         N-= Nna
+
+        #nInTot = number of edges on in global model
+        #nInTot = len(self.model.reactions)
+        nInTot = self.nInputs # should be correct
+        nDataPts = diff.shape[0] * diff.shape[1]
+        nDataP = N # N points excluding the NA if any
         #print(N)
 
-        # NAPen = NAFac * sum(self.simulated.isnull())
-        # sizePen = nDataPts * sizeFac * nInputs / nIntTot
+        #NAPen = NAFac * sum(self.simulated.isnull())
 
-        S = np.nansum(self.diff) / float(N)
+        # nInTot: number of inputs of expanded miodel
+        # nInputs: number of inputs of cut model
+
+
+        # In CNO:
+        # nDataPts = number of points irrespective of NA
+        # nDataP  sum(!is.na(CNOlist@signals[[timeIndex]]))
+        # nInputs = number of inputs of the cut model
+
+        # for now, ketassume it is the same as the number of reactions
+        # TODO AND gates should count for 1 edge
+
+        # TODO: we need the number of reactions in the model used that is
+        # the one where edges have been removed.
+        #nInputs = len(self.model.reactions)
+        nInputs = self.nInputs  # for speeding up things right now.
+
+        sizePen = nDataPts * sizeFac * nInputs / float(nInTot)
+        #print("nDataPts=", nDataPts)
+        #print("nInputs=", nInputs)
+        #print("nInTot=", nInTot)
+        #print('sizePen=',sizePen)
+
+        # TODODODODODODODODODODODO
+        deviationPen = np.nansum(self.diff) / 2. # to be in agreement with CNO but wrong
+        #print("deviationPen=", deviationPen)
+        #print("Nna=", Nna)
+        #print("nDataP=", nDataP)
+
+
+        deviationPen  /= float(nDataP)
+        #print("deviationPen=", deviationPen)
+        S = deviationPen + sizePen / nDataP  
         return S
 
     def plot(self):
@@ -281,12 +331,12 @@ class Steady(CNOBase):
         ax1.set_yticklabels(times[::-1],
                     fontsize=fontsize)
         pylab.sca(ax1)
-        pylab.title("Steady state for all experiments(x-axis)\n\n\n\n")
+        #pylab.title("Steady state for all experiments(x-axis)\n\n\n\n")
         pylab.tight_layout()
 
     def plot_errors(self, columns=None):
         # What do we use here: self.values
-        print("Use only time 0..")
+        print("Use only time 1..")
 
         if columns is None:
             columns = self.data.df.columns
@@ -304,7 +354,7 @@ class Steady(CNOBase):
 
 
 
-#@do_profile()
+@do_profile()
 def test():
     from cno import cnodata
     s = Steady(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
