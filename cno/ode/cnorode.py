@@ -102,7 +102,8 @@ class CNORode(CNOBase, CNORBase):
     @params_to_update
     def optimise(self,  n_diverse=10, dim_ref_set=10, maxtime=60,
                  verbose=False, reltol=1e-4, atol=1e-3, maxeval='Inf',
-                 transfer_function=3, maxstepsize='Inf', reuse_ode_params=False):
+                 transfer_function=3, maxstepsize='Inf', reuse_ode_params=False,
+                 local_solver=None):
         """Optimise the ODE parameters using SSM algorithm 
 
         :param int maxtime: (default 10)
@@ -139,10 +140,8 @@ class CNORode(CNOBase, CNORBase):
                    maxInputsPerGate=%(maxInputsPerGate)s)
 
 
-
         reactions = model$reacID
         species = colnames(cnolist@signals[[1]])
-
 
 
         if (is.null(ode_params) == TRUE){
@@ -150,9 +149,12 @@ class CNORode(CNOBase, CNORBase):
         }
         ode_params = parEstimationLBodeSSm(cnolist, model, 
             maxtime=%(maxtime)s, maxStepSize=%(maxstepsize)s, dim_refset=%(dim_ref_set)s, maxeval=%(maxeval)s,
-            verbose=F, ndiverse=%(n_diverse)s, ode_parameters=ode_params)
+            verbose=F, ndiverse=%(n_diverse)s, ode_parameters=ode_params,
+            local_solver=%(local_solver)s)
         """
 
+        if local_solver is None:
+            local_solver = 'NULL'
         params = {
                 'library': self._library,
             'pknmodel': self.pknmodel.filename,
@@ -161,6 +163,7 @@ class CNORode(CNOBase, CNORBase):
             'expansion': bool2R(self._expansion),
             'cutnonc': bool2R(self._cutnonc),
              'maxInputsPerGate': self._max_inputs_per_gate,
+             'local_solver': local_solver
             }
 
         params.update(ssmd)
