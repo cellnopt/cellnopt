@@ -64,7 +64,10 @@ class Steady(CNOBase):
         assert time in self.data.times
         self.values = {}
         for node in self.model.nodes():
-            self.values[node] = np.array([np.nan for x in range(0,self.N)])
+            # Do we really want NAs ? probably not. fold changes are by
+            # definitiotn 0
+            #self.values[node] = np.array([np.nan for x in range(0,self.N)])
+            self.values[node] = np.array([0 for x in range(0,self.N)])
 
         for this in self.stimuli_names:
             self.values[this] = self.stimuli[this].values.copy()
@@ -137,7 +140,10 @@ class Steady(CNOBase):
             # reactions = self.model.reactions
             reactions = self.model.buffer_reactions
             predecessors = self.predecessors.copy()
+            self.number_edges = len(self.model.buffer_reactions)
+
         else:
+            self.number_edges = len(reactions)
             predecessors = self.reactions_to_predecessors(reactions)
 
 
@@ -184,6 +190,10 @@ class Steady(CNOBase):
             self.m2 = np.array([values[k] for k in self.previous.keys() ], dtype=np.int16)
             residual = np.nansum(np.square(self.m1 - self.m2))
 
+            # TODO stop criteria should account for the length of the species to the
+            # the node itself so count < nSp should be taken into account whatever is residual.
+            #
+
             self.debug_values.append(self.previous.copy())
            
             self.residuals.append(residual)
@@ -212,10 +222,6 @@ class Steady(CNOBase):
         # We need also to include NAFac, number of reactions in the model
         # for the sizeFac
 
-        # on ExtLiverPCB
-        # computeScoreT1(cnolist, pknmodel, rep(1,116))
-        # 0.29199 from cellnoptr
-        # found 0.2945
 
         # time 1 only is taken into account
         diff = np.square(self.measures[self.time] - self.simulated[self.time])
@@ -237,7 +243,6 @@ class Steady(CNOBase):
         # nInTot: number of inputs of expanded miodel
         # nInputs: number of inputs of cut model
 
-
         # In CNO:
         # nDataPts = number of points irrespective of NA
         # nDataP  sum(!is.na(CNOlist@signals[[timeIndex]]))
@@ -246,28 +251,30 @@ class Steady(CNOBase):
         # for now, ketassume it is the same as the number of reactions
         # TODO AND gates should count for 1 edge
 
-        # TODO: we need the number of reactions in the model used that is
-        # the one where edges have been removed.
-        #nInputs = len(self.model.reactions)
-        nInputs = self.nInputs  # for speeding up things right now.
+
+        nInputs = self.number_edges
 
         sizePen = nDataPts * sizeFac * nInputs / float(nInTot)
-        #print("nDataPts=", nDataPts)
-        #print("nInputs=", nInputs)
-        #print("nInTot=", nInTot)
-        #print('sizePen=',sizePen)
+        self.debug("nDataPts=", nDataPts)
+        self.debug("nInputs=", nInputs)
+        self.debug("nInTot=", nInTot)
+        self.debug('sizePen=',sizePen)
 
         # TODODODODODODODODODODODO
         deviationPen = np.nansum(self.diff) / 2. # to be in agreement with CNO but wrong
-        #print("deviationPen=", deviationPen)
-        #print("Nna=", Nna)
-        #print("nDataP=", nDataP)
-
+        self.diff /= 2.
+        self.debug("deviationPen=", deviationPen)
+        self.debug("Nna=", Nna)
+        self.debug("nDataP=", nDataP)
 
         deviationPen  /= float(nDataP)
-        #print("deviationPen=", deviationPen)
+        self.debug("deviationPen=", deviationPen)
         S = deviationPen + sizePen / nDataP  
         return S
+
+    def get_df(self):
+        import pandas as pd
+        return pd.DataFrame(self.simulated[self.time], columns=self.data.df.columns)
 
     def plot(self):
         self.model.plot()
@@ -311,10 +318,20 @@ class Steady(CNOBase):
         t2 = time.time()
         print(str(t2-t1) + " seconds")        
 
-    def plotsim(self, fontsize=16):
+    def plotsim(self, fontsize=16, experiments=None):
+        # This is for all experiments is experiments is None
         cm = pylab.get_cmap('gray')
         pylab.clf()
-        data = pd.DataFrame(self.debug_values[-1]).fillna(0.5)
+
+        if experiments is None: # takes the latest (steady state) of each experiments
+            data = pd.DataFrame(self.debug_values[-1]).fillna(0.5)
+        else:
+            data = [(k, [self.debug_values[i][k][experiments] for i in range(0, len(self.debug_values))]) for k in self.debug_values[0].keys()]
+            data = dict(data)
+            data = pd.DataFrame(data).fillna(0.5)
+            data = data.ix[data.index[::-1]]
+        self.dummy = data
+
         pylab.pcolor(data, cmap=cm, vmin=0, vmax=1,
                 shading='faceted')
         pylab.colorbar()
@@ -353,6 +370,30 @@ class Steady(CNOBase):
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
 
 
+    def optimise(self):
+
+
+        # This function is the evaluation function, we want
+        # to give high score to more zero'ed chromosomes
+        def eval_func(chromosome):
+            reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
+            self.simulate(reactions)
+            return self.score()
+
+        from pyevolve import G1DList, GSimpleGA
+        genome = G1DList.G1DList(len(self.model.reactions))
+        genome.evaluator.set(eval_func)
+        genome.setParams(rangemin=0, rangemax=1)
+
+
+
+        ga = GSimpleGA.GSimpleGA(genome)
+        ga.evolve(freq_stats=10)
+
+        return ga
+
+
+
 
 @do_profile()
 def test():
@@ -365,122 +406,3 @@ def test():
 
 
 
-
-
-"""
-
-$mse
-[,1]  [,2]   [,3] [,4]   [,5]    [,6] [,7]
-[1,] 0.00405 0.500 0.3698 0.02 0.0072 0.00000 0.00
-[2,] 0.01620 0.045 0.0050 0.00 0.0000 0.28125 0.18
-[3,] 0.00405 0.045 0.0050 0.02 0.0072 0.28125 0.18
-[4,] 0.00405 0.000 0.3698 0.00 0.0000 0.00000 0.00
-[5,] 0.01620 0.045 0.0050 0.00 0.0000 0.28125 0.18
-[6,] 0.00405 0.045 0.0050 0.00 0.0000 0.28125 0.18
-[7,] 0.00000 0.500 0.0000 0.02 0.0072 0.00000 0.00
-[8,] 0.00000 0.045 0.0050 0.50 0.5000 0.28125 0.18
-[9,] 0.00000 0.045 0.0050 0.02 0.0072 0.28125 0.18
-
-$simResults[[1]]$t0
-[,1] [,2] [,3] [,4] [,5] [,6] [,7]
-[1,]    0    0    0    0    0    0    0
-[2,]    0    0    0    0    0    0    0
-[3,]    0    0    0    0    0    0    0
-[4,]    0    0    0    0    0    0    0
-[5,]    0    0    0    0    0    0    0
-[6,]    0    0    0    0    0    0    0
-[7,]    0    0    0    0    0    0    0
-[8,]    0    0    0    0    0    0    0
-[9,]    0    0    0    0    0    0    0
-
-s.score()
-pd.DataFrame(s.diff/2.)[[0,2,4,1,6,3,5]]
-
-     Akt Hsp27 NFkB Erk p90RSK Jnk cJun
-[,1] [,2] [,3] [,4] [,5] [,6] [,7]
-[1,]    1    1    0    1    1    0    0
-[2,]    1    1    1    0    0    1    1
-[3,]    1    1    1    1    1    1    1
-[4,]    1    0    0    0    0    0    0
-[5,]    1    1    1    0    0    1    1
-[6,]    1    1    1    0    0    1    1
-[7,]    0    1    0    1    1    0    0
-[8,]    0    1    1    1    1    1    1
-[9,]    0    1    1    1    1    1    1
-
-    EGF TNFa Raf PI3K
-[1,]   1    0   0    0
-[2,]   0    1   0    0
-[3,]   1    1   0    0
-[4,]   1    0   1    0
-[5,]   0    1   1    0
-[6,]   1    1   1    0
-[7,]   1    0   0    1
-[8,]   0    1   0    1
-[9,]   1    1   0    1
-
-"""
-
-
-"""
-
-$mse
-[,1]       [,2]      [,3]      [,4]      [,5]       [,6]
-[1,] 0.02607682         NA 0.3539345 0.4100143        NA 0.03221782
-[2,] 0.09200486 0.03723420 0.2499203 0.6794323 0.3669156 0.02610956
-[3,] 0.02845594         NA 0.1943445 0.7901995 0.3425479 0.28019457
-[4,] 0.07943784 0.04197267 0.2153080 0.5394515 0.3405881 0.26677940
-[5,] 0.06059407 0.03067175 0.2714396 0.4428013 0.3980180 0.03146179
-[6,] 0.02276370         NA 0.2004797 0.3669970 0.3474665 0.28991532
-[7,] 0.06374754 0.02499234 0.2358515 0.4051598 0.4542814 0.20409221
-[8,] 0.01885474 0.01503284 0.2139463 0.6602201 0.3880110 0.03740429
-[9,] 0.01601736 0.02506731 0.2179543 0.7714214 0.4299402 0.24682266
-[10,] 0.02014269 0.01944989 0.2992465 0.6237731 0.3529949 0.25041879
-
-$simResults
-$simResults[[1]]
-$simResults[[1]]$t0
-[,1] [,2] [,3] [,4] [,5] [,6]
-[1,]    0    0    0    0    0    0
-[2,]    0    0    0    0    0    0
-[3,]    0    0    0    0    0    0
-[4,]    0    0    0    0    0    0
-[5,]    0    0    0    0    0    0
-[6,]    0    0    0    0    0    0
-[7,]    0    0    0    0    0    0
-[8,]    0    0    0    0    0    0
-[9,]    0    0    0    0    0    0
-[10,]    0    0    0    0    0    0
-
-$simResults[[1]]$t1
-[,1] [,2] [,3] [,4] [,5] [,6]
-[1,]    0   NA    1    1   NA    0
-[2,]    1    1    1    0    1    0
-[3,]    0   NA    1    0    1    0
-[4,]    1    1    1    0    1    0
-[5,]    1    1    1    1    1    0
-[6,]    0   NA    1    1    1    0
-[7,]    1    1    1    1    1    0
-[8,]    0    0    1    0    1    0
-[9,]    0    0    1    0    1    0
-[10,]    0    0    1    0    1    0
-
-
-imResults[[1]]$t1
-      [,1] [,2] [,3] [,4] [,5] [,6] [,7]
- [1,]    1    0    0    0    0    0    0
- [2,]    1    1    1    0    0    1    1
- [3,]    1    1    1    0    0    1    1
- [4,]    1    0    0    0    0    0    0
- [5,]    1    1    1    0    0    1    1
- [6,]    1    1    1    0    0    1    1
- [7,]    0    1    0    1    1    0    0
- [8,]    0    1    1    1    1    1    1
- [9,]    0    1    1    1    1    1    1
-
-
-
-
-
-
-"""
