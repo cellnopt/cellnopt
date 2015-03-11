@@ -218,7 +218,7 @@ class CNORbool(CNOBase, CNORBase):
         except:
             N = len(self.session.best_bitstring)
             all_bs = self.session.all_bitstrings
-            if N == len(self.reactions_r):
+            if N == len(self.reactions_r) and len(self.session.all_bitstrings)>0:
                 df = pd.DataFrame([self.session.all_bitstrings],
                               columns=self.reactions_r)
                 models = BooleanModels(df)
@@ -226,6 +226,9 @@ class CNORbool(CNOBase, CNORBase):
                 self._models = models
             else:
                 df = pd.DataFrame(columns=self.reactions_r)
+                models = BooleanModels(df)
+                models.scores = easydev.to_list(self.session.all_scores)
+                self._models = models
 
             models.cnograph.midas = self.data.copy()
 
