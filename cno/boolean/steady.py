@@ -250,25 +250,23 @@ class Steady(CNOBase):
 
         # for now, ketassume it is the same as the number of reactions
         # TODO AND gates should count for 1 edge
-
-
         nInputs = self.number_edges
 
         sizePen = nDataPts * sizeFac * nInputs / float(nInTot)
-        self.debug("nDataPts=", nDataPts)
-        self.debug("nInputs=", nInputs)
-        self.debug("nInTot=", nInTot)
-        self.debug('sizePen=',sizePen)
+        self.debug("nDataPts=%s" % nDataPts)
+        self.debug("nInputs=%s" % nInputs)
+        self.debug("nInTot=%s" % nInTot)
+        self.debug('sizePen=%s' %sizePen)
 
         # TODODODODODODODODODODODO
         deviationPen = np.nansum(self.diff) / 2. # to be in agreement with CNO but wrong
         self.diff /= 2.
-        self.debug("deviationPen=", deviationPen)
-        self.debug("Nna=", Nna)
-        self.debug("nDataP=", nDataP)
+        self.debug("deviationPen=%s"% deviationPen)
+        self.debug("Nna=%s"% Nna)
+        self.debug("nDataP=%s"% nDataP)
 
         deviationPen  /= float(nDataP)
-        self.debug("deviationPen=", deviationPen)
+        self.debug("deviationPen=%s"% deviationPen)
         S = deviationPen + sizePen / nDataP  
         return S
 
@@ -370,26 +368,28 @@ class Steady(CNOBase):
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
 
 
-    def optimise(self):
+    def optimise(self, **kargs_evolve):
 
 
         # This function is the evaluation function, we want
         # to give high score to more zero'ed chromosomes
+        self.count = 0
         def eval_func(chromosome):
+            self.count+=1
             reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
-            self.simulate(reactions)
-            return self.score()
+            self.simulate(reactions=reactions)
+            #print(len(reactions), self.score())
+            return 1. - self.score()
 
         from pyevolve import G1DList, GSimpleGA
         genome = G1DList.G1DList(len(self.model.reactions))
         genome.evaluator.set(eval_func)
         genome.setParams(rangemin=0, rangemax=1)
 
-
-
         ga = GSimpleGA.GSimpleGA(genome)
-        ga.evolve(freq_stats=10)
+        ga.evolve(**kargs_evolve)
 
+        print(self.count)
         return ga
 
 
