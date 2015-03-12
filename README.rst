@@ -30,11 +30,28 @@ models and data sets used in CellNOpt project. The sub-package cno.io is ready a
 is a replacement for `cellnopt.core <https://pypi.python.org/pypi/cellnopt.core>`_ package.
 cno.datasets sub-package is a replacement for `cellnopt.data <https://pypi.python.org/pypi/cellnopt.data>`_ package.
 
-
 As for the formalisms, pipelines are provided for each formalism and are available in the 
 boolean, ode and fuzzy packages. 
 
 :See also: http://www.cellnopt.org for the context.
+
+Installation
+===============
+
+From Pypi / pip::
+
+    sudo pip install cno
+    
+From github::
+
+    # Get the source either from http
+    git clone http://github.com/cellnopt/cellnopt.git
+    # or SSH
+    # git clone git@github.com:cellnopt/cellnopt.git
+    cd cellnopt
+    sudo python setup.py install
+
+
 
 
 
