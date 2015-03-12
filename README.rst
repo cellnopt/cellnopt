@@ -44,7 +44,10 @@ From Pypi / pip::
     
 From github::
 
-    git clone http://github.com/cellnopt/cellnopt
+    # Get the source either from http
+    git clone http://github.com/cellnopt/cellnopt.git
+    # or SSH
+    # git clone git@github.com:cellnopt/cellnopt.git
     cd cellnopt
     sudo python setup.py install
 
