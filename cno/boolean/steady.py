@@ -258,7 +258,7 @@ class Steady(CNOBase):
         self.debug("nInTot=%s" % nInTot)
         self.debug('sizePen=%s' %sizePen)
 
-        # TODODODODODODODODODODODO
+        # TODO
         deviationPen = np.nansum(self.diff) / 2. # to be in agreement with CNO but wrong
         self.diff /= 2.
         self.debug("deviationPen=%s"% deviationPen)
@@ -368,8 +368,9 @@ class Steady(CNOBase):
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
 
 
-    def optimise(self, **kargs_evolve):
 
+
+    def optimise(self, freq_stats=1, maxgen=100, cross=0.9, elitism=1, mutation=0.02, popsize=80):
 
         # This function is the evaluation function, we want
         # to give high score to more zero'ed chromosomes
@@ -377,20 +378,148 @@ class Steady(CNOBase):
         def eval_func(chromosome):
             self.count+=1
             reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
+            N = len(self.model.reactions)
+            reactions = [self.model.reactions[i] for i in range(0,N) if chromosome[i] == 1]
             self.simulate(reactions=reactions)
             #print(len(reactions), self.score())
-            return 1. - self.score()
+            return self.score()
 
-        from pyevolve import G1DList, GSimpleGA
+
+        self._ga_stats = {'ave':[], 'min':[], 'max':[]}
+        def cbcall(ga):
+            print('raw fitness %s' % ga.bestIndividual().score)
+            self._ga_stats['min'].append(ga.getStatistics()['rawMin'])
+            self._ga_stats['ave'].append(ga.getStatistics()['rawAve'])
+            self._ga_stats['max'].append(ga.getStatistics()['rawMax'])
+
+
+        from pyevolve import G1DList, GSimpleGA, Consts, Selectors
         genome = G1DList.G1DList(len(self.model.reactions))
         genome.evaluator.set(eval_func)
         genome.setParams(rangemin=0, rangemax=1)
 
+
         ga = GSimpleGA.GSimpleGA(genome)
-        ga.evolve(**kargs_evolve)
+        ga.setMinimax(Consts.minimaxType["minimize"])
+        ga.setGenerations(maxgen)
+        ga.setCrossoverRate(cross)
+        ga.setMutationRate(mutation)
+        ga.setPopulationSize(popsize)
+        ga.setElitismReplacement(elitism)
+        ga.stepCallback.set(cbcall)
+        #ga.selector.set(Selectors.GRouletteWheel)
+        ga.terminationCriteria.set(GSimpleGA.ConvergenceCriteria)
+        ##ga.terminationCriteria.set(GSimpleGA.FitnessStatsCriteria)
+        #ga.setSortType(Consts.sortType['raw'])
+
+        ga.evolve(freq_stats=freq_stats)
+        ga._stats = self._ga_stats.copy()
 
         print(self.count)
         return ga
+
+def optimise2(pkn, data):
+    from PyGMO.problem import base
+    from PyGMO import algorithm, island
+
+
+
+
+
+    class problem(base):
+        def __init__(self, dim=10):
+            super(problem,self).__init__(dim)
+            self.set_bounds(0,1)
+            self.__dim = dim
+
+        def _objfun_impl(self, chromosome):
+
+            reactions = [x for c,x in zip(chromosome, self.reactions) if c==1]
+            N = len(self.reactions)
+            reactions = [self.reactions[i] for i in range(0,N) if chromosome[i] == 1]
+            print(reactions)
+            print(self.steady)
+            self.steady.simulate(reactions=reactions)
+            #print(len(reactions), self.score())
+            return (self.steady.score(),)
+        def human_readable_extra(self):
+            return "\n\t Problem dimension: " + str(self.__dim)
+
+
+
+    prob = problem(58)
+    prob.__dict__['steady'] = Steady(pkn, data)
+    prob.__dict__['reactions'] = prob.steady.model.reactions[:]
+    return prob
+    algo = algorithm.bee_colony(gen=500)
+    isl = island(algo, prob, 58)
+    isl.evolve(1);
+    isl.join()
+    return isl
+
+
+def optimise3( pkn, data):
+
+    from PyGMO import problem, algorithm, island
+    class my_problem(problem.base):
+        def __init__(self, dim = 58):
+            super(my_problem,self).__init__(dim)
+            self.set_bounds(-5.12,5.12)
+            self.__dim = dim
+        def _objfun_impl(self,x):
+            f = 0
+            for i in range(self.__dim):
+                f = f + (x[i])*(x[i])
+            return (f,)
+        def human_readable_extra(self):
+            return "\n\t Problem dimension: " + str(self.__dim)
+    prob = my_problem(58)
+    prob.simulator = Steady(pkn, data)
+
+    algo = algorithm.bee_colony(gen=500)
+    isl = island(algo, prob, 20)
+    isl.evolve(1);
+    isl.join()
+    return isl
+
+
+class GA(object):
+
+    def __init__(self, ga):
+        pass
+        # set self.ga = output of Steady.optimise()
+        self.ga = ga
+
+
+    def plots(self, hold=False):
+        self.plotHistPopScore()
+        self.plotPopScore(hold=hold)
+
+    def plotHistPopScore(self):
+        pylab.figure(1)
+        pylab.clf()
+        from pyevolve import Interaction
+        Interaction.plotHistPopScore(self.ga.getPopulation())
+
+    def plotPopScore(self, hold=False):
+        pylab.figure(2)
+        if hold is False:
+            pylab.clf()
+        # this is the last population/generation.
+        # from pyevolve import Interaction
+        #Interaction.plotPopScore(self.ga.getPopulation())
+        pylab.subplot(2,1,1)
+        pylab.plot(self.ga._stats['ave'])
+        pylab.xlim([0,120])
+        pylab.grid(True)
+        pylab.subplot(2,1,2)
+        pylab.plot(self.ga._stats['min'])
+        pylab.grid(True)
+        pylab.xlim([0,120])
+
+
+
+
 
 
 
