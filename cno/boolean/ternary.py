@@ -9,12 +9,12 @@ import time
 import bottleneck as bn
 
 
-class Steady(CNOBase):
+class Ternary(CNOBase):
     """Naive implementation of Steady state to help in 
     designing the API"""
     
     def __init__(self, pknmodel, data, verbose=True):
-        super(Steady, self).__init__(pknmodel, data, verbose)
+        super(Ternary, self).__init__(pknmodel, data, verbose)
 
         self.model = self.pknmodel.copy()
         # to speed up code later on
@@ -49,7 +49,6 @@ class Steady(CNOBase):
         df = df.ix[self.stimuli.index]
         df = df.reset_index(drop=True).values
         self.measures[self.time] = df
-        
 
         self.buffer = {}
         self.simulated = {}
@@ -73,8 +72,10 @@ class Steady(CNOBase):
         for this in self.stimuli_names:
             self.values[this] = self.stimuli[this].values.copy()
 
+        # TODO what should be the initial values here ? Let us set the values to -1
         for this in self.inhibitors_names:
-            self.values[this] = 1. - self.inhibitors[this].values.copy()
+            self.values[this] =  1 - self.inhibitors[this].values.copy()
+            self.values[this] =   self.inhibitors[this].values.copy()
 
         self.and_gates = [x for x in self.model.nodes() if "^" in x]
 
@@ -163,7 +164,12 @@ class Steady(CNOBase):
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
                 if len(predecessors[node]) != 0:
-                    values[node] = np.nanmin(np.array([values[x].copy() for x in 
+                    # not a min anymore but a consensus
+                    #values[node] = np.nanmin(np.array([values[x].copy() for x in
+                    #    predecessors[node]]), axis=0)
+                    print(np.array([values[x].copy() for x in
+                        predecessors[node]]))
+                    values[node] = consensus2(np.array([values[x].copy() for x in
                         predecessors[node]]), axis=0)
                 else:
                     values[node] = self.previous[node]
@@ -175,27 +181,30 @@ class Steady(CNOBase):
                 if len(predecessors[node]) == 0:
                     pass # nothing to change
                 else:
-                    dummy = np.array([values[x] if (x,node) not in self.toflip
-                        else 1. - values[x] for x in  predecessors[node]])
 
-                    values[node] = bn.nanmax(dummy,  axis=0)
+                    # here the nagative edges are not 1-x anymore but just -x
+                    dummy = np.array([values[x] if (x,node) not in self.toflip
+                        else - values[x] for x in  predecessors[node]])
+
+                    values[node] = accept_anything(dummy.transpose())
 
                 # take inhibitors into account
+                # TODO TERNARY: chamged 1-x into -x is this correct ?
                 if node in self.inhibitors_names:
-                    #print('HERE')
-                    values[node] *= 1 - self.inhibitors[node].values
+                    values[node] *=  1- self.inhibitors[node].values
             # 30 % of the time is here 
             # here NAs are set automatically to zero because of the int16 cast
             # but it helps speeding up a bit the code by removig needs to take care
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
             self.m1 = np.array([self.previous[k] for k in self.previous.keys() ], dtype=np.int16)
+
+            self.temp = values
             self.m2 = np.array([values[k] for k in self.previous.keys() ], dtype=np.int16)
             residual = bn.nansum(np.square(self.m1 - self.m2))
 
             # TODO stop criteria should account for the length of the species to the
             # the node itself so count < nSp should be taken into account whatever is residual.
             #
-
             self.debug_values.append(self.previous.copy())
            
             self.residuals.append(residual)
@@ -325,7 +334,7 @@ class Steady(CNOBase):
             data = data.ix[data.index[::-1]]
         self.dummy = data
 
-        pylab.pcolor(data, cmap=cm, vmin=0, vmax=1,
+        pylab.pcolor(data, cmap=cm, vmin=-1, vmax=1,
                 shading='faceted')
         pylab.colorbar()
         ax1 = pylab.gca()
@@ -367,8 +376,7 @@ class Steady(CNOBase):
         # This function is the evaluation function, we want
         # to give high score to more zero'ed chromosomes
         self.count = 0
-        def eval_func_in(x):
-            return self.eval_func(x)
+
         def eval_func(chromosome):
 
             if tuple(chromosome) in self.buffer.keys():
@@ -396,7 +404,7 @@ class Steady(CNOBase):
 
         from pyevolve import G1DList, GSimpleGA, Consts, Selectors
         genome = G1DList.G1DList(len(self.model.reactions))
-        genome.evaluator.set(eval_func_in)
+        genome.evaluator.set(eval_func)
         genome.setParams(rangemin=0, rangemax=1, rounddecimal=1e-8, bestrawscore=0)
 
         ga = GSimpleGA.GSimpleGA(genome)
@@ -430,11 +438,11 @@ class Steady(CNOBase):
                 self.buffer[tuple(chromosome)] = self.score()
             return self.buffer[tuple(chromosome)]
 
-    def optimise2(self, verbose=False, maxgens=100):
+    def optimise2(self, verbose=False):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
         #reload(genetic_algo)
-        ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, maxgens=maxgens)
+        ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, maxgens=2)
         def eval_func_in(x):
             return self.eval_func(x)
         ga.getObj = eval_func_in
@@ -442,116 +450,54 @@ class Steady(CNOBase):
         return ga
 
 
-def optimise2(pkn, data):
-    from PyGMO.problem import base
-    from PyGMO import algorithm, island
-
-    class problem(base):
-        def __init__(self, dim=10):
-            super(problem,self).__init__(dim)
-            self.set_bounds(0,1)
-            self.__dim = dim
-
-        def _objfun_impl(self, chromosome):
-
-            reactions = [x for c,x in zip(chromosome, self.reactions) if c==1]
-            N = len(self.reactions)
-            reactions = [self.reactions[i] for i in range(0,N) if chromosome[i] == 1]
-            print(reactions)
-            print(self.steady)
-            self.steady.simulate(reactions=reactions)
-            #print(len(reactions), self.score())
-            return (self.steady.score(),)
-        def human_readable_extra(self):
-            return "\n\t Problem dimension: " + str(self.__dim)
-
-
-
-    prob = problem(58)
-    prob.__dict__['steady'] = Steady(pkn, data)
-    prob.__dict__['reactions'] = prob.steady.model.reactions[:]
-    return prob
-    algo = algorithm.bee_colony(gen=500)
-    isl = island(algo, prob, 58)
-    isl.evolve(1);
-    isl.join()
-    return isl
-
-
-def optimise3( pkn, data):
-
-    from PyGMO import problem, algorithm, island
-    class my_problem(problem.base):
-        def __init__(self, dim = 58):
-            super(my_problem,self).__init__(dim)
-            self.set_bounds(-5.12,5.12)
-            self.__dim = dim
-        def _objfun_impl(self,x):
-            f = 0
-            for i in range(self.__dim):
-                f = f + (x[i])*(x[i])
-            return (f,)
-        def human_readable_extra(self):
-            return "\n\t Problem dimension: " + str(self.__dim)
-    prob = my_problem(58)
-    prob.simulator = Steady(pkn, data)
-
-    algo = algorithm.bee_colony(gen=500)
-    isl = island(algo, prob, 20)
-    isl.evolve(1);
-    isl.join()
-    return isl
-
-
-class GA(object):
-
-    def __init__(self, ga):
-        pass
-        # set self.ga = output of Steady.optimise()
-        self.ga = ga
-
-
-    def plots(self, hold=False):
-        self.plotHistPopScore()
-        self.plotPopScore(hold=hold)
-
-    def plotHistPopScore(self):
-        pylab.figure(1)
-        pylab.clf()
-        from pyevolve import Interaction
-        Interaction.plotHistPopScore(self.ga.getPopulation())
-
-    def plotPopScore(self, hold=False):
-        pylab.figure(2)
-        if hold is False:
-            pylab.clf()
-        # this is the last population/generation.
-        # from pyevolve import Interaction
-        #Interaction.plotPopScore(self.ga.getPopulation())
-        pylab.subplot(2,1,1)
-        pylab.plot(self.ga._stats['ave'])
-        pylab.xlim([0,120])
-        pylab.grid(True)
-        pylab.subplot(2,1,2)
-        pylab.plot(self.ga._stats['min'])
-        pylab.grid(True)
-        pylab.xlim([0,120])
 
 
 
 
 
+def accept_anything(x, axis=0):
+    res = []
+    for this in x:
+
+        m1 = min(this)
+        m2 = max(this)
+        if m1 >= 0 and m2>=0:
+            res.append(max(m1,m2))
+        elif m1 <=0 and m2<=0:
+            res.append(min(m1,m2))
+        else:
+            res.append(0)
+    res = np.array(res)
+    res.reshape(x.shape[0],1)
+
+    return res
 
 
+def consensus2(x):
+    # 5.75us
+    if all(x==1):
+        return 1
+    elif all(x==-1):
+        return -1
+    else:
+        return 0
 
-@do_profile()
-def test():
-    from cno import cnodata
-    s = Steady(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-    s.test()
-#test()
+def consensus_ternary(x):
+    # 2.24us
+    if len(x)>2:
+        return consensus_ternary([consensus_ternary(x[0:2]), x[2:]])
+    else:
+        if x[0] == x[1]:
+            return x[0]
+        else:
+            return 0
+        return consensus
 
-
-
-
-
+def consensus3(x):
+    #using np array as inut 26us
+    #using list 401 ns
+    # 26us
+    if len(x)>2:
+        return consensus3([consensus3(x[0:2]), x[2:]])
+    else:
+        return x[0] & x[1] | ( (x[0]!=-1)&0) | ((x[1]!=-1) &0)
