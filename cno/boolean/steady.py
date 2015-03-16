@@ -182,7 +182,8 @@ class Steady(CNOBase):
 
                 # take inhibitors into account
                 if node in self.inhibitors_names:
-                    #print('HERE')
+                    # if inhibitors is on (1), multiply by 0
+                    # if inhibitors is not active, (0), does nothing.
                     values[node] *= 1 - self.inhibitors[node].values
             # 30 % of the time is here 
             # here NAs are set automatically to zero because of the int16 cast
@@ -287,7 +288,7 @@ class Steady(CNOBase):
         # 0.2574948 in CellNOptR
         # 0.27
 
-        # CellNOptR on ToyMMB      : 0.22        ; 0.22s in cno
+        # CellNOptR on ToyMMB      : 0.13        ; 0.22s in cno
         # 0.09467
         # process and  "EGF=Raf"        "EGF+TNFa=PI3K"  "Erk+TNFa=Hsp27" off
         # then MSE is 0.10838/2
@@ -311,7 +312,7 @@ class Steady(CNOBase):
         t2 = time.time()
         print(str(t2-t1) + " seconds")        
 
-    def plotsim(self, fontsize=16, experiments=None):
+    def plotsim(self, fontsize=16, experiments=None, vmin=0, vmax=1):
         # This is for all experiments is experiments is None
         cm = pylab.get_cmap('gray')
         pylab.clf()
@@ -325,7 +326,7 @@ class Steady(CNOBase):
             data = data.ix[data.index[::-1]]
         self.dummy = data
 
-        pylab.pcolor(data, cmap=cm, vmin=0, vmax=1,
+        pylab.pcolor(data, cmap=cm, vmin=vmin, vmax=vmax,
                 shading='faceted')
         pylab.colorbar()
         ax1 = pylab.gca()
@@ -430,7 +431,7 @@ class Steady(CNOBase):
                 self.buffer[tuple(chromosome)] = self.score()
             return self.buffer[tuple(chromosome)]
 
-    def optimise2(self, verbose=False, maxgens=100):
+    def optimise2(self, verbose=False, maxgens=500):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
         #reload(genetic_algo)

@@ -90,23 +90,7 @@ class Ternary(CNOBase):
         self.nInputs = np.sum([len(self.model.predecessors(x)) for x in self.model.nodes()])
         self.nInputs -= len(self.model._find_and_nodes())
 
-    def preprocessing(self, expansion=True, compression=True, cutnonc=True):
-        self.model.midas = self.data
-        self.model.preprocessing(expansion=expansion, compression=compression, 
-                cutnonc=cutnonc)
-        self.init(self.time)
-        self.model.buffer_reactions = self.model.reactions
-
-    def reactions_to_predecessors(self, reactions):
-        predecessors = dict(((k, []) for k in self.predecessors.keys()))
-        for r in reactions:
-            reac = Reaction(r)
-            if "^" in reac.lhs:
-                predecessors[r].extend(reac.lhs_species)
-            else:
-                predecessors[reac.rhs].append(reac.lhs.replace("!",""))
-        return predecessors
-            
+   
     #@do_profile()
     def simulate(self, tick=1, debug=False, reactions=None):
         """
@@ -189,7 +173,6 @@ class Ternary(CNOBase):
                     values[node] = accept_anything(dummy.transpose())
 
                 # take inhibitors into account
-                # TODO TERNARY: chamged 1-x into -x is this correct ?
                 if node in self.inhibitors_names:
                     values[node] *=  1- self.inhibitors[node].values
             # 30 % of the time is here 
@@ -228,227 +211,13 @@ class Ternary(CNOBase):
         #newInput[which(abs(outputPrev-newInput) > testVal)] <- NA
         # loops are handle diffenty
 
-    #@do_profile()
-    def score(self, NAFac=1, sizeFac=1e-4):
-        # We need also to include NAFac, number of reactions in the model
-        # for the sizeFac
-
-
-        # time 1 only is taken into account
-        #self.diff = np.square(self.measures[self.time] - self.simulated[self.time])
-        diff = self.measures[self.time] - self.simulated[self.time]
-        diff *= diff
-
-        N = diff.shape[0] * diff.shape[1]
-        Nna = np.isnan(diff).sum()
-        N-= Nna
-
-        #nInTot = number of edges on in global model
-        #nInTot = len(self.model.reactions)
-        nInTot = self.nInputs # should be correct
-        nDataPts = diff.shape[0] * diff.shape[1]
-        nDataP = N # N points excluding the NA if any
-        #print(N)
-
-        #NAPen = NAFac * sum(self.simulated.isnull())
-
-        # nInTot: number of inputs of expanded miodel
-        # nInputs: number of inputs of cut model
-
-        # In CNO:
-        # nDataPts = number of points irrespective of NA
-        # nDataP  sum(!is.na(CNOlist@signals[[timeIndex]]))
-        # nInputs = number of inputs of the cut model
-
-        # for now, ketassume it is the same as the number of reactions
-        # TODO AND gates should count for 1 edge
-        nInputs = self.number_edges
-
-        sizePen = nDataPts * sizeFac * nInputs / float(nInTot)
-        #self.debug("nDataPts=%s" % nDataPts)
-        #self.debug("nInputs=%s" % nInputs)
-        #self.debug("nInTot=%s" % nInTot)
-        #self.debug('sizePen=%s' %sizePen)
-
-        # TODO
-        deviationPen = bn.nansum(diff) / 2. # to be in agreement with CNO but wrong
-        self.diff = diff / 2.
-        #self.debug("deviationPen=%s"% deviationPen)
-        #self.debug("Nna=%s"% Nna)
-        #self.debug("nDataP=%s"% nDataP)
-
-        deviationPen  /= float(nDataP)
-        #self.debug("deviationPen=%s"% deviationPen)
-        S = deviationPen + sizePen / nDataP  
-        return S
-
-    def get_df(self):
-        import pandas as pd
-        return pd.DataFrame(self.simulated[self.time], columns=self.data.df.columns)
-
-    def plot(self):
-        self.model.plot()
-
-    def test(self, N=100):
-        # N = 100, all bits on
-        # CellNOptR on LiverDREAM  0.85 seconds. 0.58 in cno
-        # CellNOptR on LiverDREAM preprocessed) on:0.75 seconds. 1.42 in cno
-        # 0.2574948 in CellNOptR
-        # 0.27
-
-        # CellNOptR on ToyMMB      : 0.22        ; 0.22s in cno
-        # 0.09467
-        # process and  "EGF=Raf"        "EGF+TNFa=PI3K"  "Erk+TNFa=Hsp27" off
-        # then MSE is 0.10838/2
-
-        # CellNOptR on ExtLiverPCB : 1.4 seconds ; 1.7s in cno
-        # 0.29199
-
-        # cost of pruning models ?
-        """
-        library(CellNOptR)
-        cnolist = ...
-        pknmodel = ...
-        system.time(replicate(100,computeScoreT1(cnolist, pknmodel, rep(58) ) ) )
-        """
-        t1 = time.time()
-        self.simulate()
-        for i in range(0,N):
-            self.init(self.time)
-            self.simulate()
-            #self.score()
-        t2 = time.time()
-        print(str(t2-t1) + " seconds")        
-
+   
+   
     def plotsim(self, fontsize=16, experiments=None):
-        # This is for all experiments is experiments is None
-        cm = pylab.get_cmap('gray')
-        pylab.clf()
+        super(Ternary, self).plotsim(vmin=-1)
 
-        if experiments is None: # takes the latest (steady state) of each experiments
-            data = pd.DataFrame(self.debug_values[-1]).fillna(0.5)
-        else:
-            data = [(k, [self.debug_values[i][k][experiments] for i in range(0, len(self.debug_values))]) for k in self.debug_values[0].keys()]
-            data = dict(data)
-            data = pd.DataFrame(data).fillna(0.5)
-            data = data.ix[data.index[::-1]]
-        self.dummy = data
-
-        pylab.pcolor(data, cmap=cm, vmin=-1, vmax=1,
-                shading='faceted')
-        pylab.colorbar()
-        ax1 = pylab.gca()
-        ax1.set_xticks([])
-        Ndata = len(data.columns)
-        ax1.set_xlim(0, Ndata)
-        ax = pylab.twiny()
-        ax.set_xticks(pylab.linspace(0.5, Ndata+0.5, Ndata ))
-        ax.set_xticklabels(data.columns, fontsize=fontsize, rotation=90)
-        times = list(data.index)
-        Ntimes = len(times)
-        ax1.set_yticks([x+0.5 for x in times])
-        ax1.set_yticklabels(times[::-1],
-                    fontsize=fontsize)
-        pylab.sca(ax1)
-        #pylab.title("Steady state for all experiments(x-axis)\n\n\n\n")
-        pylab.tight_layout()
-
-    def plot_errors(self, columns=None):
-        # What do we use here: self.values
-        print("Use only time 1..")
-
-        if columns is None:
-            columns = self.data.df.columns
-        X1 = pd.DataFrame(self.debug_values[-1])[columns].copy()
-        N = X1.shape[0]
-
-        X1['time'] = [self.time] * N
-        X1['cell'] = [self.data.cellLine] * N
-        X1['experiment'] = self.data.experiments.index
-        X1.set_index(['cell', 'experiment', 'time'], inplace=True)
-        self.data.sim.ix[X1.index] = X1
-        self.data.plot(mode='mse')
-        print("MSE= %s(caspo/cno with only 1 time)" % self.score())
-        print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
-
-    def optimise(self, freq_stats=1, maxgen=100, cross=0.9, elitism=1, mutation=0.02, popsize=80):
-
-        # This function is the evaluation function, we want
-        # to give high score to more zero'ed chromosomes
-        self.count = 0
-
-        def eval_func(chromosome):
-
-            if tuple(chromosome) in self.buffer.keys():
-                pass
-
-            else:
-                self.count+=1
-                reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
-                N = len(self.model.reactions)
-                reactions = [self.model.reactions[i] for i in range(0,N) if chromosome[i] == 1]
-                self.simulate(reactions=reactions)
-                #print(len(reactions), self.score())
-
-                self.buffer[tuple(chromosome)] = self.score()
-            return self.buffer[tuple(chromosome)]
-
-
-        self._ga_stats = {'ave':[], 'min':[], 'max':[]}
-        def cbcall(ga):
-            print('raw fitness %s' % ga.bestIndividual().score)
-            self._ga_stats['min'].append(ga.getStatistics()['rawMin'])
-            self._ga_stats['ave'].append(ga.getStatistics()['rawAve'])
-            self._ga_stats['max'].append(ga.getStatistics()['rawMax'])
-
-
-        from pyevolve import G1DList, GSimpleGA, Consts, Selectors
-        genome = G1DList.G1DList(len(self.model.reactions))
-        genome.evaluator.set(eval_func)
-        genome.setParams(rangemin=0, rangemax=1, rounddecimal=1e-8, bestrawscore=0)
-
-        ga = GSimpleGA.GSimpleGA(genome)
-        ga.setMinimax(Consts.minimaxType["minimize"])
-        ga.setGenerations(maxgen)
-        ga.setCrossoverRate(cross)
-        ga.setMutationRate(mutation)
-        ga.setPopulationSize(popsize)
-        ga.setElitismReplacement(elitism)
-        ga.stepCallback.set(cbcall)
-        ga.selector.set(Selectors.GRouletteWheel)
-        ga.terminationCriteria.set(GSimpleGA.ConvergenceCriteria)
-        ##ga.terminationCriteria.set(GSimpleGA.FitnessStatsCriteria)
-        #ga.setSortType(Consts.sortType['raw'])
-
-        ga.evolve(freq_stats=freq_stats)
-        ga._stats = self._ga_stats.copy()
-
-        print(self.count)
-        return ga
-
-
-    def eval_func(self, chromosome):
-            if tuple(chromosome) in self.buffer.keys():
-                pass
-            else:
-                reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
-                N = len(self.model.reactions)
-                reactions = [self.model.reactions[i] for i in range(0,N) if chromosome[i] == 1]
-                self.simulate(reactions=reactions)
-                self.buffer[tuple(chromosome)] = self.score()
-            return self.buffer[tuple(chromosome)]
-
-    def optimise2(self, verbose=False):
-        """Using the CellNOptR-like GA"""
-        from cno.optimisers import genetic_algo
-        #reload(genetic_algo)
-        ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, maxgens=2)
-        def eval_func_in(x):
-            return self.eval_func(x)
-        ga.getObj = eval_func_in
-        ga.run()
-        return ga
-
+   
+   
 
 
 
