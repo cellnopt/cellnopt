@@ -27,8 +27,6 @@ class GA(Logging):
 class GABinary(GA):
     """GA algorithm
 
-
-
     ::
 
         ga = GA(length=16) # define the length
