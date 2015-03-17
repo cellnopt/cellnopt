@@ -360,7 +360,6 @@ class MIDASReader(MIDAS):
             N = len(self._experiments.values)
             data = np.concatenate([self._experiments.values, np.array([[None]] * N)], axis=1)
 
-
         self._experiments = pd.DataFrame(data, columns=[columns_is, columns],
                     index= self._experiments.index)
         try:
@@ -1260,6 +1259,10 @@ class XMIDAS(MIDASReader):
         # if simulation do not have the same number of points as data
         simtimes = np.array(self.sim.index.levels[2])
 
+        vmin = float(self.sim.min(skipna=True).min(skipna=True))
+        vmin_data = float(self.df.min(skipna=True).min(skipna=True))
+
+
         if logx == False:
             # a tick at x = 0, 0.5 in each box (size of 1) + last x=1 in last box
             xt = pylab.linspace(0, self.nSignals, self.nSignals*2+1)
@@ -1284,6 +1287,9 @@ class XMIDAS(MIDASReader):
                 signal = self.names_signals[j]
                 exp = self.experiments.index[i]
                 data = self.sim[signal][self.cellLine][exp]
+                if vmin <0 or vmin_data<0:
+                    data/=2.
+                    data+=0.5
 
                 # sometimes we may want to get rid of all NA and show the lines.
                 data = data.dropna()
@@ -1292,7 +1298,7 @@ class XMIDAS(MIDASReader):
 
                 Xtimes = simtimes + j
 
-                pylab.plot(Xtimes, data/1.05+(self.nExps-i-1), marker=marker, color=color,
+                pylab.plot(Xtimes, data/1.05+(self.nExps-i-1), marker=marker, color=color, alpha=0.5,
                         linestyle=linestyle,
                            markersize=markersize, lw=lw)
                 #    plot(times+j, sim[i,j]/1.05+(self.nExps-i-1), 'b--o',
@@ -1323,8 +1329,8 @@ class XMIDAS(MIDASReader):
         if self.df.max().max() > 1 or self.df.min().min() < 0:
             if mode == 'data':
                 self.logging.info("Data is not normalised. Scaling by max across of species and perturbations ")
-            else:
-                raise ValueError('data must be between 0 and 1 for simulation')
+            #else:
+            #    raise ValueError('data must be between 0 and 1 for simulation')
 
         if logx is False:
             # a tick at x = 0, 0.5 in each box (size of 1) + last x=1 in last box
@@ -1344,6 +1350,8 @@ class XMIDAS(MIDASReader):
         # do a copy to rescale the data locally
         df = self.df.copy()
         vmax = float(df.max(skipna=True).max(skipna=True))
+        vmin = float(df.min(skipna=True).min(skipna=True))
+
         if vmax > 1:
             df /= vmax
         errors = self.errors.copy()
@@ -1361,6 +1369,10 @@ class XMIDAS(MIDASReader):
                 signal = self.names_signals[j]
                 exp = self.experiments.index[i]
                 data = df[signal][self.cellLine][exp]
+                if vmin <0:
+                    data /=2.
+                    data +=0.5
+
                 try:
                     yerr = errors[signal].ix['average'].ix[exp]
                 except:
@@ -1485,10 +1497,6 @@ class XMIDAS(MIDASReader):
             ax_cb.set_xticks([],[])
         except:
             pass
-
-
-
-
 
     def plot_layout(self, cmap="heat",
         rotation=90, colorbar=True, vmax=None, vmin=0.,
@@ -2484,5 +2492,4 @@ class Trend(object):
             return "green"
         else:
             return "white"
-
 
