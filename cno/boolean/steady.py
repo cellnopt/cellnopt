@@ -7,7 +7,7 @@ from cno.misc.profiler import do_profile
 from cno.io.reactions import Reaction
 import time
 import bottleneck as bn
-
+from collections import defaultdict
 
 class Steady(CNOBase):
     """Naive implementation of Steady state to help in 
@@ -50,6 +50,7 @@ class Steady(CNOBase):
         df = df.reset_index(drop=True).values
         self.measures[self.time] = df
         
+        self.buffering = True
 
         self.buffer = {}
         self.simulated = {}
@@ -81,31 +82,48 @@ class Steady(CNOBase):
         self.predecessors = {}
         for node in self.model.nodes():
             self.predecessors[node] = self.model.predecessors(node)
+        self.number_predecessors = {}
+        for node in self.predecessors.keys():
+            self.number_predecessors = len(self.predecessors[node])
 
         self.successors = {}
         for node in self.model.nodes():
             self.successors[node] = self.model.successors(node)
 
         self.nInputs = np.sum([len(self.model.predecessors(x)) for x in self.model.nodes()])
-        self.nInputs -= len(self.model._find_and_nodes())
+        self.nInputs -= len(self.model._find_and_nodes()) # get rid of the output edge on AND gates
+
+        self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
+                    and x not in self.and_gates]
+
+
+        self._temp_reactions = dict([(r, Reaction(r)) for r in self.model.reactions])
+        self._reactions = [Reaction(r) for r in self.model.reactions]
 
     def preprocessing(self, expansion=True, compression=True, cutnonc=True):
         self.model.midas = self.data
-        self.model.preprocessing(expansion=expansion, compression=compression, 
+        self.model.preprocessing(expansion=expansion, compression=compression,
                 cutnonc=cutnonc)
         self.init(self.time)
         self.model.buffer_reactions = self.model.reactions
 
+    #@do_profile()
     def reactions_to_predecessors(self, reactions):
+        #predecessors = defaultdict(list)
         predecessors = dict(((k, []) for k in self.predecessors.keys()))
-        for r in reactions:
-            reac = Reaction(r)
-            if "^" in reac.lhs:
-                predecessors[r].extend(reac.lhs_species)
-            else:
-                predecessors[reac.rhs].append(reac.lhs.replace("!",""))
+        #for r in reactions:
+        #    reac = Reaction(r) # self._temp_reactions[r]
+        #    if "^" in reac.lhs:
+        #        predecessors[r].extend(reac.lhs_species)
+        #    else:
+        #        predecessors[reac.rhs].append(reac.lhs.replace("!",""))
+        #for r in reactions:
+        #    if r.name in
+
         return predecessors
-            
+
+
+
     #@do_profile()
     def simulate(self, tick=1, debug=False, reactions=None):
         """
@@ -117,8 +135,8 @@ class Steady(CNOBase):
         # For small models, it has a non-negligeable cost.
 
         # inhibitors will be changed if not ON
-        self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
-                    and x not in self.and_gates]
+        #self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
+        #            and x not in self.and_gates]
 
         # what about a species that is both inhibited and measured
         testVal = 1e-3
@@ -130,7 +148,7 @@ class Steady(CNOBase):
         self.penalties = []
 
         self.count = 0
-        self.nSp = len(values.keys())
+        self.nSp = len(values)
         residual = 1
 
         frac = 1.2
@@ -146,12 +164,22 @@ class Steady(CNOBase):
             self.number_edges = len(self.model.buffer_reactions)
         else:
             self.number_edges = len(reactions)
-            predecessors = self.reactions_to_predecessors(reactions)
+            predecessors = dict(((k, []) for k in self.predecessors.keys()))
+            for r in reactions:
+                reac = self._temp_reactions[r] # self._temp_reactions[r]
+                if "^" in reac.lhs:
+                    predecessors[r].extend(reac.lhs_species)
+                else:
+                    predecessors[reac.rhs].append(reac.lhs.replace("!",""))
+            #predecessors = self.reactions_to_predecessors(reactions)
+
+        # speed up
+        length_predecessors = dict([(node, len(predecessors[node])) for node in predecessors.keys()])
 
         # if there is an inhibition/drug, the node is 0
         values = self.values.copy()
         for inh in self.inhibitors_names:
-            if len(predecessors[inh]) == 0:
+            if length_predecessors[inh] == 0:
                 values[inh] = np.array([np.nan for x in range(0,self.N)])
                 values[inh] = np.array([0 for x in range(0,self.N)])
 
@@ -162,8 +190,8 @@ class Steady(CNOBase):
             # compute AND gates first. why
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
-                if len(predecessors[node]) != 0:
-                    values[node] = np.nanmin(np.array([values[x].copy() for x in 
+                if length_predecessors[node] != 0:
+                    values[node] = bn.nanmin(np.array([values[x] for x in
                         predecessors[node]]), axis=0)
                 else:
                     values[node] = self.previous[node]
@@ -172,7 +200,7 @@ class Steady(CNOBase):
                 # easy one, just the value of predecessors
                 #if len(self.predecessors[node]) == 1:
                 #    self.values[node] = self.values[self.predecessors[node][0]].copy()
-                if len(predecessors[node]) == 0:
+                if length_predecessors[node] == 0:
                     pass # nothing to change
                 else:
                     dummy = np.array([values[x] if (x,node) not in self.toflip
@@ -271,7 +299,7 @@ class Steady(CNOBase):
 
         deviationPen  /= float(nDataP)
         #self.debug("deviationPen=%s"% deviationPen)
-        S = deviationPen + sizePen / nDataP  
+        S = deviationPen + sizePen / nDataP
         return S
 
     def get_df(self):
@@ -281,11 +309,12 @@ class Steady(CNOBase):
     def plot(self):
         self.model.plot()
 
+    #@do_profile()
     def test(self, N=100):
         # N = 100, all bits on
         # CellNOptR on LiverDREAM  0.85 seconds. 0.58 in cno
         # CellNOptR on LiverDREAM preprocessed) on:0.75 seconds. 1.42 in cno
-        # 0.2574948 in CellNOptR
+        # 0.2574948 in CellNOptR  somtimes, we can reach a score=0.019786867202
         # 0.27
 
         # CellNOptR on ToyMMB      : 0.13        ; 0.22s in cno
@@ -304,11 +333,18 @@ class Steady(CNOBase):
         system.time(replicate(100,computeScoreT1(cnolist, pknmodel, rep(58) ) ) )
         """
         t1 = time.time()
+
+        reactions = []
+        while len(reactions)==0:
+            import random
+            threshold = np.random.uniform(0,1,1)
+            reactions = [r for r in self.model.reactions if random.uniform(0,1)>threshold]
+
         self.simulate()
         for i in range(0,N):
-            self.init(self.time)
+            #self.init(self.time)
             self.simulate()
-            #self.score()
+            self.score()
         t2 = time.time()
         print(str(t2-t1) + " seconds")        
 
@@ -363,28 +399,13 @@ class Steady(CNOBase):
         print("MSE= %s(caspo/cno with only 1 time)" % self.score())
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
 
-    def optimise(self, freq_stats=1, maxgen=100, cross=0.9, elitism=1, mutation=0.02, popsize=80):
+    def optimise(self, freq_stats=1, maxgen=200, cross=0.9, elitism=1, mutation=0.02, popsize=80, prior=[]):
 
         # This function is the evaluation function, we want
         # to give high score to more zero'ed chromosomes
         self.count = 0
         def eval_func_in(x):
             return self.eval_func(x)
-        def eval_func(chromosome):
-
-            if tuple(chromosome) in self.buffer.keys():
-                pass
-
-            else:
-                self.count+=1
-                reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
-                N = len(self.model.reactions)
-                reactions = [self.model.reactions[i] for i in range(0,N) if chromosome[i] == 1]
-                self.simulate(reactions=reactions)
-                #print(len(reactions), self.score())
-
-                self.buffer[tuple(chromosome)] = self.score()
-            return self.buffer[tuple(chromosome)]
 
 
         self._ga_stats = {'ave':[], 'min':[], 'max':[]}
@@ -410,7 +431,7 @@ class Steady(CNOBase):
         ga.stepCallback.set(cbcall)
         ga.selector.set(Selectors.GRouletteWheel)
         ga.terminationCriteria.set(GSimpleGA.ConvergenceCriteria)
-        ##ga.terminationCriteria.set(GSimpleGA.FitnessStatsCriteria)
+        ga.terminationCriteria.set(GSimpleGA.FitnessStatsCriteria)
         #ga.setSortType(Consts.sortType['raw'])
 
         ga.evolve(freq_stats=freq_stats)
@@ -419,27 +440,29 @@ class Steady(CNOBase):
         print(self.count)
         return ga
 
-
-    def eval_func(self, chromosome):
-            if tuple(chromosome) in self.buffer.keys():
-                pass
-            else:
-                reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
-                N = len(self.model.reactions)
-                reactions = [self.model.reactions[i] for i in range(0,N) if chromosome[i] == 1]
-                self.simulate(reactions=reactions)
-                self.buffer[tuple(chromosome)] = self.score()
+    def eval_func(self, chromosome, prior=[]):
+        # TODO limnit the buffering ?
+        # add prior knowledge
+        if self.buffering and len(self.buffer)<10000 and tuple(chromosome) in self.buffer.keys():
             return self.buffer[tuple(chromosome)]
+        else:
+            reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
+            self.simulate(reactions=reactions)
+            score = self.score()
+            if self.buffering is True :
+                self.buffer[tuple(chromosome)] = score
+            return score
 
-    def optimise2(self, verbose=False, maxgens=500):
+    def optimise2(self, verbose=False, maxgens=500, show=False, maxtime=60):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
         #reload(genetic_algo)
-        ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, maxgens=maxgens)
+        ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, maxgens=maxgens, maxtime=maxtime)
         def eval_func_in(x):
             return self.eval_func(x)
         ga.getObj = eval_func_in
-        ga.run()
+        ga.run(show=show)
+        self.ga = ga
         return ga
 
 

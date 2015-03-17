@@ -7,9 +7,9 @@ from cno.misc.profiler import do_profile
 from cno.io.reactions import Reaction
 import time
 import bottleneck as bn
+from cno.boolean.steady import Steady
 
-
-class Ternary(CNOBase):
+class Ternary(Steady):
     """Naive implementation of Steady state to help in 
     designing the API"""
     
@@ -73,6 +73,9 @@ class Ternary(CNOBase):
             self.values[this] = self.stimuli[this].values.copy()
 
         # TODO what should be the initial values here ? Let us set the values to -1
+        # TODO/TODO
+        # TODO/TODO
+        # TODO/TODO
         for this in self.inhibitors_names:
             self.values[this] =  1 - self.inhibitors[this].values.copy()
             self.values[this] =   self.inhibitors[this].values.copy()
@@ -153,6 +156,9 @@ class Ternary(CNOBase):
                     #    predecessors[node]]), axis=0)
                     print(np.array([values[x].copy() for x in
                         predecessors[node]]))
+                    # TODO/TODO
+                    # TODO/TODO
+                    # TODO/TODO
                     values[node] = consensus2(np.array([values[x].copy() for x in
                         predecessors[node]]), axis=0)
                 else:
@@ -166,13 +172,20 @@ class Ternary(CNOBase):
                     pass # nothing to change
                 else:
 
+                    # TODO/TODO
+                    # TODO/TODO
                     # here the nagative edges are not 1-x anymore but just -x
                     dummy = np.array([values[x] if (x,node) not in self.toflip
                         else - values[x] for x in  predecessors[node]])
-
+                    # TODO/TODO not an AND but a consensus
+                    # TODO/TODO
+                    # TODO/TODO
                     values[node] = accept_anything(dummy.transpose())
 
                 # take inhibitors into account
+                # TODO/TODO do we want to change this behaviour ?
+                # TODO/TODO
+                # TODO/TODO
                 if node in self.inhibitors_names:
                     values[node] *=  1- self.inhibitors[node].values
             # 30 % of the time is here 
@@ -180,8 +193,6 @@ class Ternary(CNOBase):
             # but it helps speeding up a bit the code by removig needs to take care
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
             self.m1 = np.array([self.previous[k] for k in self.previous.keys() ], dtype=np.int16)
-
-            self.temp = values
             self.m2 = np.array([values[k] for k in self.previous.keys() ], dtype=np.int16)
             residual = bn.nansum(np.square(self.m1 - self.m2))
 
