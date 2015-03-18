@@ -8,6 +8,9 @@ from cno.io.reactions import Reaction
 import time
 import bottleneck as bn
 from collections import defaultdict
+import collections
+
+
 
 class Steady(CNOBase):
     """Naive implementation of Steady state to help in 
@@ -54,6 +57,7 @@ class Steady(CNOBase):
 
         self.buffer = {}
         self.simulated = {}
+        self.debug = True
 
     def init(self, time):
         # Here, we define the values of the stimuli and inhibitors
@@ -96,9 +100,18 @@ class Steady(CNOBase):
         self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
                     and x not in self.and_gates]
 
-
-        self._temp_reactions = dict([(r, Reaction(r)) for r in self.model.reactions])
         self._reactions = [Reaction(r) for r in self.model.reactions]
+
+        self._np_reactions = np.array(self.model.reactions)
+
+        self._reac2pred = {}
+        for r in self.model.reactions:
+            reac = Reaction(r)
+            if "^" in reac.lhs:
+                self._reac2pred[r] = (r, reac.lhs_species)
+            else:
+                self._reac2pred[r] = (reac.rhs, reac.lhs_species)
+
 
     def preprocessing(self, expansion=True, compression=True, cutnonc=True):
         self.model.midas = self.data
@@ -107,27 +120,19 @@ class Steady(CNOBase):
         self.init(self.time)
         self.model.buffer_reactions = self.model.reactions
 
+    # now inside def simulate
     #@do_profile()
     def reactions_to_predecessors(self, reactions):
-        #predecessors = defaultdict(list)
-        predecessors = dict(((k, []) for k in self.predecessors.keys()))
-        #for r in reactions:
-        #    reac = Reaction(r) # self._temp_reactions[r]
-        #    if "^" in reac.lhs:
-        #        predecessors[r].extend(reac.lhs_species)
-        #    else:
-        #        predecessors[reac.rhs].append(reac.lhs.replace("!",""))
-        #for r in reactions:
-        #    if r.name in
-
+        predecessors = defaultdict(collections.deque)
+        for r in reactions:
+            k,v = self._reac2pred[r]
+            predecessors[k].extend(v)
         return predecessors
 
 
-
     #@do_profile()
-    def simulate(self, tick=1, debug=False, reactions=None):
+    def simulate(self, tick=1, reactions=None):
         """
-
 
         """
         # pandas is very convenient but slower than numpy
@@ -143,13 +148,14 @@ class Steady(CNOBase):
 
         values = self.values.copy()
 
-        self.debug_values = []
+        if self.debug:
+            self.debug_values = []
         self.residuals = []
         self.penalties = []
 
         self.count = 0
         self.nSp = len(values)
-        residual = 1
+        residual = 1.
 
         frac = 1.2
         # #FIXME +1 is to have same resrults as in CellnOptR
@@ -157,33 +163,31 @@ class Steady(CNOBase):
         # this happends if you have cyvles with inhbititions
         # and an odd number of edges. 
         if reactions is None:
-            # takes some time:
-            # reactions = self.model.reactions
             reactions = self.model.buffer_reactions
-            predecessors = self.predecessors.copy()
-            self.number_edges = len(self.model.buffer_reactions)
-        else:
-            self.number_edges = len(reactions)
-            predecessors = dict(((k, []) for k in self.predecessors.keys()))
-            for r in reactions:
-                reac = self._temp_reactions[r] # self._temp_reactions[r]
-                if "^" in reac.lhs:
-                    predecessors[r].extend(reac.lhs_species)
-                else:
-                    predecessors[reac.rhs].append(reac.lhs.replace("!",""))
-            #predecessors = self.reactions_to_predecessors(reactions)
+            #predecessors = self.predecessors.copy()
+            #self.number_edges = len(self.model.buffer_reactions)
+        self.number_edges = len(reactions)
+
+        # 10 % time here
+        #predecessors = self.reactions_to_predecessors(reactions)
+        predecessors = defaultdict(collections.deque)
+        for r in reactions:
+            k,v = self._reac2pred[r]
+            predecessors[k].extend(v)
 
         # speed up
-        length_predecessors = dict([(node, len(predecessors[node])) for node in predecessors.keys()])
+        keys = self.values.keys()
+        length_predecessors = dict([(node, len(predecessors[node])) for node in keys])
 
         # if there is an inhibition/drug, the node is 0
         values = self.values.copy()
         for inh in self.inhibitors_names:
             if length_predecessors[inh] == 0:
-                values[inh] = np.array([np.nan for x in range(0,self.N)])
-                values[inh] = np.array([0 for x in range(0,self.N)])
+                #values[inh] = np.array([np.nan for x in range(0,self.N)])
+                #values[inh] = np.array([0 for x in range(0,self.N)])
+                values[inh] = np.zeros(self.N)
 
-        while (self.count < self.nSp * frac +1) and residual > testVal: 
+        while (self.count < self.nSp * frac +1.) and residual > testVal: 
             self.previous = values.copy()
             #self.X0 = pd.DataFrame(self.values)
             #self.X0 = self.values.copy()
@@ -204,8 +208,7 @@ class Steady(CNOBase):
                     pass # nothing to change
                 else:
                     dummy = np.array([values[x] if (x,node) not in self.toflip
-                        else 1. - values[x] for x in  predecessors[node]])
-
+                        else 1 - values[x] for x in  predecessors[node]])
                     values[node] = bn.nanmax(dummy,  axis=0)
 
                 # take inhibitors into account
@@ -213,38 +216,43 @@ class Steady(CNOBase):
                     # if inhibitors is on (1), multiply by 0
                     # if inhibitors is not active, (0), does nothing.
                     values[node] *= 1 - self.inhibitors[node].values
-            # 30 % of the time is here 
             # here NAs are set automatically to zero because of the int16 cast
             # but it helps speeding up a bit the code by removig needs to take care
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
-            self.m1 = np.array([self.previous[k] for k in self.previous.keys() ], dtype=np.int16)
-            self.m2 = np.array([values[k] for k in self.previous.keys() ], dtype=np.int16)
-            residual = bn.nansum(np.square(self.m1 - self.m2))
+            self.m1 = np.array([self.previous[k] for k in keys ], dtype=np.int16)
+            self.m2 = np.array([values[k] for k in keys ], dtype=np.int16)
+            #residual = bn.nansum(np.square(self.m1 - self.m2))
+            residual = np.sum(np.square(self.m1 - self.m2))
+
 
             # TODO stop criteria should account for the length of the species to the
             # the node itself so count < nSp should be taken into account whatever is residual.
             #
-
-            self.debug_values.append(self.previous.copy())
+            if self.debug:
+                self.debug_values.append(self.previous.copy())
            
             self.residuals.append(residual)
             self.count += 1
 
-        # add the latest values simulated in the while loop
-        self.debug_values.append(values.copy())
+        if self.debug is True:
+            # add the latest values simulated in the while loop
+            self.debug_values.append(values.copy())
 
         # Need to set undefined values to NAs
         self.simulated[self.time] = np.array([values[k] 
-            for k in self.data.df.columns ], dtype=float).transpose()
+            for k in self.data.df.columns ], dtype=float)#.transpose()
+
         self.prev = {}
         self.prev[self.time] = np.array([self.previous[k] 
-            for k in self.data.df.columns ], dtype=float).transpose()
+            for k in self.data.df.columns ], dtype=float)#.transpose()
 
         mask = self.prev[self.time] != self.simulated[self.time]
         self.simulated[self.time][mask] = np.nan
 
+        self.simulated[self.time] = self.simulated[self.time].transpose()
+
         # set the non-resolved bits to NA
-        # TODO
+        # TODO TODO TODO
         #newInput[which(abs(outputPrev-newInput) > testVal)] <- NA
         # loops are handle diffenty
 
@@ -252,7 +260,6 @@ class Steady(CNOBase):
     def score(self, NAFac=1, sizeFac=1e-4):
         # We need also to include NAFac, number of reactions in the model
         # for the sizeFac
-
 
         # time 1 only is taken into account
         #self.diff = np.square(self.measures[self.time] - self.simulated[self.time])
@@ -385,9 +392,19 @@ class Steady(CNOBase):
         # What do we use here: self.values
         print("Use only time 1..")
 
+        # use eval_func with debug one
+        debug = self.debug
+        self.debug = True
+        buffering = self.buffering
+        self.buffering = False
+        self.eval_func(self.ga.results['Best_bitString'][-1])
+        self.buffering = buffering
+        self.debug = debug
+
         if columns is None:
             columns = self.data.df.columns
         X1 = pd.DataFrame(self.debug_values[-1])[columns].copy()
+        X1 = self.get_df()
         N = X1.shape[0]
 
         X1['time'] = [self.time] * N
@@ -407,10 +424,9 @@ class Steady(CNOBase):
         def eval_func_in(x):
             return self.eval_func(x)
 
-
         self._ga_stats = {'ave':[], 'min':[], 'max':[]}
         def cbcall(ga):
-            print('raw fitness %s' % ga.bestIndividual().score)
+            #print('raw fitness %s' % ga.bestIndividual().score)
             self._ga_stats['min'].append(ga.getStatistics()['rawMin'])
             self._ga_stats['ave'].append(ga.getStatistics()['rawAve'])
             self._ga_stats['max'].append(ga.getStatistics()['rawMax'])
@@ -436,30 +452,50 @@ class Steady(CNOBase):
 
         ga.evolve(freq_stats=freq_stats)
         ga._stats = self._ga_stats.copy()
-
-        print(self.count)
         return ga
 
+    def exhaustive(self):
+        from cno.optimisers.binary_tools import permutations
+        # create all 
+        scores = []
+        from easydev import progress_bar
+        N = len(self.model.reactions)
+        pb = progress_bar(2**N)
+        for i,this in enumerate(permutations(N)):
+            self.simulate(this)
+            scores.append(self.score())
+            pb.animate(i, 0)
+        return scores
+
+    #@do_profile()
     def eval_func(self, chromosome, prior=[]):
         # TODO limnit the buffering ?
         # add prior knowledge
-        if self.buffering and len(self.buffer)<10000 and tuple(chromosome) in self.buffer.keys():
-            return self.buffer[tuple(chromosome)]
+        # using string or tuple takes about the same time
+
+        #str_chrome = "".join((str(x) for x in chromosome))
+        # tuple seems faster
+        str_chrome = tuple(chromosome)
+
+        if self.buffering and len(self.buffer)<10000 and str_chrome in self.buffer.keys():
+            return self.buffer[str_chrome]
         else:
-            reactions = [x for c,x in zip(chromosome, self.model.reactions) if c==1]
+            reactions = [x for c,x in zip(chromosome, self._np_reactions) if c==1]
             self.simulate(reactions=reactions)
             score = self.score()
-            if self.buffering is True :
-                self.buffer[tuple(chromosome)] = score
+            if self.buffering is True and len(self.buffer)<10000:
+                self.buffer[str_chrome] = score
+            self.counter +=1
             return score
 
     def optimise2(self, verbose=False, maxgens=500, show=False, maxtime=60):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
-        #reload(genetic_algo)
-        ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, maxgens=maxgens, maxtime=maxtime)
+        ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, 
+                maxgens=maxgens, maxtime=maxtime)
         def eval_func_in(x):
             return self.eval_func(x)
+        self.counter = 0
         ga.getObj = eval_func_in
         ga.run(show=show)
         self.ga = ga
@@ -489,8 +525,6 @@ def optimise2(pkn, data):
         def human_readable_extra(self):
             return "\n\t Problem dimension: " + str(self.__dim)
 
-
-
     prob = problem(58)
     prob.__dict__['steady'] = Steady(pkn, data)
     prob.__dict__['reactions'] = prob.steady.model.reactions[:]
@@ -502,29 +536,6 @@ def optimise2(pkn, data):
     return isl
 
 
-def optimise3( pkn, data):
-
-    from PyGMO import problem, algorithm, island
-    class my_problem(problem.base):
-        def __init__(self, dim = 58):
-            super(my_problem,self).__init__(dim)
-            self.set_bounds(-5.12,5.12)
-            self.__dim = dim
-        def _objfun_impl(self,x):
-            f = 0
-            for i in range(self.__dim):
-                f = f + (x[i])*(x[i])
-            return (f,)
-        def human_readable_extra(self):
-            return "\n\t Problem dimension: " + str(self.__dim)
-    prob = my_problem(58)
-    prob.simulator = Steady(pkn, data)
-
-    algo = algorithm.bee_colony(gen=500)
-    isl = island(algo, prob, 20)
-    isl.evolve(1);
-    isl.join()
-    return isl
 
 
 class GA(object):
