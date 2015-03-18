@@ -100,7 +100,7 @@ class GABinary(GA):
         self.popTolScores = numpy.array([numpy.nan])
 
     #@do_profile()
-    def run(self):
+    def run(self, show=False):
         t0 = time.time()
         self.stop = False
 
