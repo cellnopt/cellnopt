@@ -179,6 +179,8 @@ class Steady(CNOBase):
         keys = self.values.keys()
         length_predecessors = dict([(node, len(predecessors[node])) for node in keys])
 
+
+        #self._length_predecessors = length_predecessors
         # if there is an inhibition/drug, the node is 0
         values = self.values.copy()
         for inh in self.inhibitors_names:
@@ -194,10 +196,11 @@ class Steady(CNOBase):
             # compute AND gates first. why
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
+                # THere are always predecessors
                 if length_predecessors[node] != 0:
-                    values[node] = bn.nanmin(np.array([values[x] for x in
-                        predecessors[node]]), axis=0)
+                    values[node] = bn.nanmin(np.array([values[x] for x in predecessors[node]]), axis=0)
                 else:
+                    #assert 1==0, "%s %s" % (node, predecessors[node])
                     values[node] = self.previous[node]
 
             for node in self.tochange:
@@ -207,8 +210,7 @@ class Steady(CNOBase):
                 if length_predecessors[node] == 0:
                     pass # nothing to change
                 else:
-                    dummy = np.array([values[x] if (x,node) not in self.toflip
-                        else 1 - values[x] for x in  predecessors[node]])
+                    dummy = np.array([values[x] if (x,node) not in self.toflip else 1 - values[x] for x in  predecessors[node]])
                     values[node] = bn.nanmax(dummy,  axis=0)
 
                 # take inhibitors into account

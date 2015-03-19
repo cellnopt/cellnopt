@@ -15,6 +15,7 @@ import numpy
 from easydev import Logging
 from cno.misc.profiler import do_profile
 import time
+import pylab
 
 
 class GA(Logging):
@@ -104,6 +105,18 @@ class GABinary(GA):
         t0 = time.time()
         self.stop = False
 
+
+
+        import matplotlib.animation as animation
+        if show is True:
+            fig, ax = pylab.subplots()
+            line, = ax.plot([],[], 'o', color='b')
+            ax.set_ylim(0,1)
+            ax.grid()
+
+
+
+        print('Starting GA')
         while self.stop is False:
             # for each bistring in self.Pop, compute the scores for each string in Pop
 
@@ -207,7 +220,7 @@ class GABinary(GA):
 
             _tolscore = self._scores[-1] * self.reltol
             _tolbs = numpy.where(self._scores < self._scores[-1] + _tolscore)[0]
-            self.info("Generation %s: best score=%s" % (self.g, self.bestobj))
+            self.info("Generation %s: best score=%s (stall generation: %s)" % (self.g, self.bestobj, self.results['Stall_Generation'][-1]))
 
             if t1 - t0 > self.maxtime:
                 self.info('stopping because time %s exceeds maxtime=%s' % (t1-t0,self.maxtime))
@@ -241,6 +254,16 @@ class GABinary(GA):
             else:
                 self.Pop = self.Pop3.copy()
 
+            if show:
+                line.set_ydata(self.results['Best_score'])
+                line.set_xdata(range(0,self.g))
+                ax.relim()
+                ax.set_xlim(0, self.g+1)
+                ax.set_ylim(0, self.results['MaxScoreGen'][0])
+                ax.set_title("Best score=%s" % self.results['Best_score'][-1])
+                ax.autoscale_view()
+                fig.canvas.draw()
+                fig.canvas.flush_events()
 
             t0 = t1 # essential to stop the while loop
 
