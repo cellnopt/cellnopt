@@ -105,16 +105,12 @@ class GABinary(GA):
         t0 = time.time()
         self.stop = False
 
-
-
         import matplotlib.animation as animation
         if show is True:
             fig, ax = pylab.subplots()
-            line, = ax.plot([],[], 'o', color='b')
+            line, = ax.plot([],[], 'o-', color='b')
             ax.set_ylim(0,1)
             ax.grid()
-
-
 
         print('Starting GA')
         while self.stop is False:

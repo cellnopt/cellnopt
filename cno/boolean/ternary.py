@@ -7,7 +7,11 @@ from cno.misc.profiler import do_profile
 from cno.io.reactions import Reaction
 import time
 import bottleneck as bn
+from collections import defaultdict
+import collections
 from cno.boolean.steady import Steady
+
+
 
 class Ternary(Steady):
     """Naive implementation of Steady state to help in 
@@ -49,9 +53,12 @@ class Ternary(Steady):
         df = df.ix[self.stimuli.index]
         df = df.reset_index(drop=True).values
         self.measures[self.time] = df
+        
+        self.buffering = True
 
         self.buffer = {}
         self.simulated = {}
+        self.debug = True
 
     def init(self, time):
         # Here, we define the values of the stimuli and inhibitors
@@ -85,19 +92,35 @@ class Ternary(Steady):
         self.predecessors = {}
         for node in self.model.nodes():
             self.predecessors[node] = self.model.predecessors(node)
+        self.number_predecessors = {}
+        for node in self.predecessors.keys():
+            self.number_predecessors = len(self.predecessors[node])
 
         self.successors = {}
         for node in self.model.nodes():
             self.successors[node] = self.model.successors(node)
 
         self.nInputs = np.sum([len(self.model.predecessors(x)) for x in self.model.nodes()])
-        self.nInputs -= len(self.model._find_and_nodes())
+        self.nInputs -= len(self.model._find_and_nodes()) # get rid of the output edge on AND gates
 
-   
+        self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
+                    and x not in self.and_gates]
+
+        self._reactions = [Reaction(r) for r in self.model.reactions]
+
+        self._np_reactions = np.array(self.model.reactions)
+
+        self._reac2pred = {}
+        for r in self.model.reactions:
+            reac = Reaction(r)
+            if "^" in reac.lhs:
+                self._reac2pred[r] = (r, reac.lhs_species)
+            else:
+                self._reac2pred[r] = (reac.rhs, reac.lhs_species)
+
     #@do_profile()
     def simulate(self, tick=1, debug=False, reactions=None):
         """
-
 
         """
         # pandas is very convenient but slower than numpy
@@ -105,21 +128,22 @@ class Ternary(Steady):
         # For small models, it has a non-negligeable cost.
 
         # inhibitors will be changed if not ON
-        self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
-                    and x not in self.and_gates]
+        #self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
+        #            and x not in self.and_gates]
 
         # what about a species that is both inhibited and measured
         testVal = 1e-3
 
         values = self.values.copy()
 
-        self.debug_values = []
+        if self.debug:
+            self.debug_values = []
         self.residuals = []
         self.penalties = []
 
         self.count = 0
-        self.nSp = len(values.keys())
-        residual = 1
+        self.nSp = len(values)
+        residual = 1.
 
         frac = 1.2
         # #FIXME +1 is to have same resrults as in CellnOptR
@@ -127,40 +151,50 @@ class Ternary(Steady):
         # this happends if you have cyvles with inhbititions
         # and an odd number of edges. 
         if reactions is None:
-            # takes some time:
-            # reactions = self.model.reactions
             reactions = self.model.buffer_reactions
-            predecessors = self.predecessors.copy()
-            self.number_edges = len(self.model.buffer_reactions)
-        else:
-            self.number_edges = len(reactions)
-            predecessors = self.reactions_to_predecessors(reactions)
+        self.number_edges = len(reactions)
 
+        # 10 % time here
+        #predecessors = self.reactions_to_predecessors(reactions)
+        predecessors = defaultdict(collections.deque)
+        for r in reactions:
+            k,v = self._reac2pred[r]
+            predecessors[k].extend(v)
+
+        # speed up
+        keys = self.values.keys()
+        length_predecessors = dict([(node, len(predecessors[node])) for node in keys])
+
+
+        #self._length_predecessors = length_predecessors
         # if there is an inhibition/drug, the node is 0
         values = self.values.copy()
         for inh in self.inhibitors_names:
-            if len(predecessors[inh]) == 0:
-                values[inh] = np.array([np.nan for x in range(0,self.N)])
-                values[inh] = np.array([0 for x in range(0,self.N)])
+            if length_predecessors[inh] == 0:
+                #values[inh] = np.array([np.nan for x in range(0,self.N)])
+                #values[inh] = np.array([0 for x in range(0,self.N)])
+                values[inh] = np.zeros(self.N)
 
-        while (self.count < self.nSp * frac +1) and residual > testVal: 
+        while (self.count < self.nSp * frac +1.) and residual > testVal: 
             self.previous = values.copy()
             #self.X0 = pd.DataFrame(self.values)
             #self.X0 = self.values.copy()
             # compute AND gates first. why
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
-                if len(predecessors[node]) != 0:
+                if length_predecessors[node] != 0:
                     # not a min anymore but a consensus
                     #values[node] = np.nanmin(np.array([values[x].copy() for x in
                     #    predecessors[node]]), axis=0)
-                    print(np.array([values[x].copy() for x in
-                        predecessors[node]]))
+                    #print(np.array([values[x].copy() for x in
+                    #    predecessors[node]]))
                     # TODO/TODO
                     # TODO/TODO
                     # TODO/TODO
-                    values[node] = consensus2(np.array([values[x].copy() for x in
-                        predecessors[node]]), axis=0)
+                    dummy = np.array([values[x].copy() for x in
+                        predecessors[node]])
+
+                    values[node] = consensus2(dummy.transpose())
                 else:
                     values[node] = self.previous[node]
 
@@ -168,7 +202,7 @@ class Ternary(Steady):
                 # easy one, just the value of predecessors
                 #if len(self.predecessors[node]) == 1:
                 #    self.values[node] = self.values[self.predecessors[node][0]].copy()
-                if len(predecessors[node]) == 0:
+                if length_predecessors[node] == 0:
                     pass # nothing to change
                 else:
 
@@ -199,23 +233,28 @@ class Ternary(Steady):
             # TODO stop criteria should account for the length of the species to the
             # the node itself so count < nSp should be taken into account whatever is residual.
             #
-            self.debug_values.append(self.previous.copy())
+            if self.debug:
+                self.debug_values.append(self.previous.copy())
            
             self.residuals.append(residual)
             self.count += 1
 
-        # add the latest values simulated in the while loop
-        self.debug_values.append(values.copy())
+        if self.debug is True:
+            # add the latest values simulated in the while loop
+            self.debug_values.append(values.copy())
 
         # Need to set undefined values to NAs
         self.simulated[self.time] = np.array([values[k] 
-            for k in self.data.df.columns ], dtype=float).transpose()
+            for k in self.data.df.columns ], dtype=float)#.transpose()
+
         self.prev = {}
         self.prev[self.time] = np.array([self.previous[k] 
-            for k in self.data.df.columns ], dtype=float).transpose()
+            for k in self.data.df.columns ], dtype=float)#.transpose()
 
         mask = self.prev[self.time] != self.simulated[self.time]
         self.simulated[self.time][mask] = np.nan
+
+        self.simulated[self.time] = self.simulated[self.time].transpose()
 
         # set the non-resolved bits to NA
         # TODO
@@ -228,13 +267,6 @@ class Ternary(Steady):
         super(Ternary, self).plotsim(vmin=-1)
 
    
-   
-
-
-
-
-
-
 def accept_anything(x, axis=0):
     res = []
     for this in x:
@@ -249,18 +281,21 @@ def accept_anything(x, axis=0):
             res.append(0)
     res = np.array(res)
     res.reshape(x.shape[0],1)
-
     return res
 
 
 def consensus2(x):
-    # 5.75us
-    if all(x==1):
-        return 1
-    elif all(x==-1):
-        return -1
-    else:
-        return 0
+    res = []
+    for this in x:
+        if all(this==1):
+            res.append(1)
+        elif all(this==-1):
+            res.append(-1)
+        else:
+            res.append(0)
+    res = np.array(res)
+    res.reshape(x.shape[0],1)
+    return res
 
 def consensus_ternary(x):
     # 2.24us

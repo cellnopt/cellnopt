@@ -164,8 +164,6 @@ class Steady(CNOBase):
         # and an odd number of edges. 
         if reactions is None:
             reactions = self.model.buffer_reactions
-            #predecessors = self.predecessors.copy()
-            #self.number_edges = len(self.model.buffer_reactions)
         self.number_edges = len(reactions)
 
         # 10 % time here
@@ -224,7 +222,8 @@ class Steady(CNOBase):
             self.m1 = np.array([self.previous[k] for k in keys ], dtype=np.int16)
             self.m2 = np.array([values[k] for k in keys ], dtype=np.int16)
             #residual = bn.nansum(np.square(self.m1 - self.m2))
-            residual = np.sum(np.square(self.m1 - self.m2))
+            #residual = np.nansum(np.square(self.m1 - self.m2))
+            residual = np.nansum(np.square(self.m1 - self.m2))
 
 
             # TODO stop criteria should account for the length of the species to the
@@ -356,6 +355,7 @@ class Steady(CNOBase):
             self.score()
         t2 = time.time()
         print(str(t2-t1) + " seconds")        
+        return t2-t1
 
     def plotsim(self, fontsize=16, experiments=None, vmin=0, vmax=1):
         # This is for all experiments is experiments is None
@@ -418,7 +418,8 @@ class Steady(CNOBase):
         print("MSE= %s(caspo/cno with only 1 time)" % self.score())
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
 
-    def optimise(self, freq_stats=1, maxgen=200, cross=0.9, elitism=1, mutation=0.02, popsize=80, prior=[]):
+    def optimise(self, freq_stats=1, maxgen=200, cross=0.9, elitism=1, 
+            mutation=0.02, popsize=80, prior=[]):
 
         # This function is the evaluation function, we want
         # to give high score to more zero'ed chromosomes

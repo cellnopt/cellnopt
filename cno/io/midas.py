@@ -2028,7 +2028,21 @@ class XMIDAS(MIDASReader):
         S = diff_square.sum(level=level).sum(axis=1)
 
         if normed :
-            S /= len(self.experiments) * len(self.times)
+            S /= len(self.experiments) * len(self.signals) 
+        return S
+
+    def get_max_errors(self, level='time', normed=False):
+        """Returns max error possible
+
+        Should be below one once normalised but could be as low as 0.5 
+
+        """
+        diff = (self.df - (1-self.df.apply(lambda x: x.round(), axis=1)))
+        diff_square = diff.apply(lambda x: x**2, axis=1)
+        S = diff_square.sum(level=level).sum(axis=1)
+
+        if normed :
+            S /= len(self.experiments) * len(self.signals)
         return S
 
     def copy(self):
