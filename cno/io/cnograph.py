@@ -28,7 +28,12 @@ from functools import wraps
 import matplotlib
 import pylab
 import networkx as nx
-import pygraphviz as gv
+try:
+    import pygraphviz as gv
+except ImportError:
+    print("Warning:: Pygraphhviz not found")
+    pass
+
 import numpy as np
 from easydev import Logging, TempFile, DevTools
 
