@@ -1,10 +1,13 @@
 from cno.core.base import CNOBase
+from cno.core.results import BooleanResults
+from cno.core.models import BooleanModels
+from cno.misc.profiler import do_profile
+from cno.io.reactions import Reaction
+
 
 import pandas as pd
 import numpy as np
 import pylab
-from cno.misc.profiler import do_profile
-from cno.io.reactions import Reaction
 import time
 import bottleneck as bn
 from collections import defaultdict
@@ -33,31 +36,26 @@ class Steady(CNOBase):
 
         self.N = self.data.df.query('time==0').shape[0]
 
-        
-        self.results = self.data.df.copy()
-        self.results = self.results.query("time==@self.time")
+
+        self.results = BooleanResults()  # for time T1
+
+
+        #self.results = self.data.df.copy()
+        #self.results = self.results.query("time==@self.time")
 
         # ignore data of the edge [0:2]
         self.toflip = [x[0:2] for x in self.model.edges(data=True) if x[2]['link'] == '-']
 
         self.init(self.time)
 
-        # note that the order of the rows is experiments as defined in
-        # data.df not data.experiments
-        self.measures = {}
-        # FIXME No need for time zero but if so, need to re-order the experiments
-        #self.measures[0] = self.data.df.query("time==0").reset_index(drop=True).values
-        df = self.data.df.query("time==@self.time")
-        df = df.ix[self.data.cellLine]
-        df = df.ix[self.stimuli.index]
-        df = df.reset_index(drop=True).values
-        self.measures[self.time] = df
         
         self.buffering = True
 
         self.buffer = {}
         self.simulated = {}
         self.debug = True
+        self.counter = 0
+        self.length_buffer = 10000
 
     def init(self, time):
         # Here, we define the values of the stimuli and inhibitors
@@ -111,7 +109,16 @@ class Steady(CNOBase):
                 self._reac2pred[r] = (r, reac.lhs_species)
             else:
                 self._reac2pred[r] = (reac.rhs, reac.lhs_species)
-
+        # note that the order of the rows is experiments as defined in
+        # data.df not data.experiments
+        self.measures = {}
+        # FIXME No need for time zero but if so, need to re-order the experiments
+        #self.measures[0] = self.data.df.query("time==0").reset_index(drop=True).values
+        df = self.data.df.query("time==@self.time")
+        df = df.ix[self.data.cellLine]
+        df = df.ix[self.stimuli.index]
+        df = df.reset_index(drop=True).values
+        self.measures[self.time] = df
 
     def preprocessing(self, expansion=True, compression=True, cutnonc=True):
         self.model.midas = self.data
@@ -119,16 +126,6 @@ class Steady(CNOBase):
                 cutnonc=cutnonc)
         self.init(self.time)
         self.model.buffer_reactions = self.model.reactions
-
-    # now inside def simulate
-    #@do_profile()
-    def reactions_to_predecessors(self, reactions):
-        predecessors = defaultdict(collections.deque)
-        for r in reactions:
-            k,v = self._reac2pred[r]
-            predecessors[k].extend(v)
-        return predecessors
-
 
     #@do_profile()
     def simulate(self, tick=1, reactions=None):
@@ -177,7 +174,6 @@ class Steady(CNOBase):
         keys = self.values.keys()
         length_predecessors = dict([(node, len(predecessors[node])) for node in keys])
 
-
         #self._length_predecessors = length_predecessors
         # if there is an inhibition/drug, the node is 0
         values = self.values.copy()
@@ -208,7 +204,8 @@ class Steady(CNOBase):
                 if length_predecessors[node] == 0:
                     pass # nothing to change
                 else:
-                    dummy = np.array([values[x] if (x,node) not in self.toflip else 1 - values[x] for x in  predecessors[node]])
+                    dummy = np.array([values[x] if (x,node) not in self.toflip 
+                        else 1 - values[x] for x in  predecessors[node]])
                     values[node] = bn.nanmax(dummy,  axis=0)
 
                 # take inhibitors into account
@@ -418,8 +415,31 @@ class Steady(CNOBase):
         print("MSE= %s(caspo/cno with only 1 time)" % self.score())
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
 
-    def optimise(self, freq_stats=1, maxgen=200, cross=0.9, elitism=1, 
+    def optimise2(self, time=None, verbose=True):
+        assert len(self.data.times)>=2, "Must have at least 2 time points in the data"
+        time1 = self.time
+        if time is None:
+            self.time = self.data.times[2]
+        else:
+            self.time = time
+        self.init(time)
+        prior = list(self.results.results.best_bitstring) # best is the prior
+        self.optimise(prior=prior, verbose=verbose)
+
+        # reset to time1
+        self.init(time1)
+
+    def plot_errors2(self):
+        pass
+
+    def _optimise_gaevolve(self, freq_stats=1, maxgen=200, cross=0.9, elitism=1, 
             mutation=0.02, popsize=80, prior=[]):
+        """Example using the library gaevolve
+
+        This was an attempt at using an external library for the GA but it appears
+        thst is is slower than our implementation. Dont know why. Could be
+        their implementation. Could be the set of parameters.
+        """
 
         # This function is the evaluation function, we want
         # to give high score to more zero'ed chromosomes
@@ -455,12 +475,17 @@ class Steady(CNOBase):
 
         ga.evolve(freq_stats=freq_stats)
         ga._stats = self._ga_stats.copy()
+        #self.plotHistPopScore()
+        #self.plotPopScore(hold=hold)
+        #from pyevolve import Interaction
+        #Interaction.plotHistPopScore(self.ga.getPopulation())
         return ga
 
     def exhaustive(self):
         from cno.optimisers.binary_tools import permutations
         # create all 
         scores = []
+        sizes = []
         from easydev import progress_bar
         N = len(self.model.reactions)
         pb = progress_bar(2**N)
@@ -468,127 +493,110 @@ class Steady(CNOBase):
             self.simulate(this)
             scores.append(self.score())
             pb.animate(i, 0)
+            sizes.append(sum(this))
+        #self._fill_results()
+        self.scores = scores
+        self.sizes = sizes
         return scores
+
+    def parameters2reactions(self):
+        pass
+
+    def reactions2parameters(self):
+        pass
+
+    def prior2parameters(self, reactions_on=[], reactions_off=[]):
+        prior = [None] * len(self.model.reactions)
+        assert len(set(reactions_on).intersection(set(reactions_off))) == 0,\
+            "Error. Found reactions in both lists."
+        for this in reactions_on:
+            idx = self.model.reactions.index(this)
+            prior[idx] = 1
+        for this in reactions_off:
+            idx = self.model.reactions.index(this)
+            prior[idx] = 0
+        return prior
 
     #@do_profile()
     def eval_func(self, chromosome, prior=[]):
-        # TODO limnit the buffering ?
-        # add prior knowledge
-        # using string or tuple takes about the same time
+        """
 
-        #str_chrome = "".join((str(x) for x in chromosome))
-        # tuple seems faster
+        :param prior: a list of same length as chromosome made of 0/1/None
+
+        """
+        # TODO limnit the buffering ?
+        for i, this in enumerate(prior):
+            if this is not None:
+                chromosome[i] = this
+        
+        # using string or tuple takes about the same time but faster than a list
         str_chrome = tuple(chromosome)
 
-        if self.buffering and len(self.buffer)<10000 and str_chrome in self.buffer.keys():
+        if self.buffering and len(self.buffer)<self.length_buffer and str_chrome in self.buffer.keys():
             return self.buffer[str_chrome]
         else:
+            # 110 times faster using numpy array instead of a list...
             reactions = [x for c,x in zip(chromosome, self._np_reactions) if c==1]
             self.simulate(reactions=reactions)
             score = self.score()
-            if self.buffering is True and len(self.buffer)<10000:
+            if self.buffering is True and len(self.buffer)<self.length_buffer:
                 self.buffer[str_chrome] = score
             self.counter +=1
             return score
 
-    def optimise2(self, verbose=False, maxgens=500, show=False, maxtime=60):
+    def optimise(self, verbose=False, maxgens=500, show=False, reltol=0.1, 
+        maxtime=60, prior=[]):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
         ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, 
-                maxgens=maxgens, maxtime=maxtime)
+                maxgens=maxgens, maxtime=maxtime, reltol=reltol)
+
         def eval_func_in(x):
-            return self.eval_func(x)
+            return self.eval_func(x, prior=prior)
+
         self.counter = 0
         ga.getObj = eval_func_in
         ga.run(show=show)
         self.ga = ga
+        self._fill_results()
         return ga
 
-
-def optimise2(pkn, data):
-    from PyGMO.problem import base
-    from PyGMO import algorithm, island
-
-    class problem(base):
-        def __init__(self, dim=10):
-            super(problem,self).__init__(dim)
-            self.set_bounds(0,1)
-            self.__dim = dim
-
-        def _objfun_impl(self, chromosome):
-
-            reactions = [x for c,x in zip(chromosome, self.reactions) if c==1]
-            N = len(self.reactions)
-            reactions = [self.reactions[i] for i in range(0,N) if chromosome[i] == 1]
-            print(reactions)
-            print(self.steady)
-            self.steady.simulate(reactions=reactions)
-            #print(len(reactions), self.score())
-            return (self.steady.score(),)
-        def human_readable_extra(self):
-            return "\n\t Problem dimension: " + str(self.__dim)
-
-    prob = problem(58)
-    prob.__dict__['steady'] = Steady(pkn, data)
-    prob.__dict__['reactions'] = prob.steady.model.reactions[:]
-    return prob
-    algo = algorithm.bee_colony(gen=500)
-    isl = island(algo, prob, 58)
-    isl.evolve(1);
-    isl.join()
-    return isl
+    def _fill_results(self):
+        from easydev import AttrDict
+        res = AttrDict(**self.ga.results)
 
 
+        results = pd.DataFrame(self.ga.results)
+        columns_int = ['Generation', 'Stall_Generation']
+        columns_float = ['Best_score', 'Avg_Score_Gen', 'Best_Score_Gen', 'Iter_time']
+        results[columns_int] = results[columns_int].astype(int)
+        results[columns_float] = results[columns_float].astype(float)
 
 
-class GA(object):
+        results = {
+                'best_score': res.Best_score,
+                'best_bitstring': res.Best_bitString[-1],
+                'all_scores': self.ga.popTolScores,
+                'all_bitstrings': self.ga.popTol,
+                'reactions': self.model.reactions,
+                #'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
+                'results': results,
+                #'models': models,
+                #'stimuli': self.session.stimuli.copy(),
+                #'inhibitors': self.session.inhibitors.copy(),
+                #'species': self.session.species,
+        }
 
-    def __init__(self, ga):
-        pass
-        # set self.ga = output of Steady.optimise()
-        self.ga = ga
+        results['pkn'] = self.pknmodel
+        results['midas'] = self.data
+        #self.results.models = models
+        all_bs = self.ga.popTol
+        df = pd.DataFrame(all_bs, columns=self.model.reactions)
+        models = BooleanModels(df)
+        models.scores = results['all_scores']
 
-
-    def plots(self, hold=False):
-        self.plotHistPopScore()
-        self.plotPopScore(hold=hold)
-
-    def plotHistPopScore(self):
-        pylab.figure(1)
-        pylab.clf()
-        from pyevolve import Interaction
-        Interaction.plotHistPopScore(self.ga.getPopulation())
-
-    def plotPopScore(self, hold=False):
-        pylab.figure(2)
-        if hold is False:
-            pylab.clf()
-        # this is the last population/generation.
-        # from pyevolve import Interaction
-        #Interaction.plotPopScore(self.ga.getPopulation())
-        pylab.subplot(2,1,1)
-        pylab.plot(self.ga._stats['ave'])
-        pylab.xlim([0,120])
-        pylab.grid(True)
-        pylab.subplot(2,1,2)
-        pylab.plot(self.ga._stats['min'])
-        pylab.grid(True)
-        pylab.xlim([0,120])
-
-
-
-
-
-
-
-
-@do_profile()
-def test():
-    from cno import cnodata
-    s = Steady(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-    s.test()
-#test()
-
+        self.results.results = results
+        self.results.models = models
 
 
 
