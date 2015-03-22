@@ -27,7 +27,28 @@ __all = ["Models", "BooleanModels", "DTModels", "FuzzyModels", "CompareModels"]
 
 
 class Models(object):
+    """Data structure to store models.
+
+    Models are stored in dataframes. Columns will hold the reactions.
+
+
+    """
     def __init__(self, data, reacID=None, index_col=None, verbose=True):
+        """.. rubric:: constructor
+
+        :param data: could be a string to read a file (CSV). The CSV header 
+            should contain the reaction name. First column is not expected 
+            to be found. Note, however that :param:`index_col` may be used.
+            The input can also be a dataframe (column names being the reactions)
+            set to 0/1. The input can also be an instance of :class:`Models`.
+        :param list reacID: if provided, columns are renamed using this list
+        :param index_col:
+        :param bool verbose:
+
+        Reaction names may contain a symbol indicating the logical ANDs. This
+        should be "^" character.
+
+        """
         self.verbose = verbose
         # FIXME interpret the first columns automatically ?
         if isinstance(data, str):
@@ -71,14 +92,15 @@ class Models(object):
                 if self.verbose:
                     print('Skipping column %s (not valid reaction ?)' % this)
                 non_reactions.append(this)
-        self.non_reactions = non_reactions
-        self.df_non_reactions = self.df[non_reactions].copy()
+        #self.non_reactions = non_reactions
+        #self.df_non_reactions = self.df[non_reactions].copy()
 
     def get_average_model(self):
         """Returns the average model (on each reaction)"""
         return self.df.mean(axis=0)
 
     def to_csv(self, filename):
+        """Exports the dataframe to a CSV file"""
         self.df.to_csv(filename)
 
     def to_sif(self, filename=None):
@@ -102,6 +124,9 @@ class Models(object):
         # make sure the columns are ordered similarly
         df2 = df2[df1.columns]
         return all(df1.sort() == df2.sort())
+
+    def __len__(self):
+        return len(self.df)
 
 
 class FuzzyModels(Models):
@@ -236,9 +261,6 @@ class BooleanModels(Models):
         df = pd.concat([self.df, other.df])
         df.drop_duplicates(inplace=True)
         return Models(df)
-
-    def __len__(self):
-        return len(self.df)
 
     def __str__(self):
         txt = "Models contains {0} rows".format(len(self))
