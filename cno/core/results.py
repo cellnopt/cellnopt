@@ -79,6 +79,11 @@ class BooleanResults(Results):
         df['size'] = self.sizes
         return df
 
+    def plot_mse_grouped_by_size(self):
+        df = pd.DataFrame({'sizes': self.sizes, 'scores':self.scores}
+        df.groupby('sizes').aggregate('mean').plot()
+
+
     def hist2d_scores_vs_model_size(self, bins=None, cmap='gist_heat_r', 
             fontsize=16, contour=False, Nlevels=10):
         df = self._get_scores_vs_model_size_df()
