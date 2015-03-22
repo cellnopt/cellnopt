@@ -332,3 +332,13 @@ class GABinary(GA):
         ylabel('Best Score compared to the population average and std')
 
 
+
+
+
+class GADiscrete(GABinary):
+
+        def __init__(self):
+            pass
+
+
+        #Pop3[MutProba]<-(sample.int(dim(paramsList$type2Funs)[1],length(Pop3[MutProba]),replace = TRUE)) - 1
