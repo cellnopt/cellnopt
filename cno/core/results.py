@@ -80,7 +80,7 @@ class BooleanResults(Results):
         return df
 
     def plot_mse_grouped_by_size(self):
-        df = pd.DataFrame({'sizes': self.sizes, 'scores':self.scores}
+        df = pd.DataFrame({'sizes': self.sizes, 'scores':self.scores})
         df.groupby('sizes').aggregate('mean').plot()
 
 
