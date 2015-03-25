@@ -103,6 +103,7 @@ class GABinary(GA):
     #@do_profile()
     def run(self, show=False):
         t0 = time.time()
+        start_time = t0
         self.stop = False
 
         import matplotlib.animation as animation
@@ -218,8 +219,8 @@ class GABinary(GA):
             _tolbs = numpy.where(self._scores < self._scores[-1] + _tolscore)[0]
             self.info("Generation %s: best score=%s (stall generation: %s)" % (self.g, self.bestobj, self.results['Stall_Generation'][-1]))
 
-            if t1 - t0 > self.maxtime:
-                self.info('stopping because time %s exceeds maxtime=%s' % (t1-t0,self.maxtime))
+            if t1 - start_time > self.maxtime:
+                self.info('stopping because time %s exceeds maxtime=%s' % (t1-start_time, self.maxtime))
                 self.stop = True
             if self.stallgen > self.stallgenmax:
                 self.stop = True

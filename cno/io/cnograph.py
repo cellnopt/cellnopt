@@ -31,7 +31,8 @@ import networkx as nx
 try:
     import pygraphviz as gv
 except ImportError:
-    print("Warning:: Pygraphhviz not found")
+    print("Warning:: Pygraphviz not found")
+
     pass
 
 import numpy as np

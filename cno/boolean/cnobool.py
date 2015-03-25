@@ -131,7 +131,7 @@ class CNObool(CNOBase):
 
 
         # to be retrieved inside Python code
-        best_bitstring = res$bString
+        """best_bitstring = res$bString
         best_score = res$bScore
         all_scores = res$stringsTolScores
         all_bitstrings = res$stringsTol
@@ -141,7 +141,7 @@ class CNObool(CNOBase):
         inhibitors = as.data.frame(cnolist@inhibitors)
         species = colnames(cnolist@signals[[1]])
         optim1 = T
-
+        """
         results.columns = [x.strip() for x in results.columns]
 
         columns_int = ['Generation', 'Stall_Generation']
