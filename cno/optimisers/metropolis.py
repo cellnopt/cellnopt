@@ -19,6 +19,8 @@ class MH(Diagnostics):
         self.N = N
         
 
+        self._buffer = {}
+
     def neighbour_function(self, ):
         pass
 
@@ -101,12 +103,21 @@ class MH(Diagnostics):
         results['scores'].append(prev_score)
         results['parameters'].append(prev_bs)
 
-
         from easydev import progress_bar
         pb = progress_bar(self.N)
+
+
         for i in range(0, self.N):
 
+
             proposal_parameter = self.swaps(best_parameters, nswap)
+
+            #tup_param = tuple(proposal_parameter)
+            #if tup_param in self._buffer.keys():
+            #    proposal_score = self._buffer[tup_param]
+            #else:
+            #    proposal_score = eval_func(proposal_parameter)
+            #    self._buffer[tup_param] = proposal_score
             proposal_score = eval_func(proposal_parameter)
 
             alpha = prev_score / proposal_score # best score is the smallests one

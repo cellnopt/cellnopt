@@ -162,6 +162,7 @@ class CNOBase(Logging):
         m = self._model.copy()
         m.set_edge_attribute('opt', opt)
         m.plot(edge_attribute='opt', cmap='gray_r', show=show, filename=filename)
+        return m
 
     def _reac_cnor2cno(self, reactions):
         # CNOR ands are encoded with +

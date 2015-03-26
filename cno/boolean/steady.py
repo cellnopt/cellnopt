@@ -126,6 +126,8 @@ class Steady(CNOBase):
                 cutnonc=cutnonc)
         self.init(self.time)
         self.model.buffer_reactions = self.model.reactions
+        # we should be using _model from the beginning?
+        self._model = self.model
 
     #@do_profile()
     def simulate(self, tick=1, reactions=None):
@@ -499,8 +501,9 @@ class Steady(CNOBase):
         self.sizes = sizes
         return scores
 
-    def parameters2reactions(self):
-        pass
+    def parameters2reactions(self, chromosome):
+        reactions = [x for c,x in zip(chromosome, self._np_reactions) if c==1]
+        return reactions
 
     def reactions2parameters(self):
         pass
@@ -545,11 +548,21 @@ class Steady(CNOBase):
             return score
 
     def optimise(self, verbose=False, maxgens=500, show=False, reltol=0.1, 
-        maxtime=60, prior=[]):
+        maxtime=60, prior=[], guess=None, reuse_best=True):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
         ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, 
                 maxgens=maxgens, maxtime=maxtime, reltol=reltol)
+        # TODO: check length of init guess
+        if reuse_best is True:
+            try:
+                guess = self.results.results.best_bitstring
+            except:
+                pass
+
+        if guess is not None:
+            ga.guess = guess
+            ga.init()
 
         def eval_func_in(x):
             return self.eval_func(x, prior=prior)

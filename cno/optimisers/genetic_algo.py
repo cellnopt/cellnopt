@@ -61,7 +61,10 @@ class GABinary(GA):
         self.stallgenmax = kargs.get('stallgenmax',100)
 
 
+        self.guess = [1] * self.blength
+
         self.init()
+
 
     def init(self):
 
@@ -74,7 +77,7 @@ class GABinary(GA):
                                                           int(self.blength))
         self.Pop = self.Pop.astype('int64')
         # copy the initBstring in the first row
-        self.Pop[0,:] = [1] * self.blength
+        self.Pop[0,:] = self.guess
 
         # we will start with the first column
         self.bestbit = self.Pop[0,:]
