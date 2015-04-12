@@ -30,6 +30,7 @@ from cno.io import midas_normalisation as normalisation
 
 from easydev import DevTools
 from cno.misc import CNOError
+from cno.misc.profiler import do_profile
 
 
 __all__ = ["XMIDAS", "Trend", 'MIDASReader']
@@ -179,7 +180,9 @@ class MIDASReader(MIDAS):
                 txt = "More than 1 celline was found.\n"
                 txt += "You must select one amongst: {}".format([this.split(":")[1] for this in cellLines])
                 txt += "\n Use the keyword cellLine (note the capital L). e.g. cellLine='HepG2'"
-                raise CNOError(txt)
+                self.logging.warning(txt)
+                self.cellLine = celltype_names[0]
+                #raise CNOError(txt)
             else:
                 # we could remove columns and rows where cell type is not correct.
                 # but we are going to do it in the _init so that a user can
@@ -233,7 +236,6 @@ class MIDASReader(MIDAS):
         for label in set(labels):
             if counter[0] != counter[label]:
                 self._missing_time_zero = True
-
     def _init(self):
         """Builds the dataframe"""
         # select only data that matches the cell line choice made by the user.
@@ -247,7 +249,7 @@ class MIDASReader(MIDAS):
         # and remove all column with the CellLine keyword now
         _data = _data[ [col for col in _data.columns if "CellLine" not in col]]
 
-        #drop ID columns if any
+        # drop ID columns if any
         self._data_raw = _data.copy()
         _data = _data[ [col for col in _data.columns if col.startswith("ID")==False]]
 
@@ -255,10 +257,14 @@ class MIDASReader(MIDAS):
         df_tr = _data[[this for this in _data.columns if this.startswith("TR")]]
         df_da = _data[[this for this in _data.columns if this.startswith("DA")]]
         df_dv = _data[[this for this in _data.columns if this.startswith("DV")]]
+        
         # let us gather experiments and replace empty fields with zeros ??
-        # FIXME filling NA with zero is it correct ?
+        # FIXME filling NA with zero is it correct ? seems so 
+        # DATA should not be changed to zero though
         value_experiments = _data[df_tr.columns].copy()
-        value_experiments.replace("NaN", 0, inplace=True)
+        # This takes 40% of the time!
+
+        value_experiments = value_experiments.fillna(0)
 
         value_signals = _data[df_dv.columns].as_matrix()
         value_times = _data[df_da.columns]
@@ -270,28 +276,37 @@ class MIDASReader(MIDAS):
             for this in  self._experiments.index]
 
         # FIXME: already done above ...seemed required for time0_to_duplicate test
-        self._experiments.replace("NaN", 0, inplace=True)
+        # takes 35% of the time
+        
+        self._experiments = self._experiments.fillna(0)
         # FIXME this part is slow (for loop)
         # build the tuples that will be used by the MultiIndex dataframe
         tuples = []
 
-        # This is a slow part 80 % of the initialisation.
+        self._values_exps = value_experiments
+        N = len(value_experiments)
+        map_index = dict(zip(value_experiments.index, range(0,N)))
+
         for ix in _data.index:
             # 1. find name of the experiment
-            this_exp = value_experiments.ix[ix]
+            this_exp = value_experiments.values[map_index[ix]]
             # scan unique experiments and figure out which one is this_exp
             exp_name = None
-            for this_unique_exp in self._experiments.iterrows():
-                if all(this_unique_exp[1] == this_exp):
-                    #[1:] to ignore the cell line TODO
+            count = 0
+            for this_unique_exp in iter(self._experiments.values):
+                if all(this_unique_exp == this_exp):
                     # found it
-                    exp_name = this_unique_exp[0]
+                    exp_name = self._experiments.index[count]
+                    count += 1
                     # if so, not need to look for others
+                    #temp_df.drop(exp_name, inplace=True)
                     break
+                else:
+                    count+=1
             assert exp_name is not None
 
             # 2. times
-            time = set(value_times.ix[ix])
+            time = set(value_times.values[map_index[ix]])
             assert len(time) == 1
             time = list(time)[0]
             tuples.append((self.cellLine, exp_name, time))
@@ -414,6 +429,9 @@ class MIDASReader(MIDAS):
         if self.df.max(skipna=True).max(skipna=True) > 1:
             self.logging.warning("values larger than 1. " +
             "You may want to normalise/scale the data")
+        
+        self.sim = self.df.copy() * 0
+        self.errors = self.df.copy() * 0
 
     def _add_time_zero(self):
         # copy the dataframe with data assuming time0 does not exsits
@@ -1306,6 +1324,51 @@ class XMIDAS(MIDASReader):
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize", 10))
         pylab.gca().set_xticks(xt)
 
+
+    @do_profile()
+    def plot2(self, logx=False, logy=False):
+        # works only if there is at most one stim per experiment
+
+        trend = Trend()
+        assert all(self.experiments.Stimuli.sum(axis=1) <= 1)
+        pylab.clf()
+        nSignals = len(self.df.columns)
+        nStimuli = len(self.experiments.Stimuli.columns)
+        nInhibitors = len(self.experiments.Inhibitors.columns)
+        nTimes = len(self.times)
+        # How many drug per stimuli at max ?
+
+        # Need to find unique combination of stimuli...
+        for i, signal in enumerate(self.df.columns):
+            # ... and loop here over the different combi
+            for j, stimuli in enumerate(self.experiments.Stimuli.columns):
+                pylab.subplot(nStimuli, nSignals, j*nSignals+1+i)
+                # add the signal name on top
+                if j == 0:
+                    pylab.title(self.df.columns[i])
+                if i == 0:
+                    pylab.ylabel(stimuli)
+            
+                df1 = self.experiments.Stimuli.query('%s == 1' % stimuli)
+                for k,inhibitor in enumerate(self.experiments.Inhibitors.columns):
+
+                    df2 = self.experiments.Inhibitors.query('%s == 1' % inhibitor)
+                    experiment = df1.index.intersection(df2.index)[0]
+
+                    data = self.df.ix[self.cellLine].ix[experiment][signal] # .values
+                    trend.set(data)
+                    color = trend.get_bestfit_color()
+                    xt = np.array(self.times) / float(max(self.times)) + k
+                    pylab.plot(xt, data.values, '-o', color=color)
+                    pylab.fill_between(xt, data, 0,
+                                           color=color, alpha=trend.alpha)
+                    pylab.axvline(k+1,color='k', alpha=0.2)
+                pylab.xticks([])
+                pylab.yticks([])
+                pylab.ylim([0, pylab.ylim()[1]])
+                pylab.grid(True)
+
+    #@do_profile()
     def plot_data(self, logx=False, color="black", **kargs):
         """plot experimental curves
 
@@ -1498,6 +1561,7 @@ class XMIDAS(MIDASReader):
         except:
             pass
 
+    #@do_profile()
     def plot_layout(self, cmap="heat",
         rotation=90, colorbar=True, vmax=None, vmin=0.,
         mode="data", **kargs):
@@ -1509,6 +1573,7 @@ class XMIDAS(MIDASReader):
         :param vmax:
         :param vmin:
         :param mode:
+        :param int fignum: figure number 
 
         .. plot::
             :width: 80%
@@ -1522,6 +1587,10 @@ class XMIDAS(MIDASReader):
         .. seealso:: :meth:`plot`, :meth:`plot_layout`, :meth:`plot_sim_data`
 
         """
+
+        # get the number (default figure or otherwise one defined by the user)
+        fignum = kargs.get('fignum', pylab.gcf().number)
+
         # Get the cmap
         if mode == "data":
             #should be one with zero being white
@@ -1541,7 +1610,7 @@ class XMIDAS(MIDASReader):
         gs = pylab.GridSpec(10, 10,
                 wspace=self._params['plot_layout_space'],
                 hspace=self._params['plot_layout_space'])
-        fig = pylab.figure(num=1, figsize=(10, 6))
+        fig = pylab.figure(num=fignum, figsize=(10, 6))
         shift_top = self._params['plot_layout_shifttop']
         layout_width = 7
         w1 = layout_width + 1
@@ -1722,6 +1791,7 @@ class XMIDAS(MIDASReader):
         """Plot data contained in :attr:`experiment` and :attr:`df` dataframes.
 
         :param string mode: must be either "mse" or "data" (defaults to data)
+        :param fignum: figure number
 
         if mode is 'mse', calls also plot_layout, plot_data and plot_sim_data
         else calls plot_layout and plot_data
@@ -1735,11 +1805,10 @@ class XMIDAS(MIDASReader):
             m.plot(mode="mse")
 
         """
-        pylab.clf()
         if mode == "mse":
-            if self.df.min().min()<0:
+            if self.df.min().min() < 0:
                 self.logging.warning("values are expected to be positive")
-            if self.df.max().max()>1:
+            if self.df.max().max() > 1:
                 self.logging.warning("values are expected to be normalised")
             kargs['mode'] = 'mse'
             self.plot_layout(**kargs)
@@ -2492,7 +2561,14 @@ class Trend(object):
         corrs = self._get_correlation(self.normed_values)
         keys,values = (corrs.keys(), corrs.values())
         # M  = max(values)
-        res = keys[np.argmax(values)]
+        values = [x[0] for x in values]
+        if np.isnan(np.nanmax(values)):
+            return 'purple'
+        else:
+            res = keys[np.nanargmax(values)]
+
+        #except:
+        #    res = keys[np.argmax(values)]
 
         if "constant" in res:
             return "black"
