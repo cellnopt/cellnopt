@@ -5,7 +5,7 @@ Created on Mon Nov  3 16:40:58 2014
 @author: cokelaer
 """
 from cno.io.midas import XMIDAS
-
+import pylab
 
 class MultiMIDAS(object):
     """Data structure to store multiple instances of MIDAS files
@@ -16,7 +16,7 @@ class MultiMIDAS(object):
 
     .. doctest::
 
-        >>> mm = MultiMIDAS(cnodata("EGFR-ErbB_PCB2009.csv"))
+        >>> mm = MultiMIDAS(cnodata("MD-EGFR-ErbB_PCB2009.csv"))
         >>> mm.cellLines
         ['HepG2', 'PriHu']
         >>> mm["HepG2"].namesCues
@@ -36,8 +36,8 @@ class MultiMIDAS(object):
 
         """
         self._midasList = []
-        self._names = []
-        if filename:
+        self._cellLines = []
+        if filename is not None:
             self.readMIDAS(filename)
 
     def addMIDAS(self, midas):
@@ -51,11 +51,11 @@ class MultiMIDAS(object):
             >>> mm.addMIDAS(m)
 
         """
-        if midas.celltypeName not in self._names:
-            self._midasList.append(midas)
-            self._names.append(midas.celltypeName)
+        if midas.cellLines not in self._cellLines:
+            self._midasList.append(midas.copy())
+            self._cellLines.append(midas.cellLine)
         else:
-            raise ValueError("midsa with same celltype already in the list")
+            raise ValueError("midas with same celltype already in the list")
 
     def readMIDAS(self, filename):
         """read MIDAS file and extract individual cellType/cellLine
@@ -67,15 +67,17 @@ class MultiMIDAS(object):
 
         :param str filename: a valid MIDAS file containing any number of cellLines.
 
-
         """
-        m = XMIDAS(filename)
-        
-        self.addMIDAS(m)
-
+        try:
+            m = XMIDAS(filename)
+        except:
+            pass
+        for cellLine in m.cellLines:
+            m.cellLine = cellLine
+            self.addMIDAS(m)
 
     def _get_cellLines(self):
-        names = [x.celltypeName for x in self._midasList]
+        names = [x.cellLine for x in self._midasList]
         return names
     cellLines = property(_get_cellLines,
         doc="return names of all cell lines, which are the MIDAS instance identifier ")
@@ -96,3 +98,4 @@ class MultiMIDAS(object):
             figure(i+1)
             clf()
             m.plot()
+            pylab.title('%s' % m.cellLine, fontsize=16)
