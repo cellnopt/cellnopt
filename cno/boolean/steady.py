@@ -48,7 +48,6 @@ class Steady(CNOBase):
 
         self.init(self.time)
 
-        
         self.buffering = True
 
         self.buffer = {}
@@ -56,6 +55,8 @@ class Steady(CNOBase):
         self.debug = True
         self.counter = 0
         self.length_buffer = 10000
+
+        self.sizeFac = 1e-4
 
     def init(self, time):
         # Here, we define the values of the stimuli and inhibitors
@@ -70,8 +71,8 @@ class Steady(CNOBase):
         for node in self.model.nodes():
             # Do we really want NAs ? probably not. fold changes are by
             # definitiotn 0
-            #self.values[node] = np.array([np.nan for x in range(0,self.N)])
-            self.values[node] = np.array([0 for x in range(0,self.N)])
+            self.values[node] = np.array([np.nan for x in range(0,self.N)])
+            #self.values[node] = np.array([0 for x in range(0,self.N)])
 
         for this in self.stimuli_names:
             self.values[this] = self.stimuli[this].values.copy()
@@ -119,6 +120,7 @@ class Steady(CNOBase):
         df = df.ix[self.stimuli.index]
         df = df.reset_index(drop=True).values
         self.measures[self.time] = df
+        self.inhibitors_failed = []
 
     def preprocessing(self, expansion=True, compression=True, cutnonc=True):
         self.model.midas = self.data
@@ -144,8 +146,9 @@ class Steady(CNOBase):
 
         # what about a species that is both inhibited and measured
         testVal = 1e-3
+        import copy
+        values = copy.deepcopy(self.values)
 
-        values = self.values.copy()
 
         if self.debug:
             self.debug_values = []
@@ -211,7 +214,7 @@ class Steady(CNOBase):
                     values[node] = bn.nanmax(dummy,  axis=0)
 
                 # take inhibitors into account
-                if node in self.inhibitors_names:
+                if node in self.inhibitors_names and node not in self.inhibitors_failed:
                     # if inhibitors is on (1), multiply by 0
                     # if inhibitors is not active, (0), does nothing.
                     values[node] *= 1 - self.inhibitors[node].values
@@ -249,6 +252,9 @@ class Steady(CNOBase):
         mask = self.prev[self.time] != self.simulated[self.time]
         self.simulated[self.time][mask] = np.nan
 
+
+
+
         self.simulated[self.time] = self.simulated[self.time].transpose()
 
         # set the non-resolved bits to NA
@@ -277,7 +283,7 @@ class Steady(CNOBase):
         nDataP = N # N points excluding the NA if any
         #print(N)
 
-        #NAPen = NAFac * sum(self.simulated.isnull())
+        #NAPen = NAFac * sum(self.simulated[self.time].isnull())
 
         # nInTot: number of inputs of expanded miodel
         # nInputs: number of inputs of cut model
@@ -291,7 +297,7 @@ class Steady(CNOBase):
         # TODO AND gates should count for 1 edge
         nInputs = self.number_edges
 
-        sizePen = nDataPts * sizeFac * nInputs / float(nInTot)
+        sizePen = nDataPts * self.sizeFac * nInputs / float(nInTot)
         #self.debug("nDataPts=%s" % nDataPts)
         #self.debug("nInputs=%s" % nInputs)
         #self.debug("nInTot=%s" % nInTot)
@@ -304,9 +310,15 @@ class Steady(CNOBase):
         #self.debug("Nna=%s"% Nna)
         #self.debug("nDataP=%s"% nDataP)
 
-        deviationPen  /= float(nDataP)
         #self.debug("deviationPen=%s"% deviationPen)
-        S = deviationPen + sizePen / nDataP
+        if nDataP !=0:
+            deviationPen  /= float(nDataP)
+            S = deviationPen + sizePen / nDataP
+        else:
+
+            S = deviationPen
+        self._na_contrib  = Nna/float(N)
+        S += Nna/float(N)
         return S
 
     def get_df(self):
@@ -412,7 +424,7 @@ class Steady(CNOBase):
         X1['cell'] = [self.data.cellLine] * N
         X1['experiment'] = self.data.experiments.index
         X1.set_index(['cell', 'experiment', 'time'], inplace=True)
-        self.data.sim.ix[X1.index] = X1
+        #self.data.sim.ix[X1.index] = X1.fillna(2)
         self.data.plot(mode='mse')
         print("MSE= %s(caspo/cno with only 1 time)" % self.score())
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
@@ -505,8 +517,9 @@ class Steady(CNOBase):
         reactions = [x for c,x in zip(chromosome, self._np_reactions) if c==1]
         return reactions
 
-    def reactions2parameters(self):
-        pass
+    def reactions2parameters(self, reactions):
+        reactions_off = [x for x in self.model.reactions if x not in reactions]
+        return self.prior2parameters(reactions, reactions_off)
 
     def prior2parameters(self, reactions_on=[], reactions_off=[]):
         prior = [None] * len(self.model.reactions)
@@ -547,12 +560,14 @@ class Steady(CNOBase):
             self.counter +=1
             return score
 
-    def optimise(self, verbose=False, maxgens=500, show=False, reltol=0.1, 
-        maxtime=60, prior=[], guess=None, reuse_best=True):
+    def optimise(self, verbose=False, maxgens=500, show=False, reltol=0.1,
+            pmutation=0.5,
+        maxtime=60, elitism=5, prior=[], guess=None, reuse_best=True, maxstallgen=100):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
         ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, 
-                maxgens=maxgens, maxtime=maxtime, reltol=reltol)
+                maxgens=maxgens, maxtime=maxtime, reltol=reltol,
+                maxstallgen=maxstallgen, elitism=elitism, pmutation=pmutation)
         # TODO: check length of init guess
         if reuse_best is True:
             try:
@@ -561,6 +576,7 @@ class Steady(CNOBase):
                 pass
 
         if guess is not None:
+            print('settting guess')
             ga.guess = guess
             ga.init()
 
@@ -611,6 +627,36 @@ class Steady(CNOBase):
         self.results.results = results
         self.results.models = models
 
+    def refine(self, show=True, inplace=False, threshold=1e-4):
+        self.best_bitstring = list(self.results.results.best_bitstring)
+        self.best_score = self.results.results.best_score[-1]
 
+        reactions = self.parameters2reactions(self.best_bitstring)
 
+        scores = {}
+        for reac in reactions:
+            pruned_reactions = reactions[:]
+            pruned_reactions.remove(reac)
+            self.simulate(reactions=pruned_reactions)
+            scores[reac] = self.score()
+
+        #if inplace is True:
+        for reac in scores.keys():
+            if scores[reac] <= self.best_score + threshold:
+                reactions.remove(reac)
+
+        pylab.clf()
+        pylab.axhline(self.best_score)
+        pylab.axhline(self.best_score+ threshold)
+        pylab.plot(scores.values(), 'or')
+        N = len(scores.keys())
+        pylab.xticks(range(0, N), scores.keys(), rotation=90)
+        
+        self.simulate(reactions=reactions)
+        score = self.score()
+        print(score)
+        pylab.axhline(score, color='k', lw=2 , ls='--')
+        
+
+        return scores, reactions
 
