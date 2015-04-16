@@ -17,7 +17,30 @@ import collections
 
 class Steady(CNOBase):
     """Naive implementation of Steady state to help in 
-    designing the API"""
+    designing the API
+    
+    
+    
+    
+    Here is the algorithm:
+
+    In CellNOptR, FCs are normalised between -1 and 1. Then, FC are transformed into 
+    values between 0 and 1 (even negative !!) 
+    In order to recognise the negative values, the X0 values is set to 1 and the negative
+    FC is transformed into 1 - FC (i.e., a large FC .
+    This is obviously important and is reflected in the mathematical equations
+    set on the edges: if a link is an inhibitory link then the output f(x) = 1 - x.
+
+    If values are kept as -1, 0, 1, the boolean formalism cannot be implemented.
+
+    The time X0 should be the control that is where FC is zero. For positive FC, X0 is zero.
+    For negative FC, X0 is 1. This can be simulated by setting the inhibitors and stimuli 
+    to zero. 
+
+    
+    
+    
+    """
     
     def __init__(self, pknmodel, data, verbose=True):
         super(Steady, self).__init__(pknmodel, data, verbose)
@@ -71,8 +94,8 @@ class Steady(CNOBase):
         for node in self.model.nodes():
             # Do we really want NAs ? probably not. fold changes are by
             # definitiotn 0
-            self.values[node] = np.array([np.nan for x in range(0,self.N)])
-            #self.values[node] = np.array([0 for x in range(0,self.N)])
+            #self.values[node] = np.array([np.nan for x in range(0,self.N)])
+            self.values[node] = np.array([0 for x in range(0,self.N)])
 
         for this in self.stimuli_names:
             self.values[this] = self.stimuli[this].values.copy()
@@ -317,8 +340,8 @@ class Steady(CNOBase):
         else:
 
             S = deviationPen
-        self._na_contrib  = Nna/float(N)
-        S += Nna/float(N)
+        #self._na_contrib  = Nna/float(N)
+        #S += Nna/float(N)
         return S
 
     def get_df(self):
