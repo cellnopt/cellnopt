@@ -234,7 +234,12 @@ class Steady(CNOBase):
                 else:
                     dummy = np.array([values[x] if (x,node) not in self.toflip 
                         else 1 - values[x] for x in  predecessors[node]])
-                    values[node] = bn.nanmax(dummy,  axis=0)
+                    try:
+                        values[node] = bn.nanmax(dummy,  axis=0)
+                    except:
+                        # in some simple cases, we must reset the type. why.
+                        values[node] = bn.nanmax(dummy.astype('int'), axis=0)
+                        
 
                 # take inhibitors into account
                 if node in self.inhibitors_names and node not in self.inhibitors_failed:
@@ -447,10 +452,12 @@ class Steady(CNOBase):
         X1['cell'] = [self.data.cellLine] * N
         X1['experiment'] = self.data.experiments.index
         X1.set_index(['cell', 'experiment', 'time'], inplace=True)
-        #self.data.sim.ix[X1.index] = X1.fillna(2)
+        self.data.sim.ix[X1.index] = X1 #.fillna(2)
         self.data.plot(mode='mse')
         print("MSE= %s(caspo/cno with only 1 time)" % self.score())
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
+        m = self.data.copy()
+        return m
 
     def optimise2(self, time=None, verbose=True):
         assert len(self.data.times)>=2, "Must have at least 2 time points in the data"
@@ -583,6 +590,7 @@ class Steady(CNOBase):
             self.counter +=1
             return score
 
+    #@do_profile()
     def optimise(self, verbose=False, maxgens=500, show=False, reltol=0.1,
             pmutation=0.5,
         maxtime=60, elitism=5, prior=[], guess=None, reuse_best=True, maxstallgen=100):

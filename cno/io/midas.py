@@ -645,7 +645,9 @@ class XMIDAS(MIDASReader):
                 'plot_layout_shifttop': 1,
                 'plot_colorbar_N': 20,
                 'plot_orientation_perturbation_label': 90,
-                'plot_data_markersize': 5
+                'plot_data_markersize': 5,
+                'plot_sim_lw': 4,
+                'plot_sim_color':'blue',
                 }
         from easydev import AttrDict
         self._params = AttrDict(**self._params)
@@ -1258,8 +1260,8 @@ class XMIDAS(MIDASReader):
             pylab.colorbar()
         return corr
 
-    def plot_sim_data(self, markersize=3, logx=False, linestyle="--", lw=1,
-            color="b", marker="x", **kargs):
+    def plot_sim_data(self, markersize=3, logx=False, linestyle="--", 
+            marker="x", **kargs):
         """plot experimental curves
 
         .. plot::
@@ -1273,6 +1275,9 @@ class XMIDAS(MIDASReader):
             >>> m.plot_sim_data()
 
         """
+        color = self._params['plot_sim_color']
+        lw = self._params['plot_sim_lw']
+
         times = np.array(self.times)
         # if simulation do not have the same number of points as data
         simtimes = np.array(self.sim.index.levels[2])
@@ -1368,6 +1373,68 @@ class XMIDAS(MIDASReader):
                 pylab.ylim([0, pylab.ylim()[1]])
                 pylab.grid(True)
 
+
+    def focus_exp(self, y1=0, y2=None):
+        # Once the plot() function called, you can easily focus on 
+        # a subset of rows
+        if y2 is None:
+            y2 = len(self.experiments)
+
+        axes = pylab.gcf().get_axes()
+        x1, x2 = axes[0].set_ylim(y1,y2)
+        x1, x2 = axes[0].get_ylim()
+        print(x1, x2)
+
+        # now, set the 2 others ylimits
+        ax1 = axes[1].set_ylim([x1,x2])
+        ax2 = axes[3].set_ylim([x1,x2])
+        pylab.plot([],[])
+
+    #@do_profile()
+    def plot_mse(self, mode='mse', cmap='heat', vmax=1, vmin=0, hold=False):
+        """Simpler and faster version of plot() function"""
+        if hold is False:
+            pylab.clf()
+        self.plot_layout()
+
+        # Get the cmap
+        if mode == "data":
+            #should be one with zero being white
+            cmap = self._colormap.get_cmap_heat_r()
+        else:
+            cmap = self._get_cmap(cmap)
+
+        data = self.get_diff().ix[self.experiments.index].values 
+        pylab.pcolor(pylab.flipud(data), edgecolors='k', vmin=vmin, vmax=vmax,
+                    cmap=cmap)
+
+        N = len(self.times) * len(self.species)
+        Ntimes = len(self.times)
+
+        df = self.df.ix[self.cellLine]
+        sim = self.sim.ix[self.cellLine]
+
+        xdata = [i+(j)/(Ntimes-1.)  for i in range(0,len(self.species)) for j in range(0,Ntimes)]
+
+        for exp in self.experiments.index:
+            shift = len(self.experiments) - list(self.experiments.index).index(exp) - 1
+            pylab.plot(xdata, [x+shift for x in pylab.flatten(df.ix[exp].T.values)], 
+                    color='k', lw=1, marker='x')
+            pylab.plot(xdata, [x+shift for x in pylab.flatten(sim.ix[exp].T.values)], 
+                    color='b', lw=2, marker='o', linestyle='--', alpha=0.5)
+
+
+        # plots all the data and simulated data
+        #plot([0,1],[0,1], lw=2, color='blue', marker='o', alpha=0.5, linestyle='--'); 
+
+        pylab.xlim([0, len(self.species)])
+        pylab.ylim([0, len(self.experiments)])
+        pylab.xticks([])
+        pylab.yticks([])
+        #pylab.colorbar()
+
+
+
     #@do_profile()
     def plot_data(self, logx=False, color="black", **kargs):
         """plot experimental curves
@@ -1412,6 +1479,8 @@ class XMIDAS(MIDASReader):
 
         # do a copy to rescale the data locally
         df = self.df.copy()
+        # we do not care about the cell line name. let us simplify the df
+        df = df.ix[self.cellLine]
         vmax = float(df.max(skipna=True).max(skipna=True))
         vmin = float(df.min(skipna=True).min(skipna=True))
 
@@ -1425,13 +1494,22 @@ class XMIDAS(MIDASReader):
         else:
             show_error = False
 
+        errors = errors.ix[self.cellLine]
         # start at zero
-        for i in range(0, self.nExps):
-            for j in range(0, self.nSignals):
+        _names_exps = [x[0] for x in list(df.index)]
+        
+        for j in range(0, self.nSignals):
+            signal = self.names_signals[j]
+            df2 = df[signal]
+            for i in range(0, self.nExps):
+            #for j in range(0, self.nSignals):
 
-                signal = self.names_signals[j]
+                #signal = self.names_signals[j]
                 exp = self.experiments.index[i]
-                data = df[signal][self.cellLine][exp]
+                #ii = df.index.levels[0].get_loc(exp)
+                data = df2.ix[exp]
+                #self.df2 = df2
+                #data = df2[ii:ii+2,j]
                 if vmin <0:
                     data /=2.
                     data +=0.5
@@ -1439,7 +1517,7 @@ class XMIDAS(MIDASReader):
                 try:
                     yerr = errors[signal].ix['average'].ix[exp]
                 except:
-                    yerr = errors[signal].ix[self.cellLine].ix[exp]
+                    yerr = errors[signal].ix[exp]
                 yerr = list(pylab.flatten(yerr.values))
 
                 trend.set(data)
@@ -1787,6 +1865,8 @@ class XMIDAS(MIDASReader):
                                                  facecolor='wheat', alpha=0.5))
             tx.set_position((0.6, 1.15))
 
+    # on extliver data, 8 % on plot_layout, 56 on plot_data and 36 on plot_sim
+    #@do_profile()
     def plot(self, mode='data', **kargs):
         """Plot data contained in :attr:`experiment` and :attr:`df` dataframes.
 
