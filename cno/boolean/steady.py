@@ -51,8 +51,12 @@ class Steady(CNOBase):
         self.time = self.data.times[1]
 
         # just a reference to the conditions
-        self.inhibitors = self.data.inhibitors
-        self.stimuli = self.data.stimuli
+        self.inhibitors = self.data.inhibitors.copy()
+        self._inhibitors_none = self.data.inhibitors.copy() * 0
+        self._inhibitors_all = self.data.inhibitors.copy()
+        self.stimuli = self.data.stimuli.copy()
+        self._stimuli_none = self.data.stimuli.copy() *  0
+        self._stimuli_all = self.data.stimuli.copy()
 
         self.inhibitors_names = self.data.inhibitors.columns
         self.stimuli_names = self.data.stimuli.columns
@@ -91,12 +95,16 @@ class Steady(CNOBase):
             self.values[node] = np.array([0 for x in range(0,self.N)])
 
         if time > 0:
+            self.stimuli = self._stimuli_all
+            self.inhibitors = self._inhibitors_all
             for this in self.stimuli_names:
                 self.values[this] = self.stimuli[this].values.copy()
 
             for this in self.inhibitors_names:
                 self.values[this] = 1. - self.inhibitors[this].values.copy()
-
+        else:
+            self.stimuli = self._stimuli_none
+            self.inhibitors = self._inhibitors_none
 
     def init(self, time):
         # Here, we define the values of the stimuli and inhibitors
@@ -150,7 +158,13 @@ class Steady(CNOBase):
         df = df.ix[self.data.cellLine]
         df = df.ix[self.stimuli.index]
         df = df.reset_index(drop=True).values
-        self.measures[self.time] = df
+        self.measures[self.time] = df.copy()
+
+        df = self.data.df.query("time==0")
+        df = df.ix[self.data.cellLine]
+        df = df.ix[self.stimuli.index]
+        df = df.reset_index(drop=True).values
+        self.measures[0] = df
         self.inhibitors_failed = []
 
     def preprocessing(self, expansion=True, compression=True, cutnonc=True):
@@ -163,7 +177,23 @@ class Steady(CNOBase):
         self._model = self.model
 
     #@do_profile()
-    def simulate(self, tick=1, reactions=None):
+
+    def simulate(self, reactions=None, time=None):
+        if time != None:
+            assert time in self.data.times
+            self.time = time
+        # time T0
+        if len(self.toflip):
+            self._init_values(0)
+            self._simulate(reactions=reactions, time=0)
+        else:
+            self.simulated[0] = np.zeros(self.measures[0].shape)
+
+        # time T1
+        self._init_values(self.time)
+        self._simulate(reactions=reactions, time=None)
+
+    def _simulate(self, reactions=None, time=None):
         """
 
         """
@@ -175,6 +205,8 @@ class Steady(CNOBase):
         #self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
         #            and x not in self.and_gates]
 
+        if time is None:
+            time = self.time
         # what about a species that is both inhibited and measured
         testVal = 1e-3
         import copy
@@ -207,7 +239,7 @@ class Steady(CNOBase):
             predecessors[k].extend(v)
 
         # speed up
-        keys = self.values.keys()
+        keys = sorted(self.values.keys())
         length_predecessors = dict([(node, len(predecessors[node])) for node in keys])
 
         #self._length_predecessors = length_predecessors
@@ -219,7 +251,10 @@ class Steady(CNOBase):
                 #values[inh] = np.array([0 for x in range(0,self.N)])
                 values[inh] = np.zeros(self.N)
 
-        while (self.count < self.nSp * frac +1.) and residual > testVal: 
+        # to get same results as in cnor, it is sometimes required
+        # to add one more count.
+        # to have same results at time 0 as in LiverDream, +3 is required
+        while (self.count < self.nSp * frac +3) and residual > testVal: 
             self.previous = values.copy()
             #self.X0 = pd.DataFrame(self.values)
             #self.X0 = self.values.copy()
@@ -259,9 +294,8 @@ class Steady(CNOBase):
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
             self.m1 = np.array([self.previous[k] for k in keys ], dtype=np.int16)
             self.m2 = np.array([values[k] for k in keys ], dtype=np.int16)
-            #residual = bn.nansum(np.square(self.m1 - self.m2))
+            residual = bn.nansum(np.square(self.m1 - self.m2))
             #residual = np.nansum(np.square(self.m1 - self.m2))
-            residual = np.nansum(np.square(self.m1 - self.m2))
 
 
             # TODO stop criteria should account for the length of the species to the
@@ -277,26 +311,24 @@ class Steady(CNOBase):
             # add the latest values simulated in the while loop
             self.debug_values.append(values.copy())
 
+        self._values2 = values
+
         # Need to set undefined values to NAs
-        self.simulated[self.time] = np.array([values[k] 
-            for k in self.data.df.columns ], dtype=float)#.transpose()
 
-        self.prev = {}
-        self.prev[self.time] = np.array([self.previous[k] 
-            for k in self.data.df.columns ], dtype=float)#.transpose()
+        mask = self.m1 != self.m2
+        data = np.array([values[k] for k in keys], dtype=float) 
+        data[mask] = np.nan
+        #self.dd = data
 
-        mask = self.prev[self.time] != self.simulated[self.time]
-        self.simulated[self.time][mask] = np.nan
+        indices = [keys.index(x) for x in self.data.df.columns]
+        if time == 0:
+            self.simulated[0] = data[indices,:].transpose()
+        else:
+            self.simulated[self.time] = data[indices,:].transpose()
 
 
 
 
-        self.simulated[self.time] = self.simulated[self.time].transpose()
-
-        # set the non-resolved bits to NA
-        # TODO TODO TODO
-        #newInput[which(abs(outputPrev-newInput) > testVal)] <- NA
-        # loops are handle diffenty
 
     #@do_profile()
     def score(self, NAFac=1, sizeFac=1e-4):
@@ -374,9 +406,12 @@ class Steady(CNOBase):
         #S += Nna/float(N)
         return S
 
-    def get_df(self):
+    def get_df(self, time, columns=None):
+        if columns is None:
+            columns = self.data.df.columns
         import pandas as pd
-        return pd.DataFrame(self.simulated[self.time], columns=self.data.df.columns)
+        df = pd.DataFrame(self.simulated[time], columns=seld.data.df.columns)
+        return df.columns[colums]
 
     def plot(self):
         self.model.plot()
@@ -390,6 +425,9 @@ class Steady(CNOBase):
         # 0.27
 
         # CellNOptR on ToyMMB      : 0.13        ; 0.22s in cno
+        # 
+        
+
         # 0.09467
         # process and  "EGF=Raf"        "EGF+TNFa=PI3K"  "Erk+TNFa=Hsp27" off
         # then MSE is 0.10838/2
@@ -456,7 +494,6 @@ class Steady(CNOBase):
 
     def plot_errors(self, columns=None):
         # What do we use here: self.values
-        print("Use only time 1..")
 
         # use eval_func with debug one
         debug = self.debug
@@ -469,15 +506,25 @@ class Steady(CNOBase):
 
         if columns is None:
             columns = self.data.df.columns
-        X1 = pd.DataFrame(self.debug_values[-1])[columns].copy()
-        X1 = self.get_df()
+
+
+        X0 = self.get_df(0, columns=columns)
+        X1 = self.get_df(self.time, columns=columns)
         N = X1.shape[0]
+
+        X0['time'] = [0] * N
+        X0['cell'] = [self.data.cellLine] * N
+        X0['experiment'] = self.data.experiments.index
+        X0.set_index(['cell', 'experiment', 'time'], inplace=True)
+        self.data.sim.ix[X0.index] = X0 #.fillna(2)
 
         X1['time'] = [self.time] * N
         X1['cell'] = [self.data.cellLine] * N
         X1['experiment'] = self.data.experiments.index
         X1.set_index(['cell', 'experiment', 'time'], inplace=True)
         self.data.sim.ix[X1.index] = X1 #.fillna(2)
+
+
         self.data.plot(mode='mse')
         print("MSE= %s(caspo/cno with only 1 time)" % self.score())
         print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
