@@ -54,9 +54,13 @@ class Models(object):
         if isinstance(data, str):
             self.filename = data
             self.df = pd.read_csv(self.filename, index_col=index_col)
+            # FIXIME What is this
             if reacID:
                 reacID = pd.read_csv(reacID)
                 self.df.columns = reacID.ix[:,0]
+            if 'score' in self.df.columns:
+                self.scores = self.df.score
+                del self.df['score']
         elif isinstance(data, pd.DataFrame):
             self.df = data.copy()
         elif isinstance(data, Models):
@@ -101,7 +105,9 @@ class Models(object):
 
     def to_csv(self, filename):
         """Exports the dataframe to a CSV file"""
+        self.df['score'] = self.scores
         self.df.to_csv(filename)
+        del self.df['score']
 
     def to_sif(self, filename=None):
         """Exports 2 SIF using the "and" convention
@@ -195,6 +201,9 @@ class BooleanModels(Models):
             model = self.get_average_model()
         elif model_number == 'cv':
             model = self.get_cv_model()
+        elif isinstance(model_number, float):
+            model_number = self.scores < self.scores * (1 + model_number).index
+            model = self.df.ix[model_number]
         else:
             model = self.df.ix[model_number]
 
@@ -272,6 +281,12 @@ class BooleanModels(Models):
     def _get_sizes(self):
         return self.df.sum(axis=1)    
     sizes = property(_get_sizes)
+
+    def drop_duplicates(self):
+        self.df['score'] = self.scores
+        self.df.drop_duplicates(inplace=True)
+        self.scores = self.df['score']
+        del self.df['score']
 
 
 class DTModels(BooleanModels):
