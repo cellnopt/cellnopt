@@ -23,7 +23,29 @@ from easydev import TempFile
 __all__ = ['GTTBool']
 
 
-class GTTBool(CNORBase):
+class GTTBool(object):
+
+
+    def __init__(self, simulator):
+        self.simulator = simulator # do not touch
+
+
+    def analyse(self):
+        models = self.simulator.results.models
+        self.truth_tables = {}
+        from easydev import progress_bar
+        pb = progress_bar(len(models.df))
+        for i, index in enumerate(models.df.index):
+            reactions = models.df.ix[index][models.df.ix[index]==1]
+            reactions = list(reactions.index)
+            self.simulator.simulate(reactions=reactions)
+            tt = self.simulator.simulated[self.simulator.time].flatten()
+            self.truth_tables[index] = tt
+            pb.animate(i+1,0)
+
+
+
+class GTTBoolOld(CNORBase):
     """Works for boolean steady state (1 time point)
 
     ::
