@@ -81,6 +81,23 @@ class Steady(CNOBase):
 
         self.sizeFac = 1e-4
 
+
+    def _init_values(self, time=False):
+        self.values = {}
+        for node in self.model.nodes():
+            # Do we really want NAs ? probably not. fold changes are by
+            # definitiotn 0
+            #self.values[node] = np.array([np.nan for x in range(0,self.N)])
+            self.values[node] = np.array([0 for x in range(0,self.N)])
+
+        if time > 0:
+            for this in self.stimuli_names:
+                self.values[this] = self.stimuli[this].values.copy()
+
+            for this in self.inhibitors_names:
+                self.values[this] = 1. - self.inhibitors[this].values.copy()
+
+
     def init(self, time):
         # Here, we define the values of the stimuli and inhibitors
         # based on the order provided inside self.stimuli and 
@@ -90,18 +107,9 @@ class Steady(CNOBase):
         # order may be different !!
 
         assert time in self.data.times
-        self.values = {}
-        for node in self.model.nodes():
-            # Do we really want NAs ? probably not. fold changes are by
-            # definitiotn 0
-            #self.values[node] = np.array([np.nan for x in range(0,self.N)])
-            self.values[node] = np.array([0 for x in range(0,self.N)])
 
-        for this in self.stimuli_names:
-            self.values[this] = self.stimuli[this].values.copy()
 
-        for this in self.inhibitors_names:
-            self.values[this] = 1. - self.inhibitors[this].values.copy()
+        self._init_values(time=time)
 
         self.and_gates = [x for x in self.model.nodes() if "^" in x]
 
@@ -297,12 +305,21 @@ class Steady(CNOBase):
 
         # time 1 only is taken into account
         #self.diff = np.square(self.measures[self.time] - self.simulated[self.time])
-        diff = self.measures[self.time] - self.simulated[self.time]
-        diff *= diff
+        diff1 = self.measures[self.time] - self.simulated[self.time]
+        try:
+            diff0 = self.measures[0] - self.simulated[0]
+        except:
+            #print('no time 0. skipped')
+            diff0 = 0
+
+        diff = diff1*diff1 + diff0*diff0
 
         N = diff.shape[0] * diff.shape[1]
-        Nna = np.isnan(diff).sum()
+
+
+        Nna = np.isnan(self.measures[self.time]).sum()
         N-= Nna
+
 
         #nInTot = number of edges on in global model
         #nInTot = len(self.model.reactions)
@@ -325,20 +342,28 @@ class Steady(CNOBase):
         # TODO AND gates should count for 1 edge
         nInputs = self.number_edges
 
+        # sizePen should be same as in CNOR
         sizePen = nDataPts * self.sizeFac * nInputs / float(nInTot)
-        #self.debug("nDataPts=%s" % nDataPts)
-        #self.debug("nInputs=%s" % nInputs)
-        #self.debug("nInTot=%s" % nInTot)
-        #self.debug('sizePen=%s' %sizePen)
+        debug = False
+        if debug:
+            print("----")
+            print("nDataPts=%s" % nDataPts)
+            print("nInputs=%s" % nInputs)
+            print("nInTot=%s" % nInTot)
+            print('sizePen=%s' %sizePen)
 
         # TODO
         deviationPen = bn.nansum(diff) / 2. # to be in agreement with CNO but wrong
         self.diff = diff / 2.
-        #self.debug("deviationPen=%s"% deviationPen)
-        #self.debug("Nna=%s"% Nna)
-        #self.debug("nDataP=%s"% nDataP)
 
-        #self.debug("deviationPen=%s"% deviationPen)
+
+        if debug:
+            print("deviationPen=%s"% deviationPen)
+            print("Nna=%s"% Nna)
+            print("nDataP=%s"% nDataP)
+
+            print("deviationPen=%s"% deviationPen)
+
         if nDataP !=0:
             deviationPen  /= float(nDataP)
             S = deviationPen + sizePen / nDataP
