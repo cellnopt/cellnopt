@@ -150,13 +150,17 @@ class CNOBase(Logging):
     def plot_model(self):
         self._model.plot()
 
-    def plot_optimised_model(self, filename=None, show=True):
+    def plot_optimised_model(self, filename=None, show=True,
+            show_pruned_edges=True):
         bs = self.results.results.best_bitstring
         reactions = self.results.results.reactions
         opt = {}
         for b,r in zip(bs, reactions):
             if b == 0:
-                opt[r]= 0
+                if show_pruned_edges:
+                    opt[r]= 0.1
+                else:
+                    opt[r]= 0.
             else:
                 opt[r] = 1
         m = self._model.copy()
