@@ -338,11 +338,8 @@ class Steady(CNOBase):
         # time 1 only is taken into account
         #self.diff = np.square(self.measures[self.time] - self.simulated[self.time])
         diff1 = self.measures[self.time] - self.simulated[self.time]
-        try:
-            diff0 = self.measures[0] - self.simulated[0]
-        except:
-            #print('no time 0. skipped')
-            diff0 = 0
+        diff0 = self.measures[0] - self.simulated[0]
+        diff0*=0
 
         diff = diff1*diff1 + diff0*diff0
 
@@ -385,7 +382,7 @@ class Steady(CNOBase):
             print('sizePen=%s' %sizePen)
 
         # TODO
-        deviationPen = bn.nansum(diff) / 2. # to be in agreement with CNO but wrong
+        deviationPen = bn.nansum(diff) / 2. 
         self.diff = diff / 2.
 
 
@@ -410,8 +407,9 @@ class Steady(CNOBase):
         if columns is None:
             columns = self.data.df.columns
         import pandas as pd
-        df = pd.DataFrame(self.simulated[time], columns=seld.data.df.columns)
-        return df.columns[colums]
+        df = pd.DataFrame(self.simulated[time], columns=self.data.df.columns)
+        #return df.columns[columns]
+        return df
 
     def plot(self):
         self.model.plot()
