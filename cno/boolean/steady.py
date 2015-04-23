@@ -86,13 +86,19 @@ class Steady(CNOBase):
         self.sizeFac = 1e-4
 
 
+        self._shift = 3
+        self._params = {}
+        self._params['include_time_zero'] = True
+
+
+    #@do_profile()
     def _init_values(self, time=False):
         self.values = {}
         for node in self.model.nodes():
             # Do we really want NAs ? probably not. fold changes are by
             # definitiotn 0
             #self.values[node] = np.array([np.nan for x in range(0,self.N)])
-            self.values[node] = np.array([0 for x in range(0,self.N)])
+            self.values[node] = np.zeros(self.N)
 
         if time > 0:
             self.stimuli = self._stimuli_all
@@ -100,8 +106,13 @@ class Steady(CNOBase):
             for this in self.stimuli_names:
                 self.values[this] = self.stimuli[this].values.copy()
 
-            for this in self.inhibitors_names:
-                self.values[this] = 1. - self.inhibitors[this].values.copy()
+            #for this in self.inhibitors_names:
+            #    self.values[this] = 1. - self.inhibitors[this].values.copy()
+
+            #toflip = [x[1] for x in self.toflip]
+            #for this in toflip:
+            #    self.values[this] = np.ones(10)
+
         else:
             self.stimuli = self._stimuli_none
             self.inhibitors = self._inhibitors_none
@@ -177,23 +188,24 @@ class Steady(CNOBase):
         self._model = self.model
 
     #@do_profile()
-
-    def simulate(self, reactions=None, time=None):
+    def simulate(self, reactions=None, time=None, ntic=None):
         if time != None:
             assert time in self.data.times
             self.time = time
         # time T0
         if len(self.toflip):
             self._init_values(0)
-            self._simulate(reactions=reactions, time=0)
+            self._simulate(reactions=reactions, time=0, ntic=ntic)
+            self.dd0 = self.dd.copy()
         else:
             self.simulated[0] = np.zeros(self.measures[0].shape)
 
         # time T1
         self._init_values(self.time)
-        self._simulate(reactions=reactions, time=None)
+        self._simulate(reactions=reactions, time=None, ntic=ntic)
 
-    def _simulate(self, reactions=None, time=None):
+    #@do_profile()
+    def _simulate(self, reactions=None, time=None, ntic=None):
         """
 
         """
@@ -210,11 +222,12 @@ class Steady(CNOBase):
         # what about a species that is both inhibited and measured
         testVal = 1e-3
         import copy
-        values = copy.deepcopy(self.values)
+        #values = copy.deepcopy(self.values)
+        values = self.values  # !! reference but should be reset when calling _init_values / simulate()
 
 
         if self.debug:
-            self.debug_values = []
+            self.debug_values = [self.values.copy()]
         self.residuals = []
         self.penalties = []
 
@@ -223,7 +236,7 @@ class Steady(CNOBase):
         residual = 1.
 
         frac = 1.2
-        # #FIXME +1 is to have same resrults as in CellnOptR
+        # _shift is set to +1 FIXME +1 is to have same results as in CellnOptR
         # It means that if due to the cycles, you may not end up with same results.
         # this happends if you have cyvles with inhbititions
         # and an odd number of edges. 
@@ -235,7 +248,7 @@ class Steady(CNOBase):
         #predecessors = self.reactions_to_predecessors(reactions)
         predecessors = defaultdict(collections.deque)
         for r in reactions:
-            k,v = self._reac2pred[r]
+            k, v = self._reac2pred[r]
             predecessors[k].extend(v)
 
         # speed up
@@ -244,17 +257,23 @@ class Steady(CNOBase):
 
         #self._length_predecessors = length_predecessors
         # if there is an inhibition/drug, the node is 0
-        values = self.values.copy()
+
+        # FIXME is this required ??
         for inh in self.inhibitors_names:
             if length_predecessors[inh] == 0:
                 #values[inh] = np.array([np.nan for x in range(0,self.N)])
-                #values[inh] = np.array([0 for x in range(0,self.N)])
                 values[inh] = np.zeros(self.N)
 
         # to get same results as in cnor, it is sometimes required
         # to add one more count.
         # to have same results at time 0 as in LiverDream, +3 is required
-        while (self.count < self.nSp * frac +3) and residual > testVal: 
+
+        if ntic is None:
+            ntic = self.nSp * frac + self._shift
+        else: # we want to use the ntic as unique stopping criteria
+            testVal = -1
+
+        while ((self.count < ntic) and residual > testVal):
             self.previous = values.copy()
             #self.X0 = pd.DataFrame(self.values)
             #self.X0 = self.values.copy()
@@ -311,16 +330,17 @@ class Steady(CNOBase):
             # add the latest values simulated in the while loop
             self.debug_values.append(values.copy())
 
-        self._values2 = values
+        #self._values2 = values
 
         # Need to set undefined values to NAs
 
         mask = self.m1 != self.m2
         data = np.array([values[k] for k in keys], dtype=float) 
         data[mask] = np.nan
-        #self.dd = data
+        self.dd = data
 
         indices = [keys.index(x) for x in self.data.df.columns]
+
         if time == 0:
             self.simulated[0] = data[indices,:].transpose()
         else:
@@ -337,18 +357,23 @@ class Steady(CNOBase):
 
         # time 1 only is taken into account
         #self.diff = np.square(self.measures[self.time] - self.simulated[self.time])
-        diff1 = self.measures[self.time] - self.simulated[self.time]
-        diff0 = self.measures[0] - self.simulated[0]
-        diff0*=0
+        diff1 = (self.measures[self.time] - self.simulated[self.time])**2
+        if self._params['include_time_zero'] is True:
+            diff0 = (self.measures[0] - self.simulated[0])**2
+        else:
+            diff0 = 0
 
-        diff = diff1*diff1 + diff0*diff0
+
+        # FIXME we could have an option to ignore time 0
+        diff = diff1 + diff0
 
         N = diff.shape[0] * diff.shape[1]
 
+        Nna1 = np.isnan(diff1).sum()
+        Nna0 = np.isnan(diff0).sum()
 
         Nna = np.isnan(self.measures[self.time]).sum()
         N-= Nna
-
 
         #nInTot = number of edges on in global model
         #nInTot = len(self.model.reactions)
@@ -373,7 +398,7 @@ class Steady(CNOBase):
 
         # sizePen should be same as in CNOR
         sizePen = nDataPts * self.sizeFac * nInputs / float(nInTot)
-        debug = False
+        debug = True
         if debug:
             print("----")
             print("nDataPts=%s" % nDataPts)
@@ -381,14 +406,20 @@ class Steady(CNOBase):
             print("nInTot=%s" % nInTot)
             print('sizePen=%s' %sizePen)
 
+            print('diff0=%s', (bn.nansum(diff0)) )
+            print('diff1=%s', (bn.nansum(diff1 )))
+
         # TODO
-        deviationPen = bn.nansum(diff) / 2. 
-        self.diff = diff / 2.
+        self.diff0 = diff0
+        self.diff1 = diff1
+
+        deviationPen = (bn.nansum(diff1) + bn.nansum(diff0))/ 2.
+        #self.diff = diff / 2.
 
 
         if debug:
             print("deviationPen=%s"% deviationPen)
-            print("Nna=%s"% Nna)
+            print("Nna=(%s %s)"% (Nna0, Nna1))
             print("nDataP=%s"% nDataP)
 
             print("deviationPen=%s"% deviationPen)
@@ -397,10 +428,13 @@ class Steady(CNOBase):
             deviationPen  /= float(nDataP)
             S = deviationPen + sizePen / nDataP
         else:
-
             S = deviationPen
+
+
         #self._na_contrib  = Nna/float(N)
-        #S += Nna/float(N)
+        S = (S + NAFac * Nna1/float(nDataPts))
+        if debug:
+            print("score=%s" %S)
         return S
 
     def get_df(self, time, columns=None):
@@ -417,14 +451,20 @@ class Steady(CNOBase):
     #@do_profile()
     def test(self, N=100):
         # N = 100, all bits on
+        # on EBI laptop:
+        # 23 April
+        # LiverDREAM 1s
+        # ToyMMB: 0.3s
+        # ToyPB: 4.7  (lots of feedback and NAs
+        # ExtLiverPCB: 1.54s
+
         # CellNOptR on LiverDREAM  0.85 seconds. 0.58 in cno
         # CellNOptR on LiverDREAM preprocessed) on:0.75 seconds. 1.42 in cno
-        # 0.2574948 in CellNOptR  somtimes, we can reach a score=0.019786867202
+        # 0.2574948 in CellNOptR  sometimes, we can reach a score=0.019786867202
         # 0.27
 
         # CellNOptR on ToyMMB      : 0.13        ; 0.22s in cno
         # 
-        
 
         # 0.09467
         # process and  "EGF=Raf"        "EGF+TNFa=PI3K"  "Erk+TNFa=Hsp27" off
@@ -472,14 +512,19 @@ class Steady(CNOBase):
         self.dummy = data
 
         pylab.pcolor(data, cmap=cm, vmin=vmin, vmax=vmax,
-                shading='faceted')
+                shading='faceted', edgecolors='gray')
         pylab.colorbar()
         ax1 = pylab.gca()
         ax1.set_xticks([])
         Ndata = len(data.columns)
         ax1.set_xlim(0, Ndata)
+        ax1.set_ylim(0, len(data))
         ax = pylab.twiny()
-        ax.set_xticks(pylab.linspace(0.5, Ndata+0.5, Ndata ))
+
+
+        # FIXME seems shifted. could not fix it xticklabels seems to reset the position of the ticks
+        xr = pylab.linspace(0.5, Ndata-1.5, Ndata)
+        ax.set_xticks(xr)
         ax.set_xticklabels(data.columns, fontsize=fontsize, rotation=90)
         times = list(data.index)
         Ntimes = len(times)
@@ -490,7 +535,7 @@ class Steady(CNOBase):
         #pylab.title("Steady state for all experiments(x-axis)\n\n\n\n")
         pylab.tight_layout()
 
-    def plot_errors(self, columns=None):
+    def plot_errors(self, columns=None, reactions=None):
         # What do we use here: self.values
 
         # use eval_func with debug one
@@ -498,7 +543,10 @@ class Steady(CNOBase):
         self.debug = True
         buffering = self.buffering
         self.buffering = False
-        self.eval_func(self.ga.results['Best_bitString'][-1])
+        if reactions is None:
+            self.eval_func(self.ga.results['Best_bitString'][-1])
+        else:
+            self.eval_func(self.reactions2parameters(reactions))
         self.buffering = buffering
         self.debug = debug
 
@@ -524,8 +572,9 @@ class Steady(CNOBase):
 
 
         self.data.plot(mode='mse')
-        print("MSE= %s(caspo/cno with only 1 time)" % self.score())
-        print("MSE= %s(cellnoptr with only 1 time)" % str(self.score()/2.))
+        score = self.score()
+        print("MSE= %s(caspo/cno with only 1 time)" % score)
+        print("MSE= %s(cellnoptr with only 1 time)" % str(score/2.))
         m = self.data.copy()
         return m
 
@@ -692,6 +741,7 @@ class Steady(CNOBase):
         return ga
 
     def _fill_results(self):
+        # FIXME this could be simplified a lot
         from easydev import AttrDict
         res = AttrDict(**self.ga.results)
 
