@@ -1,4 +1,5 @@
 
+from cno import *
 from cno.io import xcnograph
 
 
@@ -76,3 +77,69 @@ class RandomGraph(object):
 
 
 
+
+
+
+class Swaper(object):
+    """Function to test the randomisation of networks.
+
+
+    """
+    def __init__(self):
+
+        self.mode = 'toy'
+        self.init()
+
+    def init(self):
+        if self.mode == 'toy':
+            self.graph = CNOGraph(cnodata("PKN-ToyMMB.sif"), 
+                cnodata("MD-ToyMMB.csv"))
+        else:
+            self.graph = CNOGraph(cnodata("PKN-ExtLiverPCB.sif"), 
+                cnodata("MD-ExtLiverPCB.csv"))
+        self.edges = self.graph.edges()
+
+    def swap(self, nswap=1, inplace=False):
+        if inplace is True:
+            self.graph.swap_edges(nswap, inplace=inplace)
+        else:
+            G, status = self.graph.swap_edges(nswap, inplace=inplace)
+            return G
+
+    def get_distance(self, G):
+        inter = len([this for this in self.edges if 
+            this in G.edges()]);
+        return float(inter)/len(self.edges)
+
+    def compute_distances(self, N=100, show=True):
+        self.init()
+        from easydev import progress_bar
+        distances = []
+        pb = progress_bar(N)
+        for i in range(0,N):
+            self.swap(1, inplace=True)
+            dist = self.get_distance(self.graph)
+            distances.append(dist)
+            pb.animate(i,0)
+        if show is True:
+            import pylab
+            pylab.plot(distances)
+            pylab.grid(True)
+        return distances
+
+    def plot_average_distance(self, repeat=10, N=100):
+        import pandas as pd
+        import pylab
+        distances = []
+        for i in range(0, repeat):
+            distance = self.compute_distances(N=N, show=False)
+            distances.append(distance)
+        df = pd.DataFrame(distances)
+        pylab.clf()
+        pylab.fill_between(range(0,N), df.mean()+df.std(),
+                y2=df.mean()-df.std()); 
+        pylab.plot(df.mean(), 'r', lw=2)
+        pylab.grid(True)
+        pylab.ylim([0,1])
+        pylab.ylabel('similarity')
+        return distances
