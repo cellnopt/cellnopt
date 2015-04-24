@@ -58,6 +58,7 @@ class Models(object):
             if reacID:
                 reacID = pd.read_csv(reacID)
                 self.df.columns = reacID.ix[:,0]
+
             if 'score' in self.df.columns:
                 self.scores = self.df.score
                 del self.df['score']
@@ -99,9 +100,17 @@ class Models(object):
         #self.non_reactions = non_reactions
         #self.df_non_reactions = self.df[non_reactions].copy()
 
-    def get_average_model(self):
+    def get_average_model(self, max_score=None):
+
         """Returns the average model (on each reaction)"""
-        return self.df.mean(axis=0)
+        if max_score is None:
+            return self.df.mean(axis=0)
+        else:
+            #filter scores below some vlues
+            N = float(sum(self.scores<=max_score))
+            print('Keeping %s percent of the models' % str( N /len(self.scores)*100.))
+
+            return self.df.ix[self.scores<=max_score].mean(axis=0)
 
     def to_csv(self, filename):
         """Exports the dataframe to a CSV file"""
@@ -191,21 +200,25 @@ class BooleanModels(Models):
         res = res.fillna(0)
         return res
 
-    def compute_average(self, model_number=None):
+    def compute_average(self, model_number=None, tolerance=None):
         """Compute the average and update the cnograph accordingly
 
         :param int model_number: model_number as shown by :attr:`df.index`
             if not provided, the average is taken
         """
-        if model_number is None:
+        if model_number is None and tolerance is None:
             model = self.get_average_model()
         elif model_number == 'cv':
             model = self.get_cv_model()
-        elif isinstance(model_number, float):
-            model_number = self.scores < self.scores * (1 + model_number).index
-            model = self.df.ix[model_number]
+        elif tolerance is not None:
+            model = self.get_average_model(max_score = self.scores.min() * (1.+tolerance))
+            if len(model) == 0:
+                raise ValueError('No model found within that tolerance')
         else:
             model = self.df.ix[model_number]
+
+
+
 
         # This is to set the average and label and penwidth
         # TODO: could be simplified using Reaction ?
@@ -231,11 +244,11 @@ class BooleanModels(Models):
             self.cnograph.edge[edge[0]][edge[1]]["penwidth"] = precision(value, 2) * 5/M
 
     def plot(self, model_number=None, cmap='gist_heat_r',
-            colorbar=True, *args, **kargs):
+            colorbar=True, tolerance=None, filename=None, **kargs):
         """Plot the average model"""
-        self.compute_average(model_number=model_number)
+        self.compute_average(model_number=model_number, tolerance=tolerance)
         self.cnograph.plot(edge_attribute="average", cmap=cmap,
-                colorbar=colorbar,**kargs)
+                colorbar=colorbar, filename=filename, **kargs)
 
     def errorbar(self):
         """Plot the average presence of reactions over all models"""
