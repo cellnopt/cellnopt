@@ -14,6 +14,7 @@ from collections import defaultdict
 import collections
 
 
+from easydev import AttrDict
 
 class Steady(CNOBase):
     """Naive implementation of Steady state to help in 
@@ -83,13 +84,16 @@ class Steady(CNOBase):
         self.counter = 0
         self.length_buffer = 10000
 
-        self.sizeFac = 1e-4
 
 
         self._shift = 3
         self._params = {}
         self._params['include_time_zero'] = True
+        self._params['NAFac'] = 1
+        self._params['sizeFac'] = 1e-4
+        self._params = AttrDict(**self._params)
 
+        self.debug_score = False
 
     #@do_profile()
     def _init_values(self, time=False):
@@ -351,10 +355,8 @@ class Steady(CNOBase):
 
 
     #@do_profile()
-    def score(self, NAFac=1, sizeFac=1e-4):
-        # We need also to include NAFac, number of reactions in the model
-        # for the sizeFac
-
+    def score(self ):
+        
         # time 1 only is taken into account
         #self.diff = np.square(self.measures[self.time] - self.simulated[self.time])
         diff1 = (self.measures[self.time] - self.simulated[self.time])**2
@@ -397,8 +399,8 @@ class Steady(CNOBase):
         nInputs = self.number_edges
 
         # sizePen should be same as in CNOR
-        sizePen = nDataPts * self.sizeFac * nInputs / float(nInTot)
-        debug = True
+        sizePen = nDataPts * self._params.sizeFac * nInputs / float(nInTot)
+        debug = self.debug_score
         if debug:
             print("----")
             print("nDataPts=%s" % nDataPts)
@@ -431,8 +433,8 @@ class Steady(CNOBase):
             S = deviationPen
 
 
-        #self._na_contrib  = Nna/float(N)
-        S = (S + NAFac * Nna1/float(nDataPts))
+        self._na_contrib  = Nna/float(nDataPts)
+        S = (S + self._params.NAFac * Nna1/float(nDataPts))
         if debug:
             print("score=%s" %S)
         return S
