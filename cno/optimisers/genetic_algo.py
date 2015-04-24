@@ -59,6 +59,7 @@ class GABinary(GA):
         self.maxtime = kargs.get('maxtime', 60)
         self.maxgens = kargs.get('maxgens', 500)
         self.stallgenmax = kargs.get('stallgenmax',100)
+        self.stallgenmax = kargs.get('maxstallgen',100)
 
 
         self.guess = [1] * self.blength
