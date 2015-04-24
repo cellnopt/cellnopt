@@ -156,16 +156,28 @@ class CNOBase(Logging):
         reactions = self.results.results.reactions
         opt = {}
         for b,r in zip(bs, reactions):
-            if b == 0:
-                if show_pruned_edges:
-                    opt[r]= 0.1
+            if "!" in r: #inhibitory
+                if b == 0:
+                    if show_pruned_edges:
+                        opt[r]= 'pink'
+                    else:
+                        opt[r]= 'white'
                 else:
-                    opt[r]= 0.
+                    opt[r] = 'red'
             else:
-                opt[r] = 1
+                if b == 0:
+                    if show_pruned_edges:
+                        opt[r]= 'lightgray'
+                    else:
+                        opt[r]= 'white'
+                else:
+                    opt[r] = 'black'
+
+
         m = self._model.copy()
-        m.set_edge_attribute('opt', opt)
-        m.plot(edge_attribute='opt', cmap='gray_r', show=show, filename=filename)
+        m.set_edge_attribute('color', opt)
+        #m.plot(edge_attribute='opt', cmap='gray_r', show=show, filename=filename)
+        m.plot(show=show, filename=filename)
         return m
 
     def _reac_cnor2cno(self, reactions):
