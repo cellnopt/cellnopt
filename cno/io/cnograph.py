@@ -28,6 +28,9 @@ from functools import wraps
 import matplotlib
 import pylab
 import networkx as nx
+
+from cno.misc.profiler import do_profile
+
 try:
     import pygraphviz as gv
 except ImportError:
@@ -1543,9 +1546,15 @@ class CNOGraph(nx.DiGraph):
         count = 0
         trials = 0
         status = {'and':0, 'selfloop':0, 'indegree':0, 'outdegree':0, 'unconnected':0}
+        if inplace is False:
+            local = self.copy()
+
         while count < nswap and trials<nswap*5:
             trials += 1
-            edges = self.edges()
+            if inplace is False:
+                edges = local.edges()
+            else:
+                edges = self.edges()
             np.random.shuffle(edges)
             e1, e2 = edges[0:2]
 
@@ -1554,15 +1563,21 @@ class CNOGraph(nx.DiGraph):
                 status['selfloop']+=1
                 continue
 
-            d1 = self.edge[e1[0]][e1[1]].copy()
-            d2 = self.edge[e2[0]][e2[1]].copy()
+            if inplace is False:
+                d1 = local.edge[e1[0]][e1[1]].copy()
+                d2 = local.edge[e2[0]][e2[1]].copy()
+                G = nx.DiGraph(local)
+            else:
+                d1 = self.edge[e1[0]][e1[1]].copy()
+                d2 = self.edge[e2[0]][e2[1]].copy()
+                G = nx.DiGraph(self)
 
-            G = nx.DiGraph(self)
             #self.copy()
             G.add_edge(e1[0], e2[1], None, **d1)
             G.add_edge(e2[0], e1[1], None, **d2)
             G.remove_edge(e1[0], e1[1])
             G.remove_edge(e2[0], e2[1])
+            #print(count, len(G))
 
             if sum(G.in_degree().values()) != I:
                 # the link already exists
@@ -1577,26 +1592,33 @@ class CNOGraph(nx.DiGraph):
                 status['unconnected'] += 1
                 continue
 
-
             if sum(G.out_degree().values()) != O:
                 status['outdegree'] +=1
                 continue
 
             # seems okay , so let us swap the edges now.
-            self.add_edge(e1[0], e2[1], None, **d1)
-            self.add_edge(e2[0], e1[1], None, **d2)
-            self.remove_edge(e1[0], e1[1])
-            self.remove_edge(e2[0], e2[1])
+            if inplace is True:
+                self.add_edge(e1[0], e2[1], None, **d1)
+                self.add_edge(e2[0], e1[1], None, **d2)
+                self.remove_edge(e1[0], e1[1])
+                self.remove_edge(e2[0], e2[1])
+            else:
+                local.add_edge(e1[0], e2[1], None, **d1)
+                local.add_edge(e2[0], e1[1], None, **d2)
+                local.remove_edge(e1[0], e1[1])
+                local.remove_edge(e2[0], e2[1])
 
             # number of inhibitory link must remain identical
-            Ninh2 = [x[2]["link"] for x in self.edges(data=True)].count('-')
-            assert Ninh2 == Ninh
+            #Ninh2 = [x[2]["link"] for x in self.edges(data=True)].count('-')
+            #assert Ninh2 == Ninh
             # seems to be true 
             #assert nx.is_connected(self.to_undirected()) == True
             count +=1
         status['count'] = count
         status['trials'] = trials
-        return status
+
+        if inplace is False:
+            return local, status
 
     def adjacency_matrix(self, nodelist=None, weight=None):
         """Return adjacency matrix.
