@@ -86,7 +86,7 @@ class Steady(CNOBase):
 
 
 
-        self._shift = 3
+        self._shift = -1
         self._params = {}
         self._params['include_time_zero'] = True
         self._params['NAFac'] = 1
@@ -231,7 +231,7 @@ class Steady(CNOBase):
 
 
         if self.debug:
-            self.debug_values = [self.values.copy()]
+            self.debug_values = [values.copy()]
         self.residuals = []
         self.penalties = []
 
@@ -286,7 +286,7 @@ class Steady(CNOBase):
                 # replace na by large number so that min is unchanged
                 # THere are always predecessors
                 if length_predecessors[node] != 0:
-                    values[node] = bn.nanmin(np.array([values[x] for x in predecessors[node]]), axis=0)
+                    values[node] = bn.nanmin(np.array([self.previous[x] for x in predecessors[node]]), axis=0)
                 else:
                     #assert 1==0, "%s %s" % (node, predecessors[node])
                     values[node] = self.previous[node]
@@ -298,14 +298,13 @@ class Steady(CNOBase):
                 if length_predecessors[node] == 0:
                     pass # nothing to change
                 else:
-                    dummy = np.array([values[x] if (x,node) not in self.toflip 
-                        else 1 - values[x] for x in  predecessors[node]])
+                    dummy = np.array([self.previous[x] if (x,node) not in self.toflip
+                        else 1 - self.previous[x] for x in  predecessors[node]])
                     try:
                         values[node] = bn.nanmax(dummy,  axis=0)
                     except:
                         # in some simple cases, we must reset the type. why.
                         values[node] = bn.nanmax(dummy.astype('int'), axis=0)
-                        
 
                 # take inhibitors into account
                 if node in self.inhibitors_names and node not in self.inhibitors_failed:
@@ -325,14 +324,14 @@ class Steady(CNOBase):
             # the node itself so count < nSp should be taken into account whatever is residual.
             #
             if self.debug:
-                self.debug_values.append(self.previous.copy())
+                self.debug_values.append(self.values.copy())
            
             self.residuals.append(residual)
             self.count += 1
 
-        if self.debug is True:
-            # add the latest values simulated in the while loop
-            self.debug_values.append(values.copy())
+        #if self.debug is True:
+        #    # add the latest values simulated in the while loop
+        #    self.debug_values.append(values.copy())
 
         #self._values2 = values
 
@@ -371,9 +370,18 @@ class Steady(CNOBase):
 
         N = diff.shape[0] * diff.shape[1]
 
+
+        # FIXME Another issue with CNOR is that NAs are takem from the simulated data only, not the data itself...
+
         Nna1 = np.isnan(diff1).sum()
         Nna0 = np.isnan(diff0).sum()
+        #we should check for NA is the measured and simulated data so in the diff as above but in cnor, htis is
+        # coming from the simulated data only....
 
+        Nna1 = np.isnan(self.simulated[self.time]).sum()
+
+
+        # FIXME in cNOR, NAs at time 0 are ignored. why ?
         Nna = np.isnan(self.measures[self.time]).sum()
         N-= Nna
 
@@ -779,6 +787,12 @@ class Steady(CNOBase):
 
         self.results.results = results
         self.results.models = models
+        self.results.models.cnograph.midas = self.data # to get the MIDAS annotation
+
+    def plot_models(self, filename=None, model_number=None, tolerance=None):
+        # if model_number set to float, models are filtered
+        # with scores < (1+model_number) times best score
+        self.results.models.plot(filename=None, model_number=model_number, tolerance=tolerance)
 
     def refine(self, show=True, inplace=False, threshold=1e-4):
         self.best_bitstring = list(self.results.results.best_bitstring)
