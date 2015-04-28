@@ -59,6 +59,10 @@ class Models(object):
                 reacID = pd.read_csv(reacID)
                 self.df.columns = reacID.ix[:,0]
 
+            if 'Score' in self.df.columns:
+                self.scores = self.df.Score
+                del self.df['Score']
+
             if 'score' in self.df.columns:
                 self.scores = self.df.score
                 del self.df['score']
@@ -99,6 +103,16 @@ class Models(object):
                 non_reactions.append(this)
         #self.non_reactions = non_reactions
         #self.df_non_reactions = self.df[non_reactions].copy()
+
+    def drop_scores_above(self, tolerance=None):
+        max_score = self.scores.min() * (1+tolerance)
+        index = self.df.ix[self.scores<=max_score].index
+
+        self.df = self.df.ix[index]
+        self.scores = self.scores.ix[index]
+
+
+
 
     def get_average_model(self, max_score=None):
 
@@ -301,6 +315,13 @@ class BooleanModels(Models):
         self.scores = self.df['score']
         del self.df['score']
 
+    def get_main_reactions(self, threshold=0.5):
+        reactions = list(self.df.columns[self.df.mean() > threshold])
+        reactions = [x.replace('+','^') for x in reactions]
+        return reactions
+
+
+
 
 class DTModels(BooleanModels):
     def __init__(self, data, reacID=None, index_col=None):
@@ -320,13 +341,16 @@ class CompareTwoModels(object):
         :param m1: first model as a Pandas time series e.g. row of BooleanModels
         :param m2: first model as a Pandas time series e.g. row of BooleanModels
         :return:
+
+        from a models, m1 = pd.TimeSeries(models.df.ix[0], dtype=int)
+        m2 = pd.TimeSeries(models.df.ix[1], dtype=int)
         """
         
         self.m1 = m1
         self.m2 = m2
 
         assert all(self.m1.index == self.m2.index) == True
-
+        self.midas = None
 
     def get_intersection(self):
         return self.m1[self.m1 & self.m2]
@@ -348,41 +372,46 @@ class CompareTwoModels(object):
 
     def plot_multigraph(self, cmap='jet'):
         from cno.io.multigraph import  CNOGraphMultiEdges
+        #from cno import CNOGraph
         from cno import Reaction
 
         c = CNOGraphMultiEdges()
+        c.midas = self.midas
 
         for reaction in self.get_both().index:
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.1, penwidth=4, label='both')
+                c.add_edge(edge[0], edge[1], edgecolor=.1, color='black', penwidth=6, label='both')
 
         for reaction in self.get_m1_only().index:
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.3, label='m1')
+                c.add_edge(edge[0], edge[1], edgecolor=.3, label='m1', color='red', penwidth=3)
 
         for reaction in self.get_m2_only().index:
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.5, label='m2')
+                c.add_edge(edge[0], edge[1], edgecolor=.5, label='m2', color='green', penwidth=3)
 
         for reaction in self.get_both_off().index:
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.9, label='off')
+                c.add_edge(edge[0], edge[1], edgecolor=.9, label='off', color='gray', penwidth=3)
 
-        c.plot(edge_attribute='edgecolor', cmap=cmap)
+
+        #c.plot(edge_attribute='edgecolor', cmap=cmap)
+        c.plot()
         return c
 
 
 
 
-
+class MultiModels(object):
+    pass
 
 
 
