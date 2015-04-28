@@ -85,8 +85,11 @@ class Steady(CNOBase):
         self.length_buffer = 10000
 
 
-
+        # affects the simulation and ts stopping criteria
+        # this is arbitrary additional tick to match CNOR simulation
         self._shift = -1
+        self._shift0 = -1
+
         self._params = {}
         self._params['include_time_zero'] = True
         self._params['NAFac'] = 1
@@ -196,10 +199,15 @@ class Steady(CNOBase):
         if time != None:
             assert time in self.data.times
             self.time = time
+
+        # sometimes the shift required to agree with CNOR are not the same at time0 or time1...
         # time T0
         if len(self.toflip):
             self._init_values(0)
+            tmp = self._shift
+            self._shift = self._shift0
             self._simulate(reactions=reactions, time=0, ntic=ntic)
+            self._shift = tmp
             self.dd0 = self.dd.copy()
         else:
             self.simulated[0] = np.zeros(self.measures[0].shape)
@@ -246,7 +254,7 @@ class Steady(CNOBase):
         # and an odd number of edges. 
         if reactions is None:
             reactions = self.model.buffer_reactions
-        self.number_edges = len(reactions)
+        self.number_edges = len([r for r in reactions]) + sum([this.count('^') for this in reactions])
 
         # 10 % time here
         #predecessors = self.reactions_to_predecessors(reactions)
@@ -349,6 +357,19 @@ class Steady(CNOBase):
         else:
             self.simulated[self.time] = data[indices,:].transpose()
 
+
+    def get_errors_rates(self):
+
+
+        FN0 = ((self.simulated[0] - self.measures[0])<-0.5).sum(axis=0)
+        FP0 = ((self.simulated[0] - self.measures[0])>0.5).sum(axis=0)
+
+        FN = ((self.simulated[self.time] - self.measures[self.time])<-0.5).sum(axis=0)
+        FP = ((self.simulated[self.time] - self.measures[self.time])>0.5).sum(axis=0)
+        df = pd.DataFrame({'FP':FP, 'FN':FN, 'FN0':FN0, 'FP0':FP0}, index=self.midas.df.columns)
+
+        df /= len(self.midas.experiments)
+        return df
 
 
 
