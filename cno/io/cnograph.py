@@ -660,13 +660,14 @@ class CNOGraph(nx.DiGraph):
                             node_dict=node_dict, edge_dict=edge_dict)
 
     def set_default_edge_attributes(self,  **attr):
-        if "compressed" not in attr.keys():
-            attr["compressed"] = []
+        #if "compressed" not in attr.keys():
+        #    attr["compressed"] = []
 
         link = Link(attr.get("link"))
         attrs = self.attributes[link.name]
         for k in attrs.keys():
-            attr[k] = attrs[k]
+            if k not in attr.keys():
+                attr[k] = attrs[k]
         return attr
 
     def reset_edge_attributes(self):
@@ -760,7 +761,10 @@ class CNOGraph(nx.DiGraph):
         self.add_node(v)
         link = Link(attr.get("link", "+"))
         attr['link'] = link.link
+        #attr_user = attr.copy()
         attr = self.set_default_edge_attributes(**attr)
+        #for k,v in attr_user.items():
+        #    attr[k] = v
 
         # cast u to str to search for + sign
         if "+" in str(u):
