@@ -82,11 +82,25 @@ class Models(object):
         # from CellNOptR, ,which has a different conventions. So, we replace
         # all + by "^" !! Do we want a warning ?
         for reaction in self.df.columns:
+            count = 0
             if "+" in reaction:
                 # todo: use logging
-                if self.verbose:
+
+                if self.verbose and count == 0:
                     print("Warning in Models. found a + sign... in %s. Interepreted as ^" % reaction)
-        self.df.columns = [x.replace("+", "^") for x in self.df.columns]
+                    count = 1
+            def convert(x):
+                from cno import Reaction
+                r = Reaction(x)
+                r.sort()
+                name = r.name
+                name = name.replace("+", "^")
+                return name
+            self.df.columns = [convert(x) for x in self.df.columns]
+
+
+
+        # we also reorder alphabetically the species in the and reactions
 
         # keep this import here to avoid cycling imports
         from cno.io.cnograph import CNOGraph
@@ -322,9 +336,9 @@ class BooleanModels(Models):
         reactions = [x.replace('+','^') for x in reactions]
         return reactions
 
-    def get_consensus_model(self):
+    def get_consensus_model(self, threshold=0.5):
         df = self.df.ix[self.scores<=self.scores.min()*(1.)]
-        reactions = list(df.mean()[df.mean() > 0.5].index)
+        reactions = list(df.mean()[df.mean() > threshold].index)
         return reactions
 
 
