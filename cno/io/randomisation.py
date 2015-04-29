@@ -75,14 +75,12 @@ class RandomGraph(object):
         pylab.grid()
 
 
-
-
-
-
-
 class Swaper(object):
     """Function to test the randomisation of networks.
 
+
+    s = Swaper()
+    s.plot_average_distance(10,100)
 
     """
     def __init__(self):
@@ -107,11 +105,13 @@ class Swaper(object):
             return G
 
     def get_distance(self, G):
+
+        # union divided by total edges
         inter = len([this for this in self.edges if 
             this in G.edges()]);
         return float(inter)/len(self.edges)
 
-    def compute_distances(self, N=100, show=True):
+    def compute_distances(self, N=100, show=True, progress=True):
         self.init()
         from easydev import progress_bar
         distances = []
@@ -120,7 +120,7 @@ class Swaper(object):
             self.swap(1, inplace=True)
             dist = self.get_distance(self.graph)
             distances.append(dist)
-            pb.animate(i,0)
+            if progress:pb.animate(i,0)
         if show is True:
             import pylab
             pylab.plot(distances)
@@ -131,9 +131,13 @@ class Swaper(object):
         import pandas as pd
         import pylab
         distances = []
+        
+        from easydev import progress_bar
+        pb = progress_bar(repeat)
         for i in range(0, repeat):
-            distance = self.compute_distances(N=N, show=False)
+            distance = self.compute_distances(N=N, show=False, progress=False)
             distances.append(distance)
+            pb.animate(i+1, 0)
         df = pd.DataFrame(distances)
         pylab.clf()
         pylab.fill_between(range(0,N), df.mean()+df.std(),

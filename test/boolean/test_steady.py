@@ -16,10 +16,11 @@ def test_steady():
     s = Steady(cnodata("PKN-LiverDREAM.sif"), cnodata("MD-LiverDREAM.csv"))
     s._params['include_time_zero'] = False
     s.simulate() 
-    s._params['NAFac'] = 0
-    assert_almost_equal(s.score(), 0.257494790181818, places=10)
-    s._params['NAFac'] = 1
-    assert_almost_equal(s.score(), 0.314637647325, places=10)
+    assert_almost_equal(s.score(), 0.2574947901818182, places=10)
+            
+    s._params['include_time_zero'] = True
+    s.simulate() 
+    assert_almost_equal(s.score(), 0.4696160023030303, places=10)
 
     # from CNOR. checked 23/4/2015
     s = Steady(cnodata("PKN-LiverDREAM.sif"), cnodata("MD-LiverDREAM.csv"))
@@ -50,6 +51,16 @@ def test_steady_with_and_gates():
 
     s.simulate(reactions=reactions)
     assert_almost_equal(s.score(), 0.02964260651629073, places=10)
+
+
+    # checked against cellnoptr 1.11.5
+    s = Steady(cnodata("PKN-LiverDREAM.sif"),
+            cnodata("MD-LiverDREAM.csv"))
+    s.preprocessing(compression=False)
+    s.simulate()
+    s.debug_score = True
+    assert_almost_equal(s.score(), 0.4696160023030303, places=10)
+
 
 
 def test_optimise():

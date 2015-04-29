@@ -111,9 +111,6 @@ class Models(object):
         self.df = self.df.ix[index]
         self.scores = self.scores.ix[index]
 
-
-
-
     def get_average_model(self, max_score=None):
 
         """Returns the average model (on each reaction)"""
@@ -126,10 +123,10 @@ class Models(object):
 
             return self.df.ix[self.scores<=max_score].mean(axis=0)
 
-    def to_csv(self, filename):
+    def to_csv(self, filename, index=False):
         """Exports the dataframe to a CSV file"""
-        self.df['score'] = self.scores
-        self.df.to_csv(filename)
+        self.df['score'] = self.scores.values
+        self.df.to_csv(filename, index=False)
         del self.df['score']
 
     def to_sif(self, filename=None):
@@ -264,11 +261,15 @@ class BooleanModels(Models):
         self.cnograph.plot(edge_attribute="average", cmap=cmap,
                 colorbar=colorbar, filename=filename, **kargs)
 
-    def errorbar(self):
+    def errorbar(self, tolerance=1e8):
         """Plot the average presence of reactions over all models"""
-        mu = self.df.mean()
+
+
+        df = self.df.ix[self.scores<=self.scores.min()*(1+tolerance)]
+
+        mu = df.mean()
         mu.sort(inplace=True)
-        sigma = self.df.std()
+        sigma = df.std()
         pylab.clf()
         X = range(0,len(mu.index))
         pylab.errorbar(X, mu.values, yerr=sigma.ix[mu.index].values,
@@ -279,6 +280,7 @@ class BooleanModels(Models):
         pylab.ylim([-0.1, 1.1])
         pylab.xlim([-0.5, len(X)+.5])
         pylab.tight_layout()
+        return df
 
     def heatmap(self, num=1, transpose=False, cmap='gist_heat_r', heatmap_attr={}):
         """    """
@@ -319,6 +321,13 @@ class BooleanModels(Models):
         reactions = list(self.df.columns[self.df.mean() > threshold])
         reactions = [x.replace('+','^') for x in reactions]
         return reactions
+
+    def get_consensus_model(self):
+        df = self.df.ix[self.scores<=self.scores.min()*(1.)]
+        reactions = list(df.mean()[df.mean() > 0.5].index)
+        return reactions
+
+
 
 
 

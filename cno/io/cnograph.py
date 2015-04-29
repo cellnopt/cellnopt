@@ -35,7 +35,6 @@ try:
     import pygraphviz as gv
 except ImportError:
     print("Warning:: Pygraphviz not found")
-
     pass
 
 import numpy as np
@@ -51,48 +50,6 @@ import colormap
 from cno.misc.profiler import do_profile
 __all__ = ["CNOGraph", "CNOGraphAttributes"]
 
-
-class Link(object):
-    """Simple class to handle links
-
-    This class is used internally to simplify code.
-
-    .. doctest::
-
-        >>> from cno.io.cnograph import Link
-        >>> l = Link("+")
-        >>> l.name
-        "activation"
-        >>> l.link
-        "+"
-
-    """
-    def __init__(self, link):
-        self._link = None
-        self._activation = 'activation'
-        self._inhibition = 'inhibition'
-        self._names = [self._activation, self._inhibition]
-
-        self.link = link
-
-    def _set_link(self, link):
-        if link == "+":
-            self.name = self._activation
-        elif link == '-':
-            self.name = self._inhibition
-        else:
-            raise ValueError("Only + and - link are valid. Got %s" % link)
-        self._link = link
-    def _get_link(self):
-        return self._link
-    link = property(_get_link, _set_link, doc="Getter/Setter for links")
-
-    def __eq__(self, other):
-        assert other in self._names
-        if other == self.name:
-            return True
-        else:
-            return False
 
 
 def modifier(func):
@@ -548,7 +505,6 @@ class CNOGraph(nx.DiGraph):
         self.set_default_node_attributes() # must be call if sif or midas modified.
         self.logging.debug("Model loaded")
 
-    #@modifier
     def _add_simple_reaction(self, reac, node_dict=None, edge_dict=None):
         """A=B or !A=B"""
 
@@ -576,8 +532,8 @@ class CNOGraph(nx.DiGraph):
                     self.add_edge(lhs, rhs, attr_dict=edge_dict, link=link)
             else:
                 self.add_edge(lhs,rhs, attr_dict=edge_dict, link=link)
+        self._changed = True
 
-    #@modifier
     def add_reactions(self, reactions, node_dict=None, edge_dict=None):
         self._changed = True
         for reac in reactions:
@@ -623,7 +579,6 @@ class CNOGraph(nx.DiGraph):
         .. warning:: component of AND gates are ordered alphabetically.
         """
         # add the nodes first so that the attributes are ste properly
-        self._changed = True
         # make sure that (1) there is no extra spaces and (2) this is a string, not
         # a unicode
         reac = Reaction(str(reac.strip()))
@@ -658,29 +613,36 @@ class CNOGraph(nx.DiGraph):
                     name = this + "=" + reac.name
                     self._add_simple_reaction(name,
                             node_dict=node_dict, edge_dict=edge_dict)
+        self._changed = True
 
-    def set_default_edge_attributes(self,  **attr):
+    #@do_profile()
+    def get_default_edge_attributes(self,  **attr):
         #if "compressed" not in attr.keys():
         #    attr["compressed"] = []
 
-        link = Link(attr.get("link"))
-        attrs = self.attributes[link.name]
-        for k in attrs.keys():
-            if k not in attr.keys():
-                attr[k] = attrs[k]
+        link = attr.get("link", "+")
+        if link == '+':
+            attr['color'] = 'black'
+            attr['arrowhead'] = 'normal'
+            attr['penwidth'] = 1
+        else:
+            attr['color'] = 'red'
+            attr['arrowhead'] = 'tee'
+            attr['penwidth'] = 1
+
         return attr
 
     def reset_edge_attributes(self):
         """set all edge attributes to default attributes
 
-        .. seealso:: :meth:`set_default_edge_attribute`
+        .. seealso:: :meth:`get_default_edge_attribute`
 
         if we set an edge label, which is an AND ^, then plot fails in this function
         c.edge["alpha^NaCl=HOG1"]['label'] = "?"
         """
         for edge in self.edges():
             attrs = self.edge[edge[0]][edge[1]]
-            attrs = self.set_default_edge_attributes(**attrs)
+            attrs = self.get_default_edge_attributes(**attrs)
             self.edge[edge[0]][edge[1]] = attrs
 
     def add_edges_from(self, ebunch, attr_dict=None, **attr):
@@ -688,7 +650,7 @@ class CNOGraph(nx.DiGraph):
         for edge in ebunch:
             self.add_edge(edge[0], edge[1], attr_dict=attr_dict, **attr)
 
-    #@modifier
+    #@do_profile()
     def add_edge(self, u, v, attr_dict=None, **attr):
         """adds an edge between node u and v.
 
@@ -751,10 +713,11 @@ class CNOGraph(nx.DiGraph):
         the edge attributes, which can be checked by printing the data of the edge (c.edges(data=True())
 
 
-        .. seealso:: special attributes are automatically set by :meth:`set_default_edge_attributes`.
+        .. seealso:: special attributes are automatically set by :meth:`get_default_edge_attributes`.
             the color of the edge is black if link is set to "+" and red otherwie.
 
         """
+<<<<<<< HEAD
         self._changed = True
 
         self.add_node(u)
@@ -765,6 +728,8 @@ class CNOGraph(nx.DiGraph):
         attr = self.set_default_edge_attributes(**attr)
         #for k,v in attr_user.items():
         #    attr[k] = v
+=======
+>>>>>>> 08433094cfd07760c338bb908f67499d666ced80
 
         # cast u to str to search for + sign
         if "+" in str(u):
@@ -779,9 +744,9 @@ class CNOGraph(nx.DiGraph):
                     attr["link"] = "+"
                     super(CNOGraph, self).add_edge(x, v, attr_dict, **attr)
         else:
+            attr = self.get_default_edge_attributes(**attr)
             super(CNOGraph, self).add_edge(u, v, attr_dict, **attr)
 
-    #@modifier
     def clear(self):
         """Remove nodes and edges and MIDAS instance"""
         super(CNOGraph, self).clear()
@@ -1621,8 +1586,12 @@ class CNOGraph(nx.DiGraph):
         status['count'] = count
         status['trials'] = trials
 
+        self._status_swap_edges = status
+
         if inplace is False:
             return local, status
+        else:
+            self._changed = True
 
     def adjacency_matrix(self, nodelist=None, weight=None):
         """Return adjacency matrix.
@@ -1643,7 +1612,6 @@ class CNOGraph(nx.DiGraph):
         """
         return nx.adjacency_matrix(self, nodelist=nodelist).astype(int)
 
-    #@modifier
     def remove_edge(self, u, v):
         """Remove the edge between u and v.
 
@@ -1860,7 +1828,7 @@ class CNOGraph(nx.DiGraph):
     def signed_predecessors(self, node):
         preds = self.predecessors(node)
         for i, pred in enumerate(preds):
-            if Link(self.edge[pred][node]['link']) == 'inhibition':
+            if self.edge[pred][node]['link'] == '-':
                 preds[i] = "!" + pred
         return preds
 
@@ -1935,6 +1903,7 @@ class CNOGraph(nx.DiGraph):
                 self.logging.warning("unknown case (no output or input ?). Node %s removed"% node)
                 #raise ValueError("invalid node to remove several in/out")
         self.remove_node(node)
+        self._changed = True
 
     def get_node_attributes(self, node):
         """Returns attributes of a node using the MIDAS attribute
@@ -2198,6 +2167,7 @@ class CNOGraph(nx.DiGraph):
                 #attr['weight'] = pylab.nan # edge from and to specy always + and nan weight
                 attr['color'] = 'black' # and output is always black
                 self.add_edge(andNode, node, None, **attr)
+        self._changed = True
 
     def _nodes2reac(self, inputsNodes, output):
         inputs = []
@@ -2278,7 +2248,6 @@ class CNOGraph(nx.DiGraph):
         .. seealso:: :meth:`~cno.io.cnograph.CNOGraph.expand_and_gates`
 
         """
-        self._changed = True
         for this in self._find_and_nodes():
             p = self.predecessors(this)
             s = self.successors(this)
@@ -2286,6 +2255,7 @@ class CNOGraph(nx.DiGraph):
             for node in p:
                 link = self.edge[node][this]['link']
                 self.add_edge(node, s[0], link=link)
+        self._changed = True
 
     def expand_and_gates(self, maxInputsPerGate=2):
         """Expands the network to incorporate AND gates
@@ -2378,7 +2348,7 @@ class CNOGraph(nx.DiGraph):
         if "link" not in attr.keys():
             raise KeyError("link keyword must be provided")
 
-        attr = self.set_default_edge_attributes(**attr)
+        attr = self.get_default_edge_attributes(**attr)
         super(CNOGraph, self).add_cycle(nodes, **attr)
 
     def add_path(self):
@@ -2682,6 +2652,7 @@ class CNOGraph(nx.DiGraph):
 
         # finally remove the old nodes
         self.remove_nodes_from(mapping.keys())
+        self._changed = True
 
     def centrality_eigenvector(self, max_iter=1000, tol=0.1):
         res = nx.eigenvector_centrality(self,max_iter,tol=tol)
@@ -3006,6 +2977,8 @@ class CNOGraph(nx.DiGraph):
                 self._inhibitors.remove(this)
             self._inhibitors.append(node)
 
+        self._changed = True
+
     def split_node(self, node, nodes):
         """
 
@@ -3030,7 +3003,6 @@ class CNOGraph(nx.DiGraph):
             c.plot(hold=True)
 
         """
-        self._changed = True
         for n in nodes:
             for pred in self.predecessors(node):
                 attrs = self.edge[pred][node]
@@ -3064,6 +3036,7 @@ class CNOGraph(nx.DiGraph):
         if node in self._inhibitors:
             self._inhibitors.extend(nodes)
             self._inhibitors.remove(node)
+        self._changed = True
 
     def _rename_node_in_reaction(self, reaction, old, new):
         """This function rename a species within a reaction."""
@@ -3160,6 +3133,7 @@ class AGraphCNO(gv.AGraph):
             for u,v,edgedata in N.edges_iter(data=True):
                 str_edgedata=dict((k,str(v)) for k,v in edgedata.items())
                 self.add_edge(u,v,**str_edgedata)
+        self._changed = True
 
     def to_dot(self, filename=None, frmt='png'):
         allranks = self.cnograph.get_same_rank()

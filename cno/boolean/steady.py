@@ -97,6 +97,7 @@ class Steady(CNOBase):
         self._params = AttrDict(**self._params)
 
         self.debug_score = False
+        self.stopcount = None
 
     #@do_profile()
     def _init_values(self, time=False):
@@ -335,6 +336,9 @@ class Steady(CNOBase):
                 self.debug_values.append(self.values.copy())
            
             self.residuals.append(residual)
+            if self.stopcount :
+                if self.count <10:
+                    residual+=1
             self.count += 1
 
         #if self.debug is True:
