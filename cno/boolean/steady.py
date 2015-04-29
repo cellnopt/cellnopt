@@ -883,7 +883,7 @@ class Steady(CNOBase):
         self._plot_essentiality(best_score, scores, threshold=threshold, new_reactions=new_reactions)
 
         noands = [r for r in reactions if "^" not in r]
-        self.simulate(reactions)
+        self.simulate(noands)
         score_noands = self.score()
         print('Scores with all reactions =%s.' % best_score)
         print('Scores with no AND reactions =%s.' % score_noands)
