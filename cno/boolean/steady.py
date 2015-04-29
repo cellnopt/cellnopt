@@ -819,36 +819,77 @@ class Steady(CNOBase):
         # with scores < (1+model_number) times best score
         self.results.models.plot(filename=None, model_number=model_number, tolerance=tolerance)
 
-    def refine(self, show=True, inplace=False, threshold=1e-4):
-        self.best_bitstring = list(self.results.results.best_bitstring)
-        self.best_score = self.results.results.best_score[-1]
-
-        reactions = self.parameters2reactions(self.best_bitstring)
-
-        scores = {}
-        for reac in reactions:
-            pruned_reactions = reactions[:]
-            pruned_reactions.remove(reac)
-            self.simulate(reactions=pruned_reactions)
-            scores[reac] = self.score()
-
-        #if inplace is True:
-        for reac in scores.keys():
-            if scores[reac] <= self.best_score + threshold:
-                reactions.remove(reac)
+    def _plot_essentiality(self, best_score, scores, threshold=1e-4, new_reactions=None):
+        reactions = scores.keys()
 
         pylab.clf()
-        pylab.axhline(self.best_score)
-        pylab.axhline(self.best_score+ threshold)
-        pylab.plot(scores.values(), 'or')
-        N = len(scores.keys())
-        pylab.xticks(range(0, N), scores.keys(), rotation=90)
-        
-        self.simulate(reactions=reactions)
-        score = self.score()
-        print(score)
-        pylab.axhline(score, color='k', lw=2 , ls='--')
-        
+        pylab.axhline(best_score, label='score (all reactions)')
+        #pylab.axhline(best_score+ threshold, label=)
 
-        return scores, reactions
+        keys = sorted(scores.keys())
+        values = [scores[k] for k in keys]
 
+        pylab.plot(values, 'or')
+        N = len(keys)
+        pylab.xticks(range(0, N), keys, rotation=90)
+
+        if new_reactions is not None:
+            self.simulate(reactions=new_reactions)
+            score = self.score()
+            pylab.axhline(score, color='k', lw=2 , ls='--', label='score (essential reactions)')
+            pylab.legend()
+        pylab.grid(True)
+
+    def essentiality(self, reactions=None, threshold=1e-4):
+
+        if reactions is None:
+            best_bitstring = list(self.results.results.best_bitstring)
+            reactions = self.parameters2reactions(self.best_bitstring)
+
+        self.simulate(reactions)
+        best_score = self.score()
+        scores = {}
+        for reac in reactions:
+            pruned_reactions = [r for r in reactions if r!=reac]
+            self.simulate(pruned_reactions)
+            scores[reac] = self.score()
+
+        new_reactions = reactions[:]
+        for reac in scores.keys():
+            if scores[reac] <= best_score + threshold:
+                new_reactions.remove(reac)
+
+        self._plot_essentiality(best_score, scores, threshold=threshold, new_reactions=new_reactions)
+        return scores
+
+    def essentiality_ands(self, reactions, threshold=1e-4):
+        """checks essiality each reaons and all andre remov.
+
+        """
+
+        self.simulate(reactions)
+        best_score = self.score()
+        scores = {}
+        for reac in reactions:
+            pruned_reactions = [r for r in reactions if r!=reac]
+            self.simulate(pruned_reactions)
+            scores[reac] = self.score()
+
+        new_reactions = reactions[:]
+        for reac in scores.keys():
+            if scores[reac] <= best_score + threshold:
+                new_reactions.remove(reac)
+
+        self._plot_essentiality(best_score, scores, threshold=threshold, new_reactions=new_reactions)
+
+        noands = [r for r in reactions if "^" not in r]
+        self.simulate(reactions)
+        score_noands = self.score()
+        print('Scores with all reactions =%s.' % best_score)
+        print('Scores with no AND reactions =%s.' % score_noands)
+        pylab.axhline(score_noands, color='g', lw=4 , ls='-', alpha=0.3, label='score (no ands)')
+        pylab.legend()
+
+
+
+        return scores, noands
