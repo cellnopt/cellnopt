@@ -717,19 +717,6 @@ class CNOGraph(nx.DiGraph):
             the color of the edge is black if link is set to "+" and red otherwie.
 
         """
-<<<<<<< HEAD
-        self._changed = True
-
-        self.add_node(u)
-        self.add_node(v)
-        link = Link(attr.get("link", "+"))
-        attr['link'] = link.link
-        #attr_user = attr.copy()
-        attr = self.set_default_edge_attributes(**attr)
-        #for k,v in attr_user.items():
-        #    attr[k] = v
-=======
->>>>>>> 08433094cfd07760c338bb908f67499d666ced80
 
         # cast u to str to search for + sign
         if "+" in str(u):
