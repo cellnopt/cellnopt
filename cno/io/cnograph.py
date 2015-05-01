@@ -624,11 +624,11 @@ class CNOGraph(nx.DiGraph):
         if link == '+':
             attr['color'] = 'black'
             attr['arrowhead'] = 'normal'
-            attr['penwidth'] = 1
+            attr['penwidth'] = attr.get('penwidth', 1)
         else:
             attr['color'] = 'red'
             attr['arrowhead'] = 'tee'
-            attr['penwidth'] = 1
+            attr['penwidth'] = attr.get('penwidth', 1)
 
         return attr
 
