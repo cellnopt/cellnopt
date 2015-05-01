@@ -376,10 +376,10 @@ class CompareTwoModels(object):
         self.midas = None
 
     def get_intersection(self):
-        return self.m1[self.m1 & self.m2]
+        return self.m1[np.logical_and(self.m1, self.m2)]
 
     def get_union(self):
-        return self.m1[self.m1 | self.m2]
+        return self.m1[np.logical_or(self.m1 , self.m2)]
 
     def get_both(self):
         return self.get_intersection()
@@ -405,25 +405,25 @@ class CompareTwoModels(object):
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.1, color='black', penwidth=6, label='both')
+                c.add_edge(edge[0], edge[1], link='+', edgecolor=.1, color='black', penwidth=6, label='both')
 
         for reaction in self.get_m1_only().index:
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.3, label='m1', color='red', penwidth=3)
+                c.add_edge(edge[0], edge[1], link='+', edgecolor=.3, label='m1', color='red', penwidth=3)
 
         for reaction in self.get_m2_only().index:
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.5, label='m2', color='green', penwidth=3)
+                c.add_edge(edge[0], edge[1], link='+', edgecolor=.5, label='m2', color='green', penwidth=3)
 
         for reaction in self.get_both_off().index:
             r = Reaction(reaction)
             r.sort()
             for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], edgecolor=.9, label='off', color='gray', penwidth=3)
+                c.add_edge(edge[0], edge[1], link='+',edgecolor=.9, label='', arrowsize=0, color='gray', penwidth=0)
 
 
         #c.plot(edge_attribute='edgecolor', cmap=cmap)
