@@ -99,6 +99,9 @@ class Steady(CNOBase):
         self.debug_score = False
         self.stopcount = None
 
+        self.paradoxical = {}
+        self.repressors = {}
+
     #@do_profile()
     def _init_values(self, time=False):
         self.values = {}
@@ -291,6 +294,15 @@ class Steady(CNOBase):
             #self.X0 = pd.DataFrame(self.values)
             #self.X0 = self.values.copy()
             # compute AND gates first. why
+
+            # an paradoxical effects induced by drugs ?
+            # should be first before updating other nodes
+            #for inh in self.paradoxical.keys():
+            #    if node in self.paradoxical[inh]:
+            #        values[node][(self.inhibitors[inh]==1).values] = 1
+            #    #values[inh][(self.inhibitors[inh]==1).values] = 1
+
+
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
                 # THere are always predecessors
@@ -320,6 +332,19 @@ class Steady(CNOBase):
                     # if inhibitors is on (1), multiply by 0
                     # if inhibitors is not active, (0), does nothing.
                     values[node] *= 1 - self.inhibitors[node].values
+
+
+                # an paradoxical effects induced by drugs ?
+                for inh in self.paradoxical.keys():
+                    if node in self.paradoxical[inh]:
+                        values[node][(self.inhibitors[inh]==1).values] = 1
+                for inh in self.repressors.keys():
+                    if node in self.repressors[inh]:
+                        values[node][(self.inhibitors[inh]==1).values] = 0
+
+
+
+
             # here NAs are set automatically to zero because of the int16 cast
             # but it helps speeding up a bit the code by removig needs to take care
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
@@ -813,13 +838,14 @@ class Steady(CNOBase):
         self.results.results = results
         self.results.models = models
         self.results.models.cnograph.midas = self.data # to get the MIDAS annotation
+        self.best_bitstring = self.results.results.best_bitstring
 
     def plot_models(self, filename=None, model_number=None, tolerance=None):
         # if model_number set to float, models are filtered
         # with scores < (1+model_number) times best score
         self.results.models.plot(filename=None, model_number=model_number, tolerance=tolerance)
 
-    def _plot_essentiality(self, best_score, scores, threshold=1e-4, new_reactions=None):
+    def _plot_essentiality(self, best_score, scores, threshold=1e-4, new_reactions=None, fontsize=16):
         reactions = scores.keys()
 
         pylab.clf()
@@ -829,18 +855,21 @@ class Steady(CNOBase):
         keys = sorted(scores.keys())
         values = [scores[k] for k in keys]
 
-        pylab.plot(values, 'or')
+        pylab.plot(values, 'or', markersize=8)
         N = len(keys)
-        pylab.xticks(range(0, N), keys, rotation=90)
+        pylab.xticks(range(0, N), keys, rotation=90, fontsize=fontsize)
+        pylab.yticks(fontsize=fontsize)
 
         if new_reactions is not None:
             self.simulate(reactions=new_reactions)
             score = self.score()
             pylab.axhline(score, color='k', lw=2 , ls='--', label='score (essential reactions)')
-            pylab.legend()
+            pylab.legend(fontsize=fontsize)
+        pylab.xlim(-1, len(values))
         pylab.grid(True)
+        pylab.tight_layout()
 
-    def essentiality(self, reactions=None, threshold=1e-4):
+    def essentiality(self, reactions=None, threshold=1e-4, show=True, fontsize=20):
 
         if reactions is None:
             best_bitstring = list(self.results.results.best_bitstring)
@@ -859,8 +888,9 @@ class Steady(CNOBase):
             if scores[reac] <= best_score + threshold:
                 new_reactions.remove(reac)
 
-        self._plot_essentiality(best_score, scores, threshold=threshold, new_reactions=new_reactions)
-        return scores
+        if show is True:
+            self._plot_essentiality(best_score, scores, threshold=threshold, new_reactions=new_reactions, fontsize=fontsize)
+        return scores, new_reactions
 
     def essentiality_ands(self, reactions, threshold=1e-4):
         """checks essiality each reaons and all andre remov.
@@ -890,6 +920,65 @@ class Steady(CNOBase):
         pylab.axhline(score_noands, color='g', lw=4 , ls='-', alpha=0.3, label='score (no ands)')
         pylab.legend()
 
-
-
         return scores, noands
+
+    def prun_model(self, reactions):
+
+        self.simulate(reactions)
+        best_score = self.score()
+        scores, newr = self.essentiality(reactions, show=False)
+        self.simulate(newr)
+        new_score = self.score()
+        return newr
+
+
+    def clean_models(self, tolerance=0.1):
+
+        models = self.results.models.copy()
+        models.midas = self.midas
+        print("Found %s models within the tolerance" % len(models.df))
+        models.drop_duplicates()
+        print("Removing duplicates found %s" % len(models.df))
+        models.drop_scores_above(tolerance=tolerance)
+        print("Keeping within tolerance, found %s" % len(models.df))
+        from easydev import progress_bar
+        pb = progress_bar(len(models))
+        count = 0
+        changed = 0
+        for index in models.df.index:
+            count +=1
+            reactions = list(models.df.columns[models.df.ix[index]==1])
+            self.simulate(reactions)
+            score = self.score()
+            #if models.scores[index] != score:
+            #     print(index, models.scores[index], score)
+
+            # compute essentiality to simplify models
+            dummy, newr = self.essentiality(reactions, show=False)
+            self.simulate(newr)
+            new_score = self.score()
+            #print score, new_score, len(reactions), len(newr)
+            if new_score <= score:
+                # keep that pruned model
+                models.df.ix[index] = self.reactions2parameters(newr)
+                models.scores.ix[index] = new_score
+                changed += 1
+            else:
+                # keep original
+                pass
+
+
+            pb.animate(count,0)
+        print('Simplified %s %% of the model' % float(changed/float(len(models.df))))
+        models.drop_duplicates()
+        print("Removing duplicaes found %s" % len(models.df))
+        models.drop_scores_above(tolerance=tolerance)
+        print("Keeping within tolerance, found %s" % len(models.df))
+
+        return models
+
+
+
+
+
+
