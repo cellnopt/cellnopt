@@ -1582,7 +1582,8 @@ class XMIDAS(MIDASReader):
             pass
         return diffs
 
-    def imshow(self, time, colorbar=True, cmap=None, vmin=None, vmax=None):
+    def imshow(self, time, colorbar=True, cmap=None, vmin=None, vmax=None,
+            edgecolors='k'):
         """vmax and vmin are replaced so that we have a symmetric colorbar
         centered around 0"""
 
@@ -1603,6 +1604,8 @@ class XMIDAS(MIDASReader):
         data = pylab.flipud(df.as_matrix())
 
 
+        data = np.ma.array(data, mask=np.isnan(data))
+
         # should be 
         ax_cb = pylab.gcf().axes[5]
         if vmax is None:
@@ -1614,7 +1617,7 @@ class XMIDAS(MIDASReader):
             vmax = abs(vmin)
         else:
             vmin = -vmax
-        ax.pcolor(data,  vmin=vmin, vmax=vmax, cmap=cmap, edgecolors='k')
+        ax.pcolormesh(data,  vmin=vmin, vmax=vmax, cmap=cmap, edgecolors=edgecolors)
         self._set_colorbar(ax_cb, vmin, vmax, cmap=cmap)
 
     def _set_colorbar(self, ax_cb, vmin, vmax, cmap='jet'):
