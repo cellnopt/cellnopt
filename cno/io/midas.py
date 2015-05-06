@@ -1589,7 +1589,7 @@ class XMIDAS(MIDASReader):
 
         if cmap is None:
             import colormap
-            cmap = colormap.cmap_builder('#ff0d90', 'white', '#0DDFFF')
+            cmap = colormap.cmap_builder('red', 'black', 'green')
 
         pylab.clf()
         ax = self.plot_layout(cmap=cmap, colorbar=colorbar, mode='mse')
