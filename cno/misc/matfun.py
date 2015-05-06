@@ -151,6 +151,74 @@ def create_picture_cnorfuzzy_package(fontsize=20, save=True):
 
 
 
+def hill_activator(data, n=2, K=.5, betamax=1):
+    r"""Hill function for an activator
+
+    For an activator the Hill function is an increasing function with concentration of active activator X.
+    The production rate rises from zero and reaches the maximal producion rate in a sigmoidal shape.
+
+    .. math:: f(X) = (\beta_{max} X^n )/ (K^n + X^n)
+
+    http://www.bio-physics.at/wiki/index.php?title=Hill_Function
+
+    maximal production rate
+    Hill coefficient
+    activation coefficient
+
+    :math:`\beta_{max}` is the maximal production rate of the promoter-transcirption factor complex.
+    If the activator concentration X equals the activation coefficient K, the Hill function
+    reaches the half-maximum point. The value of K is hardwired and a characteristic of the
+    promoter, that depends on the promoter strength as well as on increased
+    affinity through transcription factors.
+
+    The lager the Hill coefficient n the more step like the Hill function becomes and in the
+    limit n infinite the f(X) takes a unit step at X=K. The Hill coefficient comes from the fact
+    the transcription factors can act as multimeres which leads to cooperative behaviour. Typical values for n are 1-4.
+
+    """
+    #if this is a dataframe, try:
+    try:
+        return betamax * (data**n).divide( data**n + np.array(K)**n)
+    except:
+        return betamax * (data**n / (data**n + K**n))
+
+def hill_repressor(data, n=2, K=.5, betamax=1):
+    r"""For repressors the Hill function decreases with the concentration of active repressor X
+
+    .. math:: \beta_{max} / (1 + (X/K)**n)
+
+
+    maximal production rate
+    Hill coefficient
+    activation coefficient
+
+    The more repressor is available, the higher the probability that a repressor binds to the
+    operator site, thus the expression level is more and more repressed with increasing
+    repressor levels. Half-maximal repression occurs, when the concentration of active
+    repressor equals the repression coefficient X=K
+
+
+    """
+    try:
+        return betamax/(1. +  (data.divide(K))**n)
+    except:
+        return betamax/(1. +  (data/K)**n)
+
+
+
+def normalise(df, n=2, Kact=.54, Krep=.26, tag_neg=True):
+    fc = df.copy().astype(float)
+    fc[df>0] = hill_activator(df, n=n, K=Kact)[df>0]
+    if tag_neg is True:
+        fc[df<0] = -1 * (1-hill_repressor(abs(df), n=n, K=Krep)[df<0])
+    else:
+        fc[df<0] = 1-hill_repressor(abs(df), n=n, K=Krep)[df<0]
+    return fc
+
+
+
+
+
 
 def hill_activator(data, n=2, K=.5, betamax=1):
     r"""Hill function for an activator
