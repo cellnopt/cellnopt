@@ -117,7 +117,6 @@ class GABinary(GA):
             ax.set_ylim(0,1)
             ax.grid()
 
-        print('Starting GA')
         while self.stop is False:
             # for each bistring in self.Pop, compute the scores for each string in Pop
 
