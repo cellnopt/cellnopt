@@ -104,6 +104,10 @@ class Steady(CNOBase):
 
     #@do_profile()
     def _init_values(self, time=False):
+        self._node_names = sorted(self.model.nodes())
+        self._new_values = np.zeros((len(self._node_names), self.N))
+        self._index_stimuli = [self._node_names.index(name) for name in self.stimuli_names]
+
         self.values = {}
         for node in self.model.nodes():
             # Do we really want NAs ? probably not. fold changes are by
@@ -116,6 +120,9 @@ class Steady(CNOBase):
             self.inhibitors = self._inhibitors_all
             for this in self.stimuli_names:
                 self.values[this] = self.stimuli[this].values.copy()
+            for this in self._index_stimuli:
+                name = self._node_names[this]
+                self._new_values[this] = self.stimuli[name].values.copy() 
 
             #for this in self.inhibitors_names:
             #    self.values[this] = 1. - self.inhibitors[this].values.copy()
@@ -137,7 +144,6 @@ class Steady(CNOBase):
         # order may be different !!
 
         assert time in self.data.times
-
 
         self._init_values(time=time)
 
@@ -220,19 +226,11 @@ class Steady(CNOBase):
         self._init_values(self.time)
         self._simulate(reactions=reactions, time=None, ntic=ntic)
 
-    #@do_profile()
+    @do_profile()
     def _simulate(self, reactions=None, time=None, ntic=None):
         """
 
         """
-        # pandas is very convenient but slower than numpy
-        # The dataFrame instanciation is costly as well.
-        # For small models, it has a non-negligeable cost.
-
-        # inhibitors will be changed if not ON
-        #self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
-        #            and x not in self.and_gates]
-
         if time is None:
             time = self.time
         # what about a species that is both inhibited and measured
@@ -240,7 +238,6 @@ class Steady(CNOBase):
         import copy
         #values = copy.deepcopy(self.values)
         values = self.values  # !! reference but should be reset when calling _init_values / simulate()
-
 
         if self.debug:
             self.debug_values = [values.copy()]
@@ -291,23 +288,15 @@ class Steady(CNOBase):
 
         while ((self.count < ntic) and residual > testVal):
             self.previous = values.copy()
-            #self.X0 = pd.DataFrame(self.values)
-            #self.X0 = self.values.copy()
             # compute AND gates first. why
-
-            # an paradoxical effects induced by drugs ?
             # should be first before updating other nodes
-            #for inh in self.paradoxical.keys():
-            #    if node in self.paradoxical[inh]:
-            #        values[node][(self.inhibitors[inh]==1).values] = 1
-            #    #values[inh][(self.inhibitors[inh]==1).values] = 1
-
 
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
                 # THere are always predecessors
                 if length_predecessors[node] != 0:
-                    values[node] = bn.nanmin(np.array([self.previous[x] for x in predecessors[node]]), axis=0)
+                    values[node] = bn.nanmin(np.array([self.previous[x] 
+                        for x in predecessors[node]]), axis=0)
                 else:
                     #assert 1==0, "%s %s" % (node, predecessors[node])
                     values[node] = self.previous[node]
@@ -333,7 +322,6 @@ class Steady(CNOBase):
                     # if inhibitors is not active, (0), does nothing.
                     values[node] *= 1 - self.inhibitors[node].values
 
-
                 # an paradoxical effects induced by drugs ?
                 for inh in self.paradoxical.keys():
                     if node in self.paradoxical[inh]:
@@ -341,9 +329,6 @@ class Steady(CNOBase):
                 for inh in self.repressors.keys():
                     if node in self.repressors[inh]:
                         values[node][(self.inhibitors[inh]==1).values] = 0
-
-
-
 
             # here NAs are set automatically to zero because of the int16 cast
             # but it helps speeding up a bit the code by removig needs to take care
@@ -353,10 +338,8 @@ class Steady(CNOBase):
             residual = bn.nansum(np.square(self.m1 - self.m2))
             #residual = np.nansum(np.square(self.m1 - self.m2))
 
-
             # TODO stop criteria should account for the length of the species to the
             # the node itself so count < nSp should be taken into account whatever is residual.
-            #
             if self.debug:
                 self.debug_values.append(self.values.copy())
            
@@ -366,14 +349,7 @@ class Steady(CNOBase):
                     residual+=1
             self.count += 1
 
-        #if self.debug is True:
-        #    # add the latest values simulated in the while loop
-        #    self.debug_values.append(values.copy())
-
-        #self._values2 = values
-
         # Need to set undefined values to NAs
-
         mask = self.m1 != self.m2
         data = np.array([values[k] for k in keys], dtype=float) 
         data[mask] = np.nan
@@ -524,9 +500,6 @@ class Steady(CNOBase):
         # 0.27
 
         # CellNOptR on ToyMMB      : 0.13        ; 0.22s in cno
-        # 
-
-        # 0.09467
         # process and  "EGF=Raf"        "EGF+TNFa=PI3K"  "Erk+TNFa=Hsp27" off
         # then MSE is 0.10838/2
 
