@@ -275,24 +275,30 @@ class BooleanModels(Models):
         self.cnograph.plot(edge_attribute="average", cmap=cmap,
                 colorbar=colorbar, filename=filename, **kargs)
 
-    def errorbar(self, tolerance=1e8):
+    def errorbar(self, tolerance=1e8, errorbar=True):
         """Plot the average presence of reactions over all models"""
 
-
-        df = self.df.ix[self.scores<=self.scores.min()*(1+tolerance)]
+        try:
+            df = self.df.ix[self.scores<=self.scores.min()*(1+tolerance)]
+        except:
+            df = self.df[(self.scores<=self.scores.min()*(1+tolerance)).values]
 
         mu = df.mean()
         mu.sort(inplace=True)
         sigma = df.std()
         pylab.clf()
         X = range(0,len(mu.index))
-        pylab.errorbar(X, mu.values, yerr=sigma.ix[mu.index].values,
+        if errorbar is True:
+            errorbar = 1
+        else:
+            errorbar = 0
+        pylab.errorbar(X, mu.values, yerr=sigma.ix[mu.index].values*errorbar,
                        marker='x', color='r', lw=0, elinewidth=2, ecolor='b')
         pylab.xticks(X, mu.index, rotation=90)
         pylab.title('')
         pylab.grid()
         pylab.ylim([-0.1, 1.1])
-        pylab.xlim([-0.5, len(X)+.5])
+        #pylab.xlim([-0.5, len(X)+.5])
         pylab.tight_layout()
         return df
 
@@ -404,26 +410,26 @@ class CompareTwoModels(object):
         for reaction in self.get_both().index:
             r = Reaction(reaction)
             r.sort()
-            for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link='+', edgecolor=.1, color='black', penwidth=6, label='both')
+            for edge, link in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], link=link, edgecolor=.1, color='black', penwidth=6, label='both')
 
         for reaction in self.get_m1_only().index:
             r = Reaction(reaction)
             r.sort()
-            for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link='+', edgecolor=.3, label='m1', color='red', penwidth=3)
+            for edge, link in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], link=link, edgecolor=.3, label='m1', color='red', penwidth=3)
 
         for reaction in self.get_m2_only().index:
             r = Reaction(reaction)
             r.sort()
-            for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link='+', edgecolor=.5, label='m2', color='green', penwidth=3)
+            for edge, link in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], link=link, edgecolor=.5, label='m2', color='green', penwidth=3)
 
         for reaction in self.get_both_off().index:
             r = Reaction(reaction)
             r.sort()
-            for edge in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link='+',edgecolor=.9, label='', arrowsize=0, color='gray', penwidth=0)
+            for edge, link in c.reac2edges(r.name):
+                c.add_edge(edge[0], edge[1], link=link, edgecolor=.9, label='', arrowsize=0, color='gray', penwidth=0)
 
 
         #c.plot(edge_attribute='edgecolor', cmap=cmap)

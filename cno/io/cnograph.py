@@ -1983,7 +1983,8 @@ class CNOGraph(nx.DiGraph):
                 pass
 
 
-    def set_edge_attribute(self, name, values):
+    def ____set_edge_attribute(self, name, values):
+        # FIXME: not used can be deleted
         # values is a dictionary of reaction as keys
         for reaction in values.keys():
             if reaction in values.keys():
@@ -1997,14 +1998,27 @@ class CNOGraph(nx.DiGraph):
         #if reaction not in self.reactions:
         #    raise CNOError("Unknown reaction {0}".format(reaction))
         reac = Reaction(reaction)
+        dic = reac.get_signed_lhs_species()
+
         if "^" in reaction:
             inputs = reac.lhs_species
             out = reac.rhs
-            return [(this, reaction) for this in inputs] + [(reaction,out)]
+
+            def get_links(this):
+                if this in dic['+']:
+                    return '+'
+                else:
+                    return '-'
+            return [(this, reaction, get_links(this)) for this in inputs] + [(reaction,out)]
         else: #simple case
+            if dic['+']:
+                link = '+'
+            else:
+                link ='-'
+
             e0 = reac.lhs
             e1 = reac.rhs
-            return [(e0.replace("!",""), e1.replace("!",""))]
+            return [(e0.replace("!",""), e1.replace("!",""), link)]
 
     def set_edge_visibility_from_reactions(self, reactions):
         # First, reset the style, which may have been set already
