@@ -62,6 +62,7 @@ class CNOGraphMultiEdges(CNOGraph, nx.MultiDiGraph):
     """
     def __init__(self, model=None, data=None, verbose=False, **kargs):
         super(CNOGraphMultiEdges, self).__init__(**kargs)
+        self._graph_type = 'multigraph'
         c = CNOGraph(model, data)
         self.midas = c.midas
         for e in c.edges(data=True):

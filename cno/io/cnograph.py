@@ -327,6 +327,7 @@ class CNOGraph(nx.DiGraph):
         super(CNOGraph, self).__init__(**kargs)
         self.kargs = kargs.copy()
 
+        self._graph_type = 'digraph'
         # This is a DIgraph attribute
         # self.graph is a DiGraph attribute that is overwritten sometinmes
 
@@ -1403,7 +1404,6 @@ class CNOGraph(nx.DiGraph):
             else:
                 ranks[k] = [x for x in v if '=' not in x]
 
-
         selfloops = [x[1] for x in self.selfloop_edges()]
 
         # Note: if name is set to "cluster"+name, black box is added
@@ -1422,14 +1422,16 @@ class CNOGraph(nx.DiGraph):
                 if len(species)>=2:
                     for i, node1 in enumerate(species[0:-1]):
                         node2 = species[i+1]
-                        aa.add_edge(node1, node2, style="invis")
+                        if self._graph_type != 'multigraph':
+                            aa.add_edge(node1, node2, style="invis")
             elif rank == M:
                 species = sorted([x for x in ranks[rank] if x not in selfloops])
                 aa = H.add_subgraph(species, name="sink", rank='sink')
                 if len(species)>=2:
                     for i, node1 in enumerate(species[0:-1]):
                         node2 = species[i+1]
-                        aa.add_edge(node1, node2, style="invis")
+                        if self._graph_type != 'multigraph':
+                            aa.add_edge(node1, node2, style="invis")
             else:
                 if rank_method in ["all", 'cnor']:
                     # something funky here with self loop
@@ -1983,8 +1985,9 @@ class CNOGraph(nx.DiGraph):
                 pass
 
 
-    def ____set_edge_attribute(self, name, values):
+    def set_edge_attribute(self, name, values):
         # FIXME: not used can be deleted
+        # Used in plot_optimised_model in base.py
         # values is a dictionary of reaction as keys
         for reaction in values.keys():
             if reaction in values.keys():
@@ -2038,8 +2041,9 @@ class CNOGraph(nx.DiGraph):
             else:
                 reaction = self.edge2reaction(edge)
 
-            if reaction not in reactions:
-                self.edge[edge[0]][edge[1]]['style'] = 'invis'
+            if self._graph_type != 'multigraph':
+                if reaction not in reactions:
+                    self.edge[edge[0]][edge[1]]['style'] = 'invis'
 
     def get_same_rank(self):
         """Return ranks of the nodes.
