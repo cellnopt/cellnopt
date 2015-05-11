@@ -169,6 +169,7 @@ class Reaction(str, ReactionBase):
 
     # FIXME does not make sense if A^!B^C=D ?? 
     def _get_sign(self):
+        # if we have an AND gate, for instance A^B=C
         if "!" in self.name and self.and_symbol not in self.name:
             return "-1"
         else:
@@ -201,8 +202,13 @@ class Reaction(str, ReactionBase):
         else:
             species = re.split("[+|^]", reaction.split("=")[0])
             if "" in species:
-                # it means there were several ++ or ^^
                 raise CNOError("Reaction (%s) has two many + or ^ signs" % reaction)
+            # Finally, a ! must be preceded by either nothing or a special sign but not another species
+            # e.g. A!B does not make sense.
+            for i, x in enumerate(species):
+                if x == "!" and i!=0:
+                    if species[i-1] not in self.valid_symbols:
+                        raise CNOError("Reaction (%s) may be ill-formed with incorrect ! not preceded by another reaction ")
 
         return reaction
 

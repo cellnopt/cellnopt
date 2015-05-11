@@ -36,6 +36,12 @@ def test_reaction():
     except:
         assert True
 
+    try:
+        r = Reaction("A!B=C") # missing + or ^ before ! sign
+        assert False
+    except:
+        assert True
+
 
     # simplification
     r = Reaction("A+A=B")
