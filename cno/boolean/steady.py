@@ -595,7 +595,7 @@ class Steady(CNOBase):
         #pylab.title("Steady state for all experiments(x-axis)\n\n\n\n")
         pylab.tight_layout()
 
-    def plot_errors(self, columns=None, reactions=None):
+    def plot_errors(self, columns=None, reactions=None, show=True):
         # What do we use here: self.values
 
         # use eval_func with debug one
@@ -630,11 +630,12 @@ class Steady(CNOBase):
         X1.set_index(['cell', 'experiment', 'time'], inplace=True)
         self.data.sim.ix[X1.index] = X1 #.fillna(2)
 
-
-        self.data.plot(mode='mse')
-        score = self.score()
-        print("MSE= %s(caspo/cno with only 1 time)" % score)
-        print("MSE= %s(cellnoptr with only 1 time)" % str(score/2.))
+        if show is True:
+            self.data.plot(mode='mse')
+            score = self.score()
+            if self.vervose:
+                print("MSE= %s(caspo/cno with only 1 time)" % score)
+                print("MSE= %s(cellnoptr with only 1 time)" % str(score/2.))
         m = self.data.copy()
         return m
 
@@ -786,7 +787,7 @@ class Steady(CNOBase):
                 pass
 
         if guess is not None:
-            print('settting guess')
+            self.logging.debug('settting guess')
             ga.guess = guess
             ga.init()
 

@@ -83,6 +83,7 @@ class GABinary(GA):
         # we will start with the first column
         self.bestbit = self.Pop[0,:]
         self.bestobj = numpy.inf
+        self.bestobj = numpy.inf
         self.stop = False
         self.obj = [0] * self.popsize # used to store all results for each pop
         self.stallgen = 0
