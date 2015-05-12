@@ -633,9 +633,6 @@ class Steady(CNOBase):
         if show is True:
             self.data.plot(mode='mse')
             score = self.score()
-            if self.vervose:
-                print("MSE= %s(caspo/cno with only 1 time)" % score)
-                print("MSE= %s(cellnoptr with only 1 time)" % str(score/2.))
         m = self.data.copy()
         return m
 
