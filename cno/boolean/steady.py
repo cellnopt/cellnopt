@@ -771,13 +771,13 @@ class Steady(CNOBase):
             return score
 
     #@do_profile()
-    def optimise(self, verbose=False, maxgens=500, show=False, reltol=0.1,
+    def optimise(self, verbose=False, popsize=50, maxgens=500, show=False, reltol=0.1,
             pmutation=0.5,
         maxtime=60, elitism=5, prior=[], guess=None, reuse_best=True, maxstallgen=100):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
         ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, 
-                maxgens=maxgens, maxtime=maxtime, reltol=reltol,
+                maxgens=maxgens, popsize=popsize, maxtime=maxtime, reltol=reltol,
                 maxstallgen=maxstallgen, elitism=elitism, pmutation=pmutation)
         # TODO: check length of init guess
         if reuse_best is True:
