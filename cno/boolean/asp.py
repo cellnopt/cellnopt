@@ -4,13 +4,15 @@ from collections import defaultdict
 from collections import Counter
 
 from cno.io import CNOGraph, XMIDAS
-from cno.core.models import Models
+from cno.core.models import BooleanModels
 
 from easydev import AttrDict, TempFile
 
 import pylab
 import pandas as pd
 from biokit import viz
+
+from cno.core.base import CNOBase
 
 
 __all__ = ["CASPO"]
@@ -26,10 +28,11 @@ class MultiCASPO(object):
         self.verbose = verbose
 
 
-class CASPO(object):
-    def __init__(self, pkn=None, midas=None, verbose=False):
-        self.verbose = verbose
-        self.simulator = 'CASPO'
+class CASPO(CNOBase):
+    def __init__(self, pknmodel, data, verbose=False):
+        super(CASPO, self).__init__(pknmodel, data, verbose)
+
+
 
 
         # TODO out and err should be temp file
@@ -45,43 +48,7 @@ class CASPO(object):
 
         self.df = pd.DataFrame({'mse':[], 'size':[]})
 
-
-    def _optimise():
-        from caspo import core
-        graph = core.Graph(pkn.nodes(),
-                           map(lambda t: (t[0],t[1], 1 if t[2]['link'] == '+' else -1),
-                               pkn.edges_iter(pkn.nodes(),True)))
-
-        # Now, we read the MIDAS from caspo
-        from zope import component
-        reader = component.getUtility(core.ICsvReader)
-        reader.read('../caspo/data/LiverToy/dataset.csv')
-        dataset = core.IDataset(reader)
-        #Register clingo binary
-        from pyzcasp import potassco
-        potassco.configure(clingo="clingo")
-        # Instantiate the learner and learn using clingo at timepoint 10,
-        # tolerance of 10% over fitness, and tolerance of 5 over size
-        from caspo.learn import learner
-        networks = learner(graph, dataset, 10, potassco.IClingo, compress=False).learn(0.1, 5)
-        return networks
-
-        """
-    graphs = []
-for net in networks:
-    cnograph = CNOGraph()
-    cnograph.add_nodes_from(net.variables)
-    cnograph.midas = midas
-    for var, clauses in net.mapping.items():
-        for clause in clauses:
-            cnograph.add_reaction("%s=%s" % (str(clause).replace('+','^'), var))
-    graphs.append(cnograph)
-
-"""
-
-
-
-    def optimise(self, pkn, midas, size=0, fit=0, factor=10, length=0, timepoint=None):
+    def optimise(self, size=0, fit=0, factor=10, length=0, timepoint=None):
         """Run the optimisation using **clasp/gringo**.
 
         :param bool gtts: if set to True, in addition to the models, the GTTS are
@@ -101,12 +68,15 @@ for net in networks:
 
         """
 
-        # TODO: midas may be a midas instance ?
-        # Just to check that it is a valid file !
-        midas = XMIDAS(midas)
+        # save local version of the PKN and MIDAS (CASPO requires it...)
+        from easydev import TempFile
+        sifname = TempFile(suffix='.sif')
+        self.pknmodel.to_sif(sifname.name)
+        midasname = TempFile(suffix='.csv')
+        self.midas.to_midas(expand_time_column=True, filename=midasname.name)
 
         if timepoint == None:
-            timepoint = midas.times[1]
+            timepoint = self.midas.times[1]
 
         # TODO: discretisation can be floor, ceil, floor
         # TODO length option (max length for conjunecitons default to 0 ?)
@@ -115,64 +85,43 @@ for net in networks:
         #   so internally, we set fit to fit-1
         # size -= 1
 
-        script = "caspo learn %(pkn)s %(midas)s %(timepoint)s --fit %(fit)s --size %(size)s --factor %(factor)s --discretization %(disc)s --length %(length)s" % {'midas': midas.filename, 'pkn':pkn, 'fit':fit, 'length':length,
+        script = "caspo learn %(pkn)s %(midas)s %(timepoint)s --fit %(fit)s --size %(size)s --factor %(factor)s --discretization %(disc)s --length %(length)s" % \
+                 {'midas': midasname.name, 'pkn': sifname.name, 'fit':fit, 'length':length,
         'size':size, 'factor':factor, 'timepoint':timepoint, 'disc':'round'}
-        if self.verbose:
-            print (script)
+        self.logging.info(script)
+
         ret = subprocess.Popen("%s" % (script),
             stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
         out_buf = ret.stdout.read()
-        if self.verbose:
-            print(out_buf)
+        self.logging.info(out_buf)
 
-        cc = Models("out/networks.csv")
-        #cc.cnograph.midas = midas.copy()
+        self.models = BooleanModels("out/networks.csv")
 
         # TODO strategies
-        script = "caspo analyze --networks ./out/networks.csv  --midas {0} {1} --networks-stats".format(midas.filename, timepoint)
+        #script = "caspo analyze --networks ./out/networks.csv  --midas {0} {1} --networks-stats".format(midasname.name, timepoint)
 
-        if self.verbose:
-            print(script)
+        #self.logging.info(script)
 
-        ret = subprocess.Popen("%s" % (script),
-            stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
-        out_buf = ret.stdout.read()
+        #ret = subprocess.Popen("%s" % (script),
+        #    stdout=subprocess.PIPE, shell=True, stderr=subprocess.STDOUT)
+        #out_buf = ret.stdout.read()
 
         # ignore time zero in the computation so to agree with CNO, we divide
         # MSE by 2
-        print(out_buf)
-        try:
-            mse = float([x for x in out_buf.split("\n") if 'MSE' in x][0].split()[2])
-        except:
-            mse = []
+        #self.logging.info(out_buf)
+        #try:
+        #    mse = float([x for x in out_buf.split("\n") if 'MSE' in x][0].split()[2])
+        #except:
+        #    mse = []
 
         # TODO simplify
-        all_scores = Models("out/networks-mse-len.csv").df['MSE']
-        all_sizes = Models("out/networks-mse-len.csv").df['SIZE']
+        import pandas as pd
+        self.models.scores = pd.read_csv("out/networks-mse-len.csv")['MSE']
+        self.models.midas = self.midas
 
+        #all_sizes = BooleanModels("out/networks-mse-len.csv").df['SIZE']
 
-        if self.verbose:
-            print("Best MSE: {0}".format(all_scores.min()/2.))
-
-        #cc.mse = mse
-        res = {
-            'reactions': cc.df.columns,
-            'models': cc,    # contains all bitstrings
-            'all_scores': all_scores/2.,
-            'all_sizes': all_sizes,
-            'best_score': mse,
-        }
-
-        self.results = res
-        self.results['pkn'] = pkn
-        self.results['midas'] = midas.filename
-        self.results['simulator'] = self.simulator
-
-        self.results = AttrDict(**self.results)
-
-        self.df = pd.DataFrame(cc.df)
-        self.df['mse'] = all_scores/2.
-        self.df['size'] = all_sizes
+        self.logging.info("Best MSE: {0}".format(self.models.scores.min()/2.))
 
     def hist_mse(self, fontsize=16, **kargs):
         """Plot histogram of the MSEs
@@ -186,57 +135,27 @@ for net in networks:
              >>> a.run(fit=1)
              >>> a.hist_mse()
 
-
         """
-        pylab.clf()
-        mses = self.df.mse.values
-        opt = self.df.mse.min()
-        N = len(set(mses))
-        print("There are %s different MSE found amongst %s models" % (N,len(mses)))
-        res = pylab.hist(mses, **kargs)
-        pylab.title("MSEs Distribution of the %s best models " % len(mses),
-                    fontsize=fontsize)
-        pylab.grid()
-        pylab.plot([opt,opt], [0,max(res[0])], "r--",lw=2)
-        pylab.xlabel("Mean Square Error of all models", fontsize=fontsize)
-        pylab.ylabel("#",  fontsize=fontsize)
-
-    def hist_model_size(self, fontsize=16, **kargs):
-        pylab.clf()
-        m = self.df.size.min()
-        M = self.df.size.max()
-
-        bins = kargs.get('bins', range(m-1, M+2)) # why +2 ?
-        kargs['bins'] = bins
-
-        bins = kargs.get('align', 'left')
-        kargs['align'] = bins
-
-        pylab.hist(self.df.size, **kargs)
-        pylab.grid()
-        pylab.xlabel("Model size", fontsize=fontsize)
-        pylab.ylabel("#", fontsize=fontsize)
+        from cno.core.results import BooleanResults
+        br = BooleanResults()
+        br.models = self.models
+        br.hist_scores()
 
     def _get_scores_vs_model_size_df(self):
         df = pd.DataFrame(
-            {'score': self.df.mse.values,
-            'size': self.df.size.values})
+            {'score': self.models.scores.values,
+            'size': self.models.sizes.values})
         return df
 
     def scatter_scores_vs_model_size(self):
         df = self._get_scores_vs_model_size_df()
         viz.scatter_hist(df)
 
-    def hist2d_scores_vs_model_size(self, bins=None, cmap='gist_heat_r',fontsize=16):
-        df = self._get_scores_vs_model_size_df()
-        h = viz.Hist2d(df)
-        if bins == None:
-            mse_range = 20
-            size_range = df.size.max() - df.size.min() + 1
-            bins = (mse_range, size_range)
-        h.plot(bins=(20,8), Nlevels=10, cmap=cmap)
-        pylab.xlabel("Score", fontsize=fontsize)
-        pylab.ylabel("Model size", fontsize=fontsize)
+    def hist2d_scores_vs_model_size(self, bins=[10,10], cmap='gist_heat_r',fontsize=16):
+        from cno.core.results import BooleanResults
+        br = BooleanResults()
+        br.models = self.models
+        br.hist2d_scores_vs_model_size(cmap=cmap, bins=bins)
 
     def plot_model_number_vs_tolerance(self, normed=True, **kargs):
         """Plots number of models found as a function of the tolerance
@@ -254,8 +173,8 @@ for net in networks:
 
         """
         from numpy import cumsum
-        counter = Counter(self.df.mse)
-        m = self.df.mse.min()
+        counter = Counter(self.models.scores)
+        m = self.models.scores.min()
         counts = [counter[x] for x in sorted(counter.keys())]
         tolerances = [(x-m)/m*100 for x in sorted(counter.keys())]
 
@@ -275,12 +194,12 @@ for net in networks:
 
     def __str__(self):
         """Prints information about the optimisation"""
-        mses = self.df.mse.values
+        mses = self.models.scores.values
         #models = self.models[:]
 
         N = len(set(mses))
         txt = "There are %s different MSE found amongst %s models\n" % (N,len(mses))
-        txt += "The minimum MSE is %s " % self.df.mse.min()
+        txt += "The minimum MSE is %s " % self.models.scores.min()
         return txt
         #Ngtts = len(self.family.gtts)
         #print("There are %s GTTS " % Ngtts)
@@ -288,47 +207,6 @@ for net in networks:
     def summary(self):
         print(self)
 
-
-    def plot_frequencies_hyperedges(self):
-        """Plot frequencies of the hyperedges amonsgt all models
-
-
-        .. plot::
-
-            >>> from cellnopt.optimiser import ASPBool
-            >>> from cellnopt.data import cnodata
-            >>> a = ASPBool(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
-            >>> a.run(fit=2, gtts=False, size=2)
-            >>> a.plot_frequencies_hyperedges()
-
-
-        .. todo:: refine plotting to cope with xlabels being too long.
-
-        """
-        from pylab import clf, plot, xlim, grid, xlabel, ylabel, vlines, title
-        from pylab import xticks, arange, argsort
-        _freq = list(self.family.frequencies)
-        values = [x[1] for x in _freq]
-        names  = [x[0] for x in _freq]
-
-        # let us sort them (reversed) and sort the names accordingly
-        values = sorted(values, reverse=True)
-        sorted_names = [names[i] for i in argsort(names)[::-1]]
-
-        N = len(values)
-        Nzeros = values.count(0)
-        Nones = values.count(1)
-
-        clf();
-        plot(range(1, N+1), values, 'o-');
-        xlim([1, N]);
-        grid()
-        vlines(Nones, 0, 1, linestyles="--")
-        vlines(Nones+(N-Nzeros), 0,1, linestyles="--")
-        xlabel("Hyperedges")
-        xticks(arange(1,1+len(names)), sorted_names, rotation=90, fontsize=8)
-        ylabel("Frequency")
-        title("Frequencies of hyperedges over %s sub-optimal models \nwithin %s %% tolerance" % (len(self.models), self.fit*100))
 
     def get_exclusive_conjunctions(self):
         """Returns the exclusive conjunctions

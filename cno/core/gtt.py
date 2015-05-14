@@ -24,11 +24,28 @@ __all__ = ['GTTBool']
 
 
 class GTTBool(object):
+    """API could be simplified.
 
+    ::
+
+
+        # here there are duplicate, should be called automatically ?
+        s = steady.Steady(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+        s.preprocessing()
+        s.optimise()
+        s.results.models.drop_duplicates()
+
+
+        g = gtt.GTTBool(s)
+        g.analyse()
+        # here indices are same s in models, which may not be contiguous
+        g.truth_tables[189]
+
+
+    """
 
     def __init__(self, simulator):
         self.simulator = simulator # do not touch
-
 
     def analyse(self):
         models = self.simulator.results.models

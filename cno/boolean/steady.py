@@ -17,11 +17,8 @@ import collections
 from easydev import AttrDict
 
 class Steady(CNOBase):
-    """Naive implementation of Steady state to help in 
-    designing the API
-    
-    
-    
+    """Naive implementation of Steady state to help in designing the API
+
     
     Here is the algorithm:
 
@@ -38,8 +35,6 @@ class Steady(CNOBase):
     For negative FC, X0 is 1. This can be simulated by setting the inhibitors and stimuli 
     to zero. 
 
-    
-    
     
     """
     

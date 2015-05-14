@@ -45,7 +45,7 @@ from .testing import getdata
 from .core import *
 
 #Boolean package
-from .boolean import cnorbool, CNORbool, steady
+from .boolean import cnorbool, CNORbool, steady, CASPO, asp
 
 # FEEDER package
 from .feeder import Feeder
