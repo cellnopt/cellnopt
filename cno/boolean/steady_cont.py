@@ -77,15 +77,12 @@ class SteadyCont(Steady):
     def _simulate(self, reactions=None, time=None, ntic=None):
         """
 
+        reactions is a list of parameters between 0 and 1
         """
-        # pandas is very convenient but slower than numpy
-        # The dataFrame instanciation is costly as well.
-        # For small models, it has a non-negligeable cost.
-
-        # inhibitors will be changed if not ON
-        #self.tochange = [x for x in self.model.nodes() if x not in self.stimuli_names
-        #            and x not in self.and_gates]
-
+        if reactions is None:
+            reactions = [1] * len(self.model.reactions)
+        self.parameters_in = reactions[:]
+        self.number_edges = len(self.model.reactions)
         if time is None:
             time = self.time
         # what about a species that is both inhibited and measured
@@ -105,18 +102,10 @@ class SteadyCont(Steady):
         residual = 1.
 
         frac = 1.2
-        # _shift is set to +1 FIXME +1 is to have same results as in CellnOptR
-        # It means that if due to the cycles, you may not end up with same results.
-        # this happends if you have cyvles with inhbititions
-        # and an odd number of edges. 
-        if reactions is None:
-            reactions = self.model.buffer_reactions
-        self.number_edges = len([r for r in reactions]) + sum([this.count('^') for this in reactions])
-
-        # 10 % time here
-        #predecessors = self.reactions_to_predecessors(reactions)
+        # all reactions are always on but for now keep this:
+        reactions = self.model.buffer_reactions
         predecessors = defaultdict(collections.deque)
-        for r in reactions:
+        for r in self.model.reactions:
             k, v = self._reac2pred[r]
             predecessors[k].extend(v)
 
@@ -124,7 +113,6 @@ class SteadyCont(Steady):
         keys = sorted(self.values.keys())
         length_predecessors = dict([(node, len(predecessors[node])) for node in keys])
 
-        #self._length_predecessors = length_predecessors
         # if there is an inhibition/drug, the node is 0
 
         # FIXME is this required ??
@@ -133,54 +121,78 @@ class SteadyCont(Steady):
                 #values[inh] = np.array([np.nan for x in range(0,self.N)])
                 values[inh] = np.zeros(self.N)
 
-        # to get same results as in cnor, it is sometimes required
-        # to add one more count.
-        # to have same results at time 0 as in LiverDream, +3 is required
-
         if ntic is None:
             ntic = self.nSp * frac + self._shift
         else: # we want to use the ntic as unique stopping criteria
             testVal = -1
 
+        _reactions = self.model.reactions[:]
+        _inputs = [r.split("=")[0] for r in _reactions]
+
+        N = len(_reactions)
+        value_edges = np.zeros((1,N))
+        # create function once for all for each edge
+        function_edges = [None] * N
+
+        species_in = [None] * N
+        for i,reac in enumerate(_reactions):
+            if "^" in reac:
+                from cno import Reaction
+                r = Reaction(reac)
+                species = r.get_signed_lhs_species()
+                def ands(species):
+                    species_plus = species['+'][:]
+                    species_minus = species['-'][:]
+                    data = []
+                    if len(species_plus)>0:
+                        #print("+")
+                        plus = np.min([self.previous[spec] 
+                            for spec in species_plus], axis=0)
+                        data.append(plus.copy())
+                    if len(species_minus)>0:
+                        #print("-")
+                        minus = np.min([1-self.previous[spec] 
+                            for spec in species_minus], axis=0)
+                        data.append(minus.copy())
+                    if len(data) == 1:
+                        return data[0]
+                    else:
+                        return np.min(data, axis=0)
+                species_in[i] = species.copy()
+                function_edges[i] = lambda i: ands(species_in[i]) * self.parameters_in[i] 
+            else:
+                if reac.startswith("!"):
+                    species = reac.split("=")[0][1:]
+                    function_edges[i] = lambda i: (1.-self.values[species_in[i]]) * self.parameters_in[i]
+                    species_in[i] = species[:]
+                else:
+                    species = reac.split("=")[0][:]
+                    function_edges[i] = lambda i: self.values[species_in[i]] * self.parameters_in[i]
+                    species_in[i] = species[:]
+
+        self.species_in = species_in
+        self.function_edges = function_edges
+
+        self.input_edges = {}
+        for i,r in enumerate(self.model.reactions):
+            left, right = r.split("=")
+            if right in self.input_edges.keys():
+                self.input_edges[right].append(i)
+            else:
+                self.input_edges[right] = [i]
+
         while ((self.count < ntic) and residual > testVal):
             self.previous = values.copy()
-            #self.X0 = pd.DataFrame(self.values)
-            #self.X0 = self.values.copy()
-            # compute AND gates first. why
 
-            # an paradoxical effects induced by drugs ?
-            # should be first before updating other nodes
-            #for inh in self.paradoxical.keys():
-            #    if node in self.paradoxical[inh]:
-            #        values[node][(self.inhibitors[inh]==1).values] = 1
-            #    #values[inh][(self.inhibitors[inh]==1).values] = 1
+            # 1. for each AND edge and for each normal edge, 
+            # get inputs, multiply by strength (parameter)
+            edge_values = [self.function_edges[i](i) for i in range(0,N)]
+                
+            # 2. for each node, compute max of predecessors
+            for node in self.input_edges.keys():
+                values[node] = np.max(np.vstack([self.function_edges[i](i) for 
+                    i in self.input_edges[node]]), axis=0)
 
-
-            for node in self.and_gates:
-                # replace na by large number so that min is unchanged
-                # THere are always predecessors
-                if length_predecessors[node] != 0:
-                    values[node] = bn.nanmin(np.array([self.previous[x] for x in predecessors[node]]), axis=0)
-                else:
-                    #assert 1==0, "%s %s" % (node, predecessors[node])
-                    values[node] = self.previous[node]
-
-            for node in self.tochange:
-                # easy one, just the value of predecessors
-                #if len(self.predecessors[node]) == 1:
-                #    self.values[node] = self.values[self.predecessors[node][0]].copy()
-                if length_predecessors[node] == 0:
-                    pass # nothing to change
-                else:
-                    dummy = np.array([self.previous[x] if (x,node) not in self.toflip
-                        else 1 - self.previous[x] for x in  predecessors[node]])
-                    try:
-                        values[node] = bn.nanmax(dummy,  axis=0)
-                    except:
-                        # in some simple cases, we must reset the type. why.
-                        values[node] = bn.nanmax(dummy.astype('int'), axis=0)
-
-                # take inhibitors into account
                 if node in self.inhibitors_names and node not in self.inhibitors_failed:
                     # if inhibitors is on (1), multiply by 0
                     # if inhibitors is not active, (0), does nothing.
@@ -188,12 +200,12 @@ class SteadyCont(Steady):
 
 
                 # an paradoxical effects induced by drugs ?
-                for inh in self.paradoxical.keys():
-                    if node in self.paradoxical[inh]:
-                        values[node][(self.inhibitors[inh]==1).values] = 1
-                for inh in self.repressors.keys():
-                    if node in self.repressors[inh]:
-                        values[node][(self.inhibitors[inh]==1).values] = 0
+                #for inh in self.paradoxical.keys():
+                #    if node in self.paradoxical[inh]:
+                #        values[node][(self.inhibitors[inh]==1).values] = 1
+                #for inh in self.repressors.keys():
+                #    if node in self.repressors[inh]:
+                #        values[node][(self.inhibitors[inh]==1).values] = 0
 
 
 
@@ -239,7 +251,6 @@ class SteadyCont(Steady):
         else:
             self.simulated[self.time] = data[indices,:].transpose()
 
-
     #@do_profile()
     def eval_func(self, chromosome, prior=[]):
         """
@@ -260,6 +271,7 @@ class SteadyCont(Steady):
         else:
             # 110 times faster using numpy array instead of a list...
             reactions = [x for c,x in zip(chromosome, self._np_reactions) if c==1]
+            reactions = str_chrome
             self.simulate(reactions=reactions)
             score = self.score()
             if self.buffering is True and len(self.buffer)<self.length_buffer:
@@ -268,135 +280,115 @@ class SteadyCont(Steady):
             return score
 
     #@do_profile()
-    def optimise(self, verbose=False, guess=None, method="nelder-mead", elitism=5, 
-            nswap=3, pop_size=50, mut=0.02, maxgens=50):
-        """Using the CellNOptR-like GA"""
+    def optimise(self, verbose=False, guess=None, 
+            method="nelder-mead", elitism=5, 
+            nswap=3, pop_size=50, mut=0.02, maxgens=50, dimension_bits=1):
+        """
+        s.optimise(method='inspyred', mut=0.02, pop_size=50, maxgens=40)
+        """
+        
         # TODO: check length of init guess
         from scipy.optimize import minimize
         from scipy.optimize import basinhopping
 
-        from inspyred.ec.utilities import memoize
         def eval_func_in(x):
-            #x = [int(x) if x<=1 else 1 for x in x]
             return self.eval_func(x, prior=[])
 
 
         if guess is None:
             guess = [1] * len(self.model.reactions)
 
-
         def print_fun(x, f, accepted):
             print("at minimum %.4f accepted %d" % (f, int(accepted)))
 
         N = len(self.model.reactions)
 
-        if method == 'anneal':
-            self.da = DiscreteAnnealer(eval_func_in, guess, nswap=nswap)
-            state, e = self.da.anneal()
-            #state, e = self.da.auto(minutes=1, steps=2)
-            print(state, e)
-            self.state = state
-            self.e = e
-            return self.state
-        elif method == 'inspyred':
-            import inspyred
-            from random import Random
-            rand = Random()
-            ea = inspyred.ec.GA(rand)
-            self.scores = []
+        import inspyred
+        from random import Random
+        rand = Random()
+        ea = inspyred.ec.GA(rand)
+        self.scores = []
+        self.lower = 0
+        self.upper = 1
+        self.best_score = 1
+        def evaluator(candidates, args):
+            dimensions = args['dimensions']
+            dimension_bits = args['dimension_bits']
+                
+            fitness = []
+            for cs in candidates:
+                params = self._binary_to_real(cs, dimensions, dimension_bits)
+                score = eval_func_in(params)
+                #score = eval_func_in(cs)
+                fitness.append(score)
+                # TODO selection pressure could be added here 
+            self.scores.append(min(np.array(fitness)))
+            if self.scores[-1] < self.best_score:
+                self.best_score =  self.scores[-1]
+            print(self.scores[-1], self.best_score)
+
+            return fitness
+        dimensions = len(self.model.reactions)
+        #dimension_bits = 4 # preceision is 1/(2**n-1)
+        def generator(random, args):
+            # For the first generation only.
+            dimension_bits = args['dimension_bits']
+            return [random.choice([0, 1]) 
+                    for _ in range(len(self.model.reactions) * dimension_bits)]
+
+        import inspyred.ec
+        import inspyred.ec.ec
+        ea.terminator = inspyred.ec.terminators.evaluation_termination
+        bounder = inspyred.ec.ec.Bounder([0,1])
 
 
+        ea.selector = inspyred.ec.selectors.uniform_selection
+        #ea.selector = inspyred.ec.selectors.rank_selection
+        #ea.selector = inspyred.ec.selectors.fitness_proportionate_selection
+        #ea.selector = inspyred.ec.selectors.tournament_selection
 
-            #@memoize
-            def evaluator(candidates, args):
-                fitness = []
-                for cs in candidates:
-                    score = eval_func_in(cs)
-                    fitness.append(score)
-                    # TODO selection pressure could be added here 
-                self.scores.append(min(np.array(fitness)))
-                print(self.scores[-1])
-                return fitness
+        ea.replacer = inspyred.ec.replacers.truncation_replacement
+        #ea.replacer = inspyred.ec.replacers.plus_replacement
 
-            def generator(random, args):
-                # For the first generation only.
-                return [random.choice([0, 1]) for _ in range(len(self.model.reactions) * 2)]
+        final = ea.evolve(generator=generator, evaluator=evaluator, 
+                maximize=False, bounder=bounder,
+                max_evaluations=pop_size*maxgens,dimensions=len(self.model.reactions), 
+                dimension_bits = dimension_bits,
+                pop_size=pop_size, mutation_rate=mut, num_elites=elitism)
 
-            import inspyred.ec
-            import inspyred.ec.ec
-            ea.terminator = inspyred.ec.terminators.evaluation_termination
-            bounder = inspyred.ec.ec.DiscreteBounder([0,1])
+        self.ea = ea
+        self.final = final
+        res = None
+        self.best_bitstring = max(self.ea.population).candidate
 
-            self.generator = generator
-            self.evaluator = evaluator
-
-            ea.selector = inspyred.ec.selectors.uniform_selection
-            #ea.selector = inspyred.ec.selectors.rank_selection
-            #ea.selector = inspyred.ec.selectors.fitness_proportionate_selection
-            #ea.selector = inspyred.ec.selectors.tournament_selection
-
-            ea.replacer = inspyred.ec.replacers.truncation_replacement
-            #ea.replacer = inspyred.ec.replacers.plus_replacement
-
-            final = ea.evolve(generator=self.generator, evaluator=self.evaluator, 
-                    maximize=False, bounder=bounder,
-                    max_evaluations=pop_size*maxgens, 
-                    pop_size=pop_size, mutation_rate=mut, num_elites=elitism)
-
-            self.ea = ea
-            self.final = final
-            res = None
-
-        else:
-            res = minimize(eval_func_in, guess,
-                method=method, bounds=bounds, options={'disp':True})
-        
-        #self._fill_results()
+        self.best_bitstring = self._binary_to_real(self.best_bitstring, 
+                len(self.model.reactions), dimension_bits)
         return res
 
-    def _fill_results(self):
-        # FIXME this could be simplified a lot
-        from easydev import AttrDict
-        res = AttrDict(**self.ga.results)
 
-        results = pd.DataFrame(self.ga.results)
-        columns_int = ['Generation', 'Stall_Generation']
-        columns_float = ['Best_score', 'Avg_Score_Gen', 'Best_Score_Gen', 'Iter_time']
-        results[columns_int] = results[columns_int].astype(int)
-        results[columns_float] = results[columns_float].astype(float)
+    def _binary_to_real(self, binary, dimensions, dimension_bits):
+        real = []
+        #0 and 1 are the lower/upper bounds
+        lo = self.lower
+        hi = self.upper
+        for d in range(0,dimensions):
+            b = binary[d*dimension_bits:(d+1)*dimension_bits]
+            real_val = float(int(''.join([str(i) for i in b]), 2))
+            value = real_val / (2**(dimension_bits)-1) * (hi - lo) + lo
+            real.append(value)
+        return real
 
-        results = {
-                'best_score': res.Best_score,
-                'best_bitstring': res.Best_bitString[-1],
-                'all_scores': self.ga.popTolScores,
-                'all_bitstrings': self.ga.popTol,
-                'reactions': self.model.reactions,
-                #'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
-                'results': results,
-                #'models': models,
-                #'stimuli': self.session.stimuli.copy(),
-                #'inhibitors': self.session.inhibitors.copy(),
-                #'species': self.session.species,
-        }
+    def plot_optimised_model(self):
 
-        results['pkn'] = self.pknmodel
-        results['midas'] = self.data
-        #self.results.models = models
-        all_bs = self.ga.popTol
-        df = pd.DataFrame(all_bs, columns=self.model.reactions)
-        models = BooleanModels(df)
-        models.scores = results['all_scores']
-
-        self.results.results = results
-        self.results.models = models
-        self.results.models.cnograph.midas = self.data # to get the MIDAS annotation
-        self.best_bitstring = self.results.results.best_bitstring
-
-
-
-
-
-
+        ss = self.model.copy()
+        for i,r in enumerate(ss.reactions):
+            edges = ss.reac2edges(r)
+            for edge in edges: 
+                ss.edge[edge[0]][edge[1]]['label'] = float(int(self.best_bitstring[i]*100))
+                ss.edge[edge[0]][edge[1]]['wc'] = self.best_bitstring[i]
+                ss.edge[edge[0]][edge[1]]['penwidth'] = 5*(self.best_bitstring[i])
+        ss.plot(edge_attribute='wc', cmap='copper')
+        return ss
 
 
 

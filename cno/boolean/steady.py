@@ -599,7 +599,10 @@ class Steady(CNOBase):
         buffering = self.buffering
         self.buffering = False
         if reactions is None:
-            self.eval_func(self.ga.results['Best_bitString'][-1])
+            try:
+                self.eval_func(self.ga.results['Best_bitString'][-1])
+            except:
+                self.eval_func(self.best_bitstring)
         else:
             self.eval_func(self.reactions2parameters(reactions))
         self.buffering = buffering
