@@ -152,8 +152,12 @@ class CNOBase(Logging):
 
     def plot_optimised_model(self, filename=None, show=True,
             show_pruned_edges=True):
-        bs = self.results.results.best_bitstring
-        reactions = self.results.results.reactions
+        try:
+            bs = self.results.results.best_bitstring
+            reactions = self.results.results.reactions
+        except:
+            bs = self.best_bitstring
+            reactions = self.reactions2parameters(bs)
         opt = {}
         for b,r in zip(bs, reactions):
             if "!" in r: #inhibitory
