@@ -295,12 +295,6 @@ class SteadyCont(Steady):
             return self.eval_func(x, prior=[])
 
 
-        if guess is None:
-            guess = [1] * len(self.model.reactions)
-
-        def print_fun(x, f, accepted):
-            print("at minimum %.4f accepted %d" % (f, int(accepted)))
-
         N = len(self.model.reactions)
 
         import inspyred
@@ -311,13 +305,15 @@ class SteadyCont(Steady):
         self.lower = 0
         self.upper = 1
         self.best_score = 1
+
         def evaluator(candidates, args):
+
             dimensions = args['dimensions']
             dimension_bits = args['dimension_bits']
-                
             fitness = []
-            for cs in candidates:
-                params = self._binary_to_real(cs, dimensions, dimension_bits)
+            for cs in enumerate(candidates):
+                if len(params) != dimensions:
+                    params = self._binary_to_real(cs, dimensions, dimension_bits)
                 score = eval_func_in(params)
                 #score = eval_func_in(cs)
                 fitness.append(score)
@@ -325,6 +321,7 @@ class SteadyCont(Steady):
             self.scores.append(min(np.array(fitness)))
             if self.scores[-1] < self.best_score:
                 self.best_score =  self.scores[-1]
+            start = False
             print(self.scores[-1], self.best_score)
 
             return fitness
@@ -333,8 +330,12 @@ class SteadyCont(Steady):
         def generator(random, args):
             # For the first generation only.
             dimension_bits = args['dimension_bits']
-            return [random.choice([0, 1]) 
+            guess = args['guess'][:]
+            pop = [random.choice([0, 1]) 
                     for _ in range(len(self.model.reactions) * dimension_bits)]
+            if guess is not None:
+                pop[0] = guess
+            return pop
 
         import inspyred.ec
         import inspyred.ec.ec
@@ -349,11 +350,10 @@ class SteadyCont(Steady):
 
         ea.replacer = inspyred.ec.replacers.truncation_replacement
         #ea.replacer = inspyred.ec.replacers.plus_replacement
-
         final = ea.evolve(generator=generator, evaluator=evaluator, 
                 maximize=False, bounder=bounder,
                 max_evaluations=pop_size*maxgens,dimensions=len(self.model.reactions), 
-                dimension_bits = dimension_bits,
+                dimension_bits = dimension_bits, guess=guess,
                 pop_size=pop_size, mutation_rate=mut, num_elites=elitism)
 
         self.ea = ea
