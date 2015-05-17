@@ -246,8 +246,10 @@ class GABinary(GA):
             if len(_tolbs) > 0:
                 #print self.popTol
                 #print self.Pop[_tolbs, :]
+                #FIXME: axis=1 here below will be an error in future numpy version.
                 self.popTol = numpy.concatenate( (self.popTol, self.Pop[_tolbs,:]), axis=0)
-                self.popTolScores = numpy.concatenate( (self.popTolScores, self._scores[_tolbs]), axis=1)
+                self.popTolScores = numpy.concatenate( (self.popTolScores, 
+                    self._scores[_tolbs]), axis=1)
 
 
             if self.elitism > 0:
