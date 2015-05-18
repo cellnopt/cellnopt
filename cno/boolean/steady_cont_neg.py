@@ -166,19 +166,10 @@ class SteadyContNeg(Steady):
         # speed up
         keys = sorted(self.values.keys())
 
-        # if there is an inhibition/drug, the node is 0
-
-        # FIXME is this required ??
-        #for inh in self.inhibitors_names:
-        #    if length_predecessors[inh] == 0:
-        #        #values[inh] = np.array([np.nan for x in range(0,self.N)])
-        #        values[inh] = np.zeros(self.N)
-
         if ntic is None:
             ntic = self.nSp * frac + self._shift
         else: # we want to use the ntic as unique stopping criteria
             testVal = -1
-
 
 
         while ((self.count < ntic) and residual > testVal):
@@ -209,8 +200,8 @@ class SteadyContNeg(Steady):
                     # if inhibitors is on (1), multiply by 0
                     # if inhibitors is not active, (0), does nothing.
                     values[node] -= self.inhibitors[node].values
-                    if node != 'AKT':
-                        values[node] = np.clip(values[node], 0, 1)
+                    #if node != 'AKT':
+                    #    values[node] = np.clip(values[node], 0, 1)
                 values[node] = np.clip(values[node], -1, 1)
 
 
@@ -218,9 +209,9 @@ class SteadyContNeg(Steady):
                 #for inh in self.paradoxical.keys():
                 #    if node in self.paradoxical[inh]:
                 #        values[node][(self.inhibitors[inh]==1).values] = 1
-                #for inh in self.repressors.keys():
-                #    if node in self.repressors[inh]:
-                #        values[node][(self.inhibitors[inh]==1).values] = 0
+                for inh in self.repressors.keys():
+                    if node in self.repressors[inh]:
+                        values[node][(self.inhibitors[inh]==1).values] -= 1
 
 
             # here NAs are set automatically to zero because of the int16 cast
@@ -317,7 +308,7 @@ class SteadyContNeg(Steady):
         else:
             ea = inspyred.ec.SA(rand)
         self.scores = []
-        self.lower = 0
+        self.lower = -1
         self.upper = 1
         self.best_score = 1
 
@@ -366,7 +357,7 @@ class SteadyContNeg(Steady):
         import inspyred.ec
         import inspyred.ec.ec
         ea.terminator = inspyred.ec.terminators.evaluation_termination
-        bounder = inspyred.ec.ec.Bounder(-1,1)
+        bounder = inspyred.ec.ec.Bounder(self.lower, self.upper)
 
 
         self.storage = []
@@ -434,55 +425,3 @@ class SteadyContNeg(Steady):
         ss.plot(edge_attribute='wc', cmap='copper')
         return ss
 
-
-"""
-from simanneal import Annealer
-import sys
-from simanneal.anneal import time_string
-
-class DiscreteAnnealer(Annealer):
-    def __init__(self, eval_func, state, N=1000, nswap=3):
-        self.eval_func = eval_func
-        super(DiscreteAnnealer, self).__init__(state)
-        from easydev import progress_bar as pb
-        self.pb = pb(N)
-        self.count = 1
-        self.steps = N
-        self.best_state = self.state[:]
-        self.nswap = nswap
-        self.best_score = 1
-
-    def move(self):
-        #swap states
-        # swap 5 states ?
-        import random
-        self.state = self.best_state[:]
-        
-        for i in range(0,self.nswap):
-            #print self.state
-            flipthis = random.randint(0, len(self.state)-1)
-            #print flipthis
-            self.state[flipthis] = int(self.state[flipthis] + 1) % 2
-
-    def energy(self):
-        #self.pb.animate(self.count,0)
-        self.count += 1
-        score = self.eval_func(self.state)
-        if score < self.best_score:
-            self.best_score = score
-        return score
-    
-    def update(self, step, T, E, acceptance, improvement):
-        elapsed = time.time() - self.start
-        if step == 0:
-            print(' Temperature        Energy    Accept   Improve     Elapsed   Remaining    Best')
-            sys.stdout.write('\r%12.2f  %12.2f                      %s            %s' % \
-            (T, E, time_string(elapsed), self.best_score))
-            sys.stdout.flush()
-        else:
-            remain = (self.steps - step) * (elapsed / step)
-            sys.stdout.write('\r%12.2f  %12.2f  %7.2f%%  %7.2f%%  %s  %s %s' % \
-            (T, E, 100.0 * acceptance, 100.0 * improvement,\
-            time_string(elapsed), time_string(remain), self.best_score)),
-            sys.stdout.flush()
-"""
