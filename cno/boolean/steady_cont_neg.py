@@ -16,19 +16,19 @@ import collections
 from cno.boolean.steady import Steady
 
 
-class SteadyCont(Steady):
+class SteadyContNeg(Steady):
     """
 
     
     """
     
     def __init__(self, pknmodel, data, verbose=True):
-        super(SteadyCont, self).__init__(pknmodel, data, verbose)
+        super(SteadyContNeg, self).__init__(pknmodel, data, verbose)
         self.results = BooleanResults()  # for time T1
 
 
     def init(self, time):
-        super(SteadyCont, self).init(time)
+        super(SteadyContNeg, self).init(time)
         self.input_edges = {}
         for i,r in enumerate(self.model.reactions):
             left, right = r.split("=")
@@ -71,7 +71,7 @@ class SteadyCont(Steady):
             else:
                 if reac.startswith("!"):
                     species = reac.split("=")[0][1:]
-                    function_edges[i] = lambda i: (1.-self.values[species_in[i]]) * self.parameters_in[i]
+                    function_edges[i] = lambda i: (-self.values[species_in[i]]) * self.parameters_in[i]
                     species_in[i] = species[:]
                 else:
                     species = reac.split("=")[0][:]
@@ -200,7 +200,7 @@ class SteadyCont(Steady):
                     for i in self.input_edges[node]:
                         data[count] = self.function_edges[i](i)
                         count+=1
-                    values[node] = np.max(data, axis=0)
+                    values[node] = np.sum(data, axis=0)
                 else:
                     i = self.input_edges[node][0]
                     values[node] = self.function_edges[i](i)
@@ -208,13 +208,16 @@ class SteadyCont(Steady):
                 if node in self.inhibitors_names and node not in self.inhibitors_failed:
                     # if inhibitors is on (1), multiply by 0
                     # if inhibitors is not active, (0), does nothing.
-                    values[node] *= 1 - self.inhibitors[node].values
+                    values[node] -= self.inhibitors[node].values
+                    if node != 'AKT':
+                        values[node] = np.clip(values[node], 0, 1)
+                values[node] = np.clip(values[node], -1, 1)
 
 
                 # an paradoxical effects induced by drugs ?
-                for inh in self.paradoxical.keys():
-                    if node in self.paradoxical[inh]:
-                        values[node][(self.inhibitors[inh]==1).values] = 1
+                #for inh in self.paradoxical.keys():
+                #    if node in self.paradoxical[inh]:
+                #        values[node][(self.inhibitors[inh]==1).values] = 1
                 #for inh in self.repressors.keys():
                 #    if node in self.repressors[inh]:
                 #        values[node][(self.inhibitors[inh]==1).values] = 0
@@ -363,7 +366,7 @@ class SteadyCont(Steady):
         import inspyred.ec
         import inspyred.ec.ec
         ea.terminator = inspyred.ec.terminators.evaluation_termination
-        bounder = inspyred.ec.ec.Bounder(0,1)
+        bounder = inspyred.ec.ec.Bounder(-1,1)
 
 
         self.storage = []

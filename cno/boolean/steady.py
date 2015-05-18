@@ -156,6 +156,7 @@ class Steady(CNOBase):
                     and x not in self.and_gates]
 
         self._reactions = [Reaction(r) for r in self.model.reactions]
+        self.N_reactions = len(self._reactions)
 
         self._np_reactions = np.array(self.model.reactions)
 
