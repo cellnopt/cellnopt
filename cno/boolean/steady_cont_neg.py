@@ -172,6 +172,8 @@ class SteadyContNeg(Steady):
             testVal = -1
 
 
+        # CCK81: inhibitors_failed = ['mTOR', 'PI3K'] but has effects on AKT
+        # CCK81: repressors['mTOR'] = ['AKT']
         while ((self.count < ntic) and residual > testVal):
             self.previous = values.copy()
 
@@ -199,7 +201,12 @@ class SteadyContNeg(Steady):
                 if node in self.inhibitors_names and node not in self.inhibitors_failed:
                     # if inhibitors is on (1), multiply by 0
                     # if inhibitors is not active, (0), does nothing.
-                    values[node] -= self.inhibitors[node].values
+                    #values[self.drug_targets[node]] *= 1-self.inhibitors[node].values
+                    mask = self.inhibitors[node].values == 1
+                    values[node][mask] *= 0 # could be optimised as well
+
+                    # could be a value between 0 and 1 or even negative if we have neg values 
+
                     #if node != 'AKT':
                     #    values[node] = np.clip(values[node], 0, 1)
                 values[node] = np.clip(values[node], -1, 1)
@@ -308,7 +315,7 @@ class SteadyContNeg(Steady):
         else:
             ea = inspyred.ec.SA(rand)
         self.scores = []
-        self.lower = -1
+        self.lower = 0
         self.upper = 1
         self.best_score = 1
 
