@@ -997,7 +997,10 @@ class CNOGraph(nx.DiGraph):
         elif cmap == "green":
             cmap = self._colormap.get_cmap_red_green()
         else:
-            cmap = colormap.cmap_builder(cmap)
+            try:
+                cmap = colormap.cmap_builder(cmap)
+            except:
+                pass # already a valid cmap ?
         return cmap
 
     def plot(self, prog="dot", viewer="pylab", hold=False,

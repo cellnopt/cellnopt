@@ -209,7 +209,6 @@ class SteadyContNeg(Steady):
 
                     #if node != 'AKT':
                     #    values[node] = np.clip(values[node], 0, 1)
-                values[node] = np.clip(values[node], -1, 1)
 
 
                 # an paradoxical effects induced by drugs ?
@@ -219,6 +218,11 @@ class SteadyContNeg(Steady):
                 for inh in self.repressors.keys():
                     if node in self.repressors[inh]:
                         values[node][(self.inhibitors[inh]==1).values] -= 1
+
+
+
+                values[node] = np.clip(values[node], -1, 1)
+
 
 
             # here NAs are set automatically to zero because of the int16 cast
@@ -292,7 +296,7 @@ class SteadyContNeg(Steady):
 
     #@do_profile()
     def optimise(self, verbose=False, guess=None, 
-             elitism=5, method='GA',cooling_rate=0.1,
+             elitism=5, method='GA', cooling_rate=0.1,
             nswap=3, popsize=50, mut=0.02, maxgens=50, dimension_bits=1):
         """
         s.optimise(method='inspyred', mut=0.02, pop_size=50, maxgens=40)
@@ -358,14 +362,12 @@ class SteadyContNeg(Steady):
             self.pop = pop
             if hasattr(self, 'best_individual'):
                 pop = self.best_individual
-
             return pop
 
         import inspyred.ec
         import inspyred.ec.ec
         ea.terminator = inspyred.ec.terminators.evaluation_termination
         bounder = inspyred.ec.ec.Bounder(self.lower, self.upper)
-
 
         self.storage = []
 
@@ -374,9 +376,9 @@ class SteadyContNeg(Steady):
             #print('{0:6} -- {1} : '.format(num_generations, best.fitness))
 
             #print(population)
-            self.storage.append(population[0].candidate[:])
+            for pop in population:
+                self.storage.append(pop.candidate[:])
         ea.observer = my_observer
-
 
         ea.selector = inspyred.ec.selectors.uniform_selection
         #ea.selector = inspyred.ec.selectors.rank_selection
@@ -404,7 +406,6 @@ class SteadyContNeg(Steady):
         except:
             pass
         return res
-
 
     def _binary_to_real(self, binary, dimensions, dimension_bits):
         real = []

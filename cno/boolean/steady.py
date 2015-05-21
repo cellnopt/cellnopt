@@ -16,6 +16,7 @@ import collections
 
 from easydev import AttrDict
 
+
 class Steady(CNOBase):
     """Naive implementation of Steady state to help in designing the API
 
@@ -397,8 +398,6 @@ class Steady(CNOBase):
         return df
 
 
-
-
     #@do_profile()
     def score(self ):
         
@@ -609,9 +608,17 @@ class Steady(CNOBase):
         self.buffering = buffering
         self.debug = debug
 
+        self.data.sim = self.get_sim()
+        
+        if show is True:
+            self.data.plot(mode='mse')
+            score = self.score()
+        m = self.data.copy()
+        return m
+
+    def get_sim(self, columns=None):
         if columns is None:
             columns = self.data.df.columns
-
 
         X0 = self.get_df(0, columns=columns)
         X1 = self.get_df(self.time, columns=columns)
@@ -621,19 +628,18 @@ class Steady(CNOBase):
         X0['cell'] = [self.data.cellLine] * N
         X0['experiment'] = self.data.experiments.index
         X0.set_index(['cell', 'experiment', 'time'], inplace=True)
-        self.data.sim.ix[X0.index] = X0 #.fillna(2)
+        sim = self.data.sim.copy()
+
+        sim.ix[X0.index] = X0 #.fillna(2)
 
         X1['time'] = [self.time] * N
         X1['cell'] = [self.data.cellLine] * N
         X1['experiment'] = self.data.experiments.index
         X1.set_index(['cell', 'experiment', 'time'], inplace=True)
-        self.data.sim.ix[X1.index] = X1 #.fillna(2)
+        sim.ix[X1.index] = X1 #.fillna(2)
 
-        if show is True:
-            self.data.plot(mode='mse')
-            score = self.score()
-        m = self.data.copy()
-        return m
+        return sim
+
 
     def optimise2(self, time=None, verbose=True):
         assert len(self.data.times)>=2, "Must have at least 2 time points in the data"
