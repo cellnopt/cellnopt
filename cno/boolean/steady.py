@@ -41,41 +41,14 @@ class Steady(CNOBase):
     
     def __init__(self, pknmodel, data, verbose=True):
         super(Steady, self).__init__(pknmodel, data, verbose)
-
         self.model = self.pknmodel.copy()
         # to speed up code later on
         self.model.buffer_reactions = self.model.reactions[:]
-        self.time = self.data.times[1]
 
-        # just a reference to the conditions
-        self.inhibitors = self.data.inhibitors.copy()
-        self._inhibitors_none = self.data.inhibitors.copy() * 0
-        self._inhibitors_all = self.data.inhibitors.copy()
-        self.stimuli = self.data.stimuli.copy()
-        self._stimuli_none = self.data.stimuli.copy() *  0
-        self._stimuli_all = self.data.stimuli.copy()
-
-        self.inhibitors_names = self.data.inhibitors.columns
-        self.stimuli_names = self.data.stimuli.columns
-
-        self.N = self.data.df.query('time==0').shape[0]
+        # if you change the model or data
+        self._init_model_data()
 
 
-        self.results = BooleanResults()  # for time T1
-
-
-        #self.results = self.data.df.copy()
-        #self.results = self.results.query("time==@self.time")
-
-        # ignore data of the edge [0:2]
-        self.toflip = [x[0:2] for x in self.model.edges(data=True) if x[2]['link'] == '-']
-
-        self.init(self.time)
-
-        self.buffering = True
-
-        self.buffer = {}
-        self.simulated = {}
         self.debug = True
         self.counter = 0
         self.length_buffer = 10000
@@ -97,6 +70,37 @@ class Steady(CNOBase):
 
         self.paradoxical = {}
         self.repressors = {}
+
+    def _init_model_data(self):
+
+
+        self.time = self.data.times[1]
+
+        # just a reference to the conditions
+        self.inhibitors = self.data.inhibitors.copy()
+        self._inhibitors_none = self.data.inhibitors.copy() * 0
+        self._inhibitors_all = self.data.inhibitors.copy()
+        self.stimuli = self.data.stimuli.copy()
+        self._stimuli_none = self.data.stimuli.copy() *  0
+        self._stimuli_all = self.data.stimuli.copy()
+
+        self.inhibitors_names = self.data.inhibitors.columns
+        self.stimuli_names = self.data.stimuli.columns
+
+        self.N = self.data.df.query('time==0').shape[0]
+
+
+        self.results = BooleanResults()  # for time T1
+
+        # ignore data of the edge [0:2]
+        self.toflip = [x[0:2] for x in self.model.edges(data=True) if x[2]['link'] == '-']
+
+        self.init(self.time)
+
+        self.buffering = True
+        self.buffer = {}
+        self.simulated = {}
+
 
     #@do_profile()
     def _init_values(self, time=False):
@@ -339,9 +343,6 @@ class Steady(CNOBase):
                     if node in self.repressors[inh]:
                         values[node][(self.inhibitors[inh]==1).values] = 0
 
-
-
-
             # here NAs are set automatically to zero because of the int16 cast
             # but it helps speeding up a bit the code by removig needs to take care
             # of NAs. if we use sumna, na are ignored even when 1 is compared to NA            
@@ -383,7 +384,6 @@ class Steady(CNOBase):
         else:
             self.simulated[self.time] = data[indices,:].transpose()
 
-
     def get_errors_rates(self):
 
 
@@ -396,7 +396,6 @@ class Steady(CNOBase):
 
         df /= len(self.midas.experiments)
         return df
-
 
     #@do_profile()
     def score(self ):
