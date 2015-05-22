@@ -355,7 +355,7 @@ class BooleanModels(Models):
         pb = progress_bar(N)
         for ic, i in enumerate(self.df.index):
             for jc, j in enumerate(self.df.index):
-                J[ic][jc] = sklearn.metrics.jaccard_similarity(self.df.ix[i], self.df.ix[j])
+                J[ic][jc] = sklearn.metrics.jaccard_similarity_score(self.df.ix[i], self.df.ix[j])
             pb.animate(1+ic, 0)
         return J
 
