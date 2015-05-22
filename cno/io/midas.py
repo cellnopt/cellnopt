@@ -2013,8 +2013,9 @@ class XMIDAS(MIDASReader):
             # experiments of levels is 1
             # better to use experiments df so that order is same as in experiments
             for exp in self.experiments.index:
+                if (self.cellLine, exp, time) not in self.df.index:
+                    continue
 
-                #
                 measurements = self.df.xs((self.cellLine, exp, time))
                 measurements = measurements[self.df.columns] # maybe not needed
                 # keep it for now to be sure that order of measurements is same as in the header

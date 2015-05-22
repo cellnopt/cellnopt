@@ -347,6 +347,17 @@ class BooleanModels(Models):
         reactions = list(df.mean()[df.mean() > threshold].index)
         return reactions
 
+    def get_jaccard(self, progress=True):
+        import sklearn.metrics
+        N = len(self.df)
+        J = np.zeros((N,N))
+        from easydev import progress_bar
+        pb = progress_bar(N)
+        for ic, i in enumerate(self.df.index):
+            for jc, j in enumerate(self.df.index):
+                J[ic][jc] = sklearn.metrics.jaccard_similarity(self.df.ix[i], self.df.ix[j])
+            pb.animate(1+ic, 0)
+        return J
 
 
 
