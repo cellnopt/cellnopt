@@ -57,6 +57,8 @@ class MultiMIDAS(object):
         else:
             raise ValueError("midas with same celltype already in the list")
 
+    #TODO rename with lower case
+    #TODO allows a glob directly
     def readMIDAS(self, filename):
         """read MIDAS file and extract individual cellType/cellLine
 
@@ -65,9 +67,16 @@ class MultiMIDAS(object):
         :attr:`_midasList`. The MIDAS file can then be retrieved using their
         cellLine name, which list is stored in :attr:`cellLines`.
 
-        :param str filename: a valid MIDAS file containing any number of cellLines.
+        :param str filename: a valid MIDAS file or a list of filenames.
 
         """
+        if isinstance(filename, str):
+            self._read_midas(filename)
+        elif isinstance(filename, list):
+            for this in filename:
+                self._read_midas(this)
+
+    def _read_midas(self, filename):
         try:
             m = XMIDAS(filename)
         except:
@@ -99,3 +108,53 @@ class MultiMIDAS(object):
             clf()
             m.plot()
             pylab.title('%s' % m.cellLine, fontsize=16)
+
+    def _get_species(self):#
+        if len(self.cellLines):
+            cell = self.cellLines[0]
+            return self[cell].df.columns[:]
+        else:
+            return []
+    species = property(_get_species)
+
+
+
+    def get_midas_for_one_species(self, species):
+        """
+
+
+        
+        :param species: name of a species (i.e. column). All column that have that name
+            will be merged into a new MIDAS files. new columns will be the cell line names
+            and data will be from the species only.
+        :return: a MIDAS file. The name of the cell line is replaced wit the species name
+            and columns are the cell lines found in the MultiMIDAS structure.
+        """
+
+        import pandas as pd
+        cellLines = self.cellLines[:]
+        df = pd.concat([self[cell].df[species] for cell in cellLines]).unstack(0)
+
+        from cno.io.measurements import MIDASBuilder, Measurement, Measurements
+
+
+        mb = MIDASBuilder()
+        # loop over the data looking at the row (experiment name and time)
+        for exp, time in df.index:
+            # and the column, supposibly the cell line name
+            for column in df.columns:
+                # fetching (1) the experiment details
+                exp_details = self[cellLines[0]].experiments.ix[exp]
+                # and the value
+                datum = df[column].ix[exp].ix[time]
+                # Create the experiment instance
+                exp_instance = Measurement(column, time,
+                    stimuli=exp_details.Stimuli.to_dict(),
+                    inhibitors=exp_details.Inhibitors.to_dict(),
+                    value=datum, cellLine=species)
+                mb.add_measurements(exp_instance)
+        newm = mb.xmidas
+        newm.sort_experiments_by_inhibitors()
+        return newm
+
+
