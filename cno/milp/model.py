@@ -406,8 +406,8 @@ def standalone(args=None):
         options = user_options.parse_args(args[1:])
 
     if options.onweb is True or options.report is True:
-        o = MILPTrain(options.pknmodel, options.data, verbose=options.verbose,
-            verboseR=options.verboseR, config=user_options.config)
+        o = MILPTrain(options.pknmodel, options.data, verbose=options.verbose
+             )
 
     if options.onweb is True:
         o.optimise()

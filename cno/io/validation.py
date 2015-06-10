@@ -44,5 +44,5 @@ class Validation(object):
                     maxstallgen=maxstallgen, maxtime=maxtime)
             score = self.sim.results.results.best_score[-1]
             self.best_scores.append(score)
-            pb.animate(i+1,0)
+            pb.animate(i+1)
 

@@ -462,7 +462,7 @@ class DiscreteAnnealer(Annealer):
             self.state[flipthis] = int(self.state[flipthis] + 1) % 2
 
     def energy(self):
-        #self.pb.animate(self.count,0)
+        #self.pb.animate(self.count)
         self.count += 1
         score = self.eval_func(self.state)
         if score < self.best_score:

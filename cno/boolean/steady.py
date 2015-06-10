@@ -717,7 +717,7 @@ class Steady(CNOBase):
         for i,this in enumerate(permutations(N)):
             self.simulate(this)
             scores.append(self.score())
-            pb.animate(i, 0)
+            pb.animate(i)
             sizes.append(sum(this))
         #self._fill_results()
         self.scores = scores
@@ -970,7 +970,7 @@ class Steady(CNOBase):
                 pass
 
 
-            pb.animate(count,0)
+            pb.animate(count)
         print('Simplified %s %% of the model' % float(changed/float(len(models.df))))
         models.drop_duplicates()
         print("Removing duplicaes found %s" % len(models.df))

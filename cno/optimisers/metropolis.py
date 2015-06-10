@@ -156,7 +156,7 @@ class MH(Diagnostics):
                 results['best_score'] = best_score
             results['best_scores'].append(best_score)
             results['best_score'] = best_score # just for the progres
-            pb.animate(i, 0)
+            pb.animate(i)
 
         #print best_parameters
         del results['scores'][0] # remove first element to have a length of N value

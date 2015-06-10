@@ -356,7 +356,7 @@ class BooleanModels(Models):
         for ic, i in enumerate(self.df.index):
             for jc, j in enumerate(self.df.index):
                 J[ic][jc] = sklearn.metrics.jaccard_similarity_score(self.df.ix[i], self.df.ix[j])
-            pb.animate(1+ic, 0)
+            pb.animate(1+ic)
         return J
 
 

@@ -120,7 +120,7 @@ class Swaper(object):
             self.swap(1, inplace=True)
             dist = self.get_distance(self.graph)
             distances.append(dist)
-            if progress:pb.animate(i,0)
+            if progress:pb.animate(i)
         if show is True:
             import pylab
             pylab.plot(distances)
@@ -137,7 +137,7 @@ class Swaper(object):
         for i in range(0, repeat):
             distance = self.compute_distances(N=N, show=False, progress=False)
             distances.append(distance)
-            pb.animate(i+1, 0)
+            pb.animate(i+1)
         df = pd.DataFrame(distances)
         pylab.clf()
         pylab.fill_between(range(0,N), df.mean()+df.std(),

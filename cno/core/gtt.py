@@ -58,7 +58,7 @@ class GTTBool(object):
             self.simulator.simulate(reactions=reactions)
             tt = self.simulator.simulated[self.simulator.time].flatten()
             self.truth_tables[index] = tt
-            pb.animate(i+1,0)
+            pb.animate(i+1)
 
 
 
@@ -130,7 +130,7 @@ class GTTBoolOld(CNORBase):
         d = {}
         for i in range(0, N):
             res = np.array(self._get_sim(self.models.df.ix[i].values))
-            b.animate(i, N)
+            b.animate(i)
             d[i] = res
 
         df = pd.DataFrame(d).transpose()
