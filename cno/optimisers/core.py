@@ -1,13 +1,11 @@
-"""
-
-
-"""
+"""Old code that may be reused"""
 import itertools
 import math
 import numpy
 import random
 
 from pylab import *  
+
 
 __all__ = ["Optimisation", "MultiOptimisation", "Results", "MultiResults"]
 
@@ -79,7 +77,6 @@ class MultiResults(object):
     std = property(_get_std_best_scores,
         doc="return std of  best scores (vector)")
 
-
     def _get_results(self):
         return self._results
     results = property(_get_results)
@@ -119,7 +116,6 @@ class MultiResults(object):
         a = [argmin(x) for x in self.best_scores]
         return a
     min_index = property(_get_min_index)
-
 
     def plotMulti(self, nbars=10, **kargs):
         label = kargs.get('label', None)
@@ -171,7 +167,6 @@ class MultiResults(object):
         figure()
         hist(self.min_index, nbins)
         xlabel('Indices where Best Scores was found')
-
         
     def plot(self, save=True, tag="optimisation", nbins=20,
 burnin=0.1,nswaps=1, fontsize=12, label=None):
@@ -202,7 +197,6 @@ burnin=0.1,nswaps=1, fontsize=12, label=None):
         xlabel('Scores')
         if label: legend(loc=1,prop={'size':fontsize}) 
        
-
         subplot(2,2,3)
         b = numpy.array(self.scores)
         plot(numpy.mean(b,axis=0), label=label)
@@ -490,7 +484,6 @@ class MultiOptimisation(object):
 
         self.multi = MultiResults()
         self.multiT2 = MultiResults()
-
 
     def reset(self):
         self.multi.reset()
