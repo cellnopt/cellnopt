@@ -12,18 +12,27 @@ class Simulator(object):
 
 
 class MH(Diagnostics):
+    """
 
+
+    ::
+    
+        from cno import *
+        s = Steady(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
+        def eval_func(param):
+            return s.eval_func(param)
+        m = MH()
+        m.run(eval_func, len(s.model.reactions), nswap=3)
+
+
+    """
     def __init__(self, N=1000):
         Diagnostics.__init__(self)
-
         self.N = N
-        
-
         self._buffer = {}
 
-    def neighbour_function(self, ):
+    def neighbour_function(self):
         pass
-
 
     def _swap(self, x):
         if x == 1:
@@ -41,15 +50,6 @@ class MH(Diagnostics):
         # let us do the swaps now
         newbitstring =  self._swapbits(bit, indexlist)
         return newbitstring
-
-    def  _swapbits(self, bitstring, indexlist):
-       """Swap the bits of a bitstring (given a list of indices)"""
-       for x in indexlist:
-           if bitstring[x] == 0:
-               bitstring[x] = 1
-           else:
-               bitstring[x] = 0
-       return bitstring
 
     def maxswaps(self, bitstring, nswap):
         """ Returns a modified version of the given bitstring by swapping 1 to N bits 
@@ -106,9 +106,7 @@ class MH(Diagnostics):
         from easydev import progress_bar
         pb = progress_bar(self.N)
 
-
         for i in range(0, self.N):
-
 
             proposal_parameter = self.swaps(best_parameters, nswap)
 
@@ -149,7 +147,6 @@ class MH(Diagnostics):
             self.acceptance.append(accepted)
             results['scores'].append(score)
 
-
             if score < best_score:
                 best_score = score
                 best_parameters = proposal_parameter[:]
@@ -168,7 +165,3 @@ class MH(Diagnostics):
         print "simulation took", t2-t1, "seconds."
 
         self.results = results.copy()
-
-
-
-    
