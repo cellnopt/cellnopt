@@ -205,12 +205,6 @@ class MIDASBuilder(object):
     This class allows one to add measurements to obtain a dataframe compatible with
     XMIDAS class, which can then be saved using XMIDAS.to_midas.
 
-    More sophisticated builders can be added.
-
-    .. note:: a bit slow but can scale up to 20 species, 20 conditions
-        60 time points and 2 replicates that is 2280 points in less than 
-        0.2 seconds so good enough for now.
-
     If an inhibitor or stimuli is not provided, we assume ti is absent (set 
     to zero).
 
@@ -290,14 +284,12 @@ class MIDASBuilder(object):
                 columns=[['Stimuli']*Ns + ['Inhibitors']*Ni, stimuli + inhibitors])
         df.sortlevel(axis=1, inplace=True)
 
-
         # this is the slowest part in the 2 next loops.
         for stimulus in stimuli:
-             df.loc[:,('Stimuli', stimulus)] = [x.stimuli[stimulus] if stimulus
-                     in x.stimuli.keys() else 0 for x in  self.measurements]
+             df.loc[:,('Stimuli', stimulus)] = [x.stimuli.get(stimulus, 0) 
+                     for x in  self.measurements]
         for inhibitor in inhibitors:
-             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors[inhibitor] 
-                     if inhibitor in x.inhibitors.keys() else 0 
+             df.loc[:,('Inhibitors', inhibitor)] = [x.inhibitors.get(inhibitor, 0) 
                      for x in  self.measurements]
 
         df['time'] = self.measurements.get_time()
@@ -317,7 +309,7 @@ class MIDASBuilder(object):
                 range(0, len(groups.keys()))]
 
         df.reset_index(inplace=True)
-        self._df = df
+        self._df = df.copy()
 
         # add dummy inhibitors and stimuli columns to create the
         # strucuture, then remove them
@@ -386,8 +378,7 @@ class MIDASBuilder(object):
         #xm.df.set_index(['cell', 'experiment', 'time'], inplace=True)
 
         xm.create_empty_simulation()
-        # TODO
-        print(xm.cellLines)
+        # cell line must be set to one of the cell lines
         xm.cellLine = xm.cellLines[0]
 
         xm.errors = xm.df * 0
