@@ -30,7 +30,6 @@ from cno.io import midas_normalisation as normalisation
 
 from easydev import DevTools
 from cno.misc import CNOError
-from cno.misc.profiler import do_profile
 
 
 __all__ = ["XMIDAS", "Trend", 'MIDASReader']
@@ -1329,11 +1328,8 @@ class XMIDAS(MIDASReader):
         pylab.gca().set_xticklabels(xtlabels, fontsize=kargs.get("fontsize", 10))
         pylab.gca().set_xticks(xt)
 
-
-    @do_profile()
     def plot2(self, logx=False, logy=False):
         # works only if there is at most one stim per experiment
-
         trend = Trend()
         assert all(self.experiments.Stimuli.sum(axis=1) <= 1)
         pylab.clf()
@@ -1390,7 +1386,6 @@ class XMIDAS(MIDASReader):
         ax2 = axes[3].set_ylim([x1,x2])
         pylab.plot([],[])
 
-    #@do_profile()
     def plot_mse(self, mode='mse', cmap='heat', vmax=1, vmin=0, hold=False):
         """Simpler and faster version of plot() function"""
         if hold is False:
@@ -1435,7 +1430,6 @@ class XMIDAS(MIDASReader):
 
 
 
-    #@do_profile()
     def plot_data(self, logx=False, color="black", **kargs):
         """plot experimental curves
 
@@ -1642,7 +1636,6 @@ class XMIDAS(MIDASReader):
         except:
             pass
 
-    #@do_profile()
     def plot_layout(self, cmap="heat",
         rotation=90, colorbar=True, vmax=None, vmin=0.,
         mode="data", **kargs):
@@ -1868,8 +1861,6 @@ class XMIDAS(MIDASReader):
                                                  facecolor='wheat', alpha=0.5))
             tx.set_position((0.6, 1.15))
 
-    # on extliver data, 8 % on plot_layout, 56 on plot_data and 36 on plot_sim
-    #@do_profile()
     def plot(self, mode='data', **kargs):
         """Plot data contained in :attr:`experiment` and :attr:`df` dataframes.
 
@@ -1919,7 +1910,9 @@ class XMIDAS(MIDASReader):
              self.df.reset_index().boxplot(by="time")
              pylab.tight_layout()
         else:
-            self.df.boxplot()
+            # return_type= axes is to remove warning in pandas
+            # The default value for 'return_type' will change to 'axes' in a future release.
+            self.df.boxplot(return_type='axes')
 
     def radviz(self, species=None, fontsize=10):
         """
@@ -2340,20 +2333,21 @@ class XMIDAS(MIDASReader):
         .. note:: time zero is ignored. Indeed, data at time zero is mostly set
             to zero, which biases clustering.
         """
-        #FIXME 1 looks like dendograms are not shown. why?
+        cmap = self._get_cmap(cmap)
         from biokit.viz.heatmap import Heatmap
         data = self.df.query('time>0').unstack(2).ix[self.cellLine]
         if transpose:
             h = Heatmap(data.transpose())
         else:
             h = Heatmap(data)
+
         h.plot(cmap=cmap)
         return h
 
     def shuffle(self, mode="experiment", inplace=True):
         """Shuffle data
 
-        this method does not alter the data but shuffle it around
+        This method does not alter the data but shuffles it 
         depending on the user choice.
 
         :param str mode: type of shuffling (see below)
@@ -2364,10 +2358,11 @@ class XMIDAS(MIDASReader):
         #. `timeseries` shuffles experiments and species; timeseries
             are unchanged.
         #. `all`: through times, experiments and species. No structure kept
+            sum of the data is constant.
         #. `signal` (or `species` or `column`): within a column, timeseries
            are shuffled. So, sum over signals is constant.
         #. `experiment` (or `index`): with a row (experiment),
-           timeseries are shuffled.
+           timeseries are shuffled. Sum of data over a row is constant.
 
         Original data:
 
@@ -2406,10 +2401,9 @@ class XMIDAS(MIDASReader):
                     self.df.values[i][j] = data[count]
                     count += 1
         elif mode in ["signal", "species",  "column"]:
-            # m.df.sum() is constant
-            raise NotImplementedError
+            # sum on a species is constant
             for c in self.df.columns:
-                self.df[c] = np.random.permutation(self.df[c].values)
+                np.random.shuffle(self.df[c].values)
         elif mode in ["index", "experiment"]:
             # m.df.sum(level="experiment").sum(axis=1) is constant
             for this_index in self.df.index:
@@ -2418,10 +2412,7 @@ class XMIDAS(MIDASReader):
             # swap boxes
             species = list(self.species)
             exps = list(self.experiments.index)
-            pairs = []
-            for s in species:
-                for e in exps:
-                    pairs.append((s,e))
+            pairs = [(s,e) for s in species for e in exps]
             # permutation now
             np.random.shuffle(pairs)
             df = self.df.copy()
@@ -2432,7 +2423,6 @@ class XMIDAS(MIDASReader):
                     rand_s = pairs[count][0]
                     rand_e = pairs[count][1]
                     data = list(df[rand_s].ix[self.cellLine].ix[rand_e])
-
                     self.df[s].ix[self.cellLine].ix[e] = data
                     count += 1
         else:
