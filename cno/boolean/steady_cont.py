@@ -16,6 +16,27 @@ import collections
 from cno.boolean.steady import Steady
 
 
+class SteadyContMultiRun(CNOBase):
+    """Example of multi run and steady analysis)"""
+
+    def __init__(self, pknmodel, data, N=10, verbose=True):
+        super(SteadyContMultiRun, self).__init__(pknmodel, data, verbose)
+        from cno.optimisers import multiresults
+        self.mr = multiresults.MultiResults()
+
+    def run(self, N=10, popsize=50, maxgens=100,nbits=1):
+        from easydev import progressbar
+        pb = progressbar.progress_bar(N, interval=1)
+        for i in range(0,N):
+            s = SteadyCont(self.pknmodel, self.data)
+            s.optimise(maxgens=maxgens, popsize=popsize, dimension_bits=nbits)
+            self.mr.add_scores(s.scores)
+            pb.animate(i+1)
+        self.mr.interval = popsize
+
+
+
+
 class SteadyCont(Steady):
     """
 
@@ -291,7 +312,7 @@ class SteadyCont(Steady):
 
     #@do_profile()
     def optimise(self, verbose=False, guess=None, 
-             elitism=5, method='GA',cooling_rate=0.1,
+             elitism=5, method='GA',cooling_rate=0.1, maxtime=60, maxstallgen=100,
             nswap=3, popsize=50, mut=0.02, maxgens=50, dimension_bits=1):
         """
         s.optimise(method='inspyred', mut=0.02, pop_size=50, maxgens=40)
@@ -319,7 +340,6 @@ class SteadyCont(Steady):
         self.best_score = 1
 
         def evaluator(candidates, args):
-
             dimensions = args['dimensions']
             dimension_bits = args['dimension_bits']
             fitness = []
@@ -357,7 +377,6 @@ class SteadyCont(Steady):
             self.pop = pop
             if hasattr(self, 'best_individual'):
                 pop = self.best_individual
-
             return pop
 
         import inspyred.ec
@@ -396,14 +415,13 @@ class SteadyCont(Steady):
         self.final = final
         res = None
         self.best_bitstring = max(self.ea.population).candidate
-
+        print self.best_bitstring
         try:
             self.best_bitstring = self._binary_to_real(self.best_bitstring,
                 len(self.model.reactions), dimension_bits)
         except:
             pass
         return res
-
 
     def _binary_to_real(self, binary, dimensions, dimension_bits):
         real = []
