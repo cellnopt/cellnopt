@@ -65,7 +65,7 @@ setup(
     #packages = ['cno'],
     #package_dir  = package_dir,
     install_requires = ['numpy', 'matplotlib', 'scipy', 'networkx', 'pandas>=0.15', 'bioservices',
-        'colormap>=0.9.3', 'biokit', 'pulp', 'numexpr', 'wrapt'],
+        'colormap>=0.9.3', 'biokit', 'pulp', 'numexpr', 'wrapt', 'easydev>=0.8.4'],
     zip_safe=False,
 
 

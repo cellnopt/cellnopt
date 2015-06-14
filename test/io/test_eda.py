@@ -1,5 +1,5 @@
-from cno.io.eda import EDA
-from cno.io.sif import SIF
+from cno import EDA
+from cno import SIF
 from cno.testing import getdata
 import tempfile
 
