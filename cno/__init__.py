@@ -30,6 +30,7 @@ from .datasets import cnodata
 from .io import midas, cnograph, sif # 3 most common modules.  
 from .io.reactions import Reactions, Reaction
 from .io.sif import SIF
+from .io.eda import EDA
 from .io.cna import CNA
 from .io.midas import XMIDAS
 from .io.cnograph import CNOGraph

@@ -40,6 +40,7 @@ class Results(object):
     def __init__(self):
         self._models = None
         self._results = None
+        self._best_score
 
     def _get_models(self):
         return self._models
@@ -57,15 +58,19 @@ class Results(object):
         return self.models.scores
     scores = property(_get_scores)
 
-    def _get_sizes(self):
-        return self.models.sizes
-    sizes = property(_get_sizes)
+    def _get_best_score(self):
+        return self._best_score
+    best_score = property(_get_best_score)
 
 
 class BooleanResults(Results):
 
     def __init__(self):
         pass
+
+    def _get_sizes(self):
+        return self.models.sizes
+    sizes = property(_get_sizes)
 
     def plot_fit(self):
         self.results.results[['Best_score','Avg_Score_Gen']].plot()
@@ -82,7 +87,6 @@ class BooleanResults(Results):
     def plot_mse_grouped_by_size(self):
         df = pd.DataFrame({'sizes': self.sizes, 'scores':self.scores})
         df.groupby('sizes').aggregate('mean').plot()
-
 
     def hist2d_scores_vs_model_size(self, bins=None, cmap='gist_heat_r', 
             fontsize=16, contour=False, Nlevels=10):

@@ -21,9 +21,8 @@ from easydev import precision
 and_symbol = "^"
 
 
-__all = ["Models", "BooleanModels", "DTModels", "FuzzyModels", "CompareModels"]
-
-
+__all = ["Models", "BooleanModels", "ContinousModels", 
+    "DTModels", "FuzzyModels", "CompareModels"]
 
 
 class Models(object):
@@ -97,8 +96,6 @@ class Models(object):
                 name = name.replace("+", "^")
                 return name
             self.df.columns = [convert(x) for x in self.df.columns]
-
-
 
         # we also reorder alphabetically the species in the and reactions
 
@@ -241,9 +238,6 @@ class BooleanModels(Models):
                 raise ValueError('No model found within that tolerance')
         else:
             model = self.df.ix[model_number]
-
-
-
 
         # This is to set the average and label and penwidth
         # TODO: could be simplified using Reaction ?

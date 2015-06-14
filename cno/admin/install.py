@@ -43,5 +43,13 @@ def install_all_cellnopt_dependencies(verbose=True):
         if verbose:
             print("%s already installed. skipped" % "Rsge")
 
+    #MEIGOR
+    pm.install("snowfall")
+    pm.install("Rsolnp")
+    if pm.is_installed("MEIGOR") is False:
+        pm.install_packages("http://www.cellnopt.org/downloads/MEIGOR_0.99.6_svn3222.tar.gz",
+            type="source")
+
+
 if __name__ == "__main__":
     install_all_cellnopt_dependencies()
