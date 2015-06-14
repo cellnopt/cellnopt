@@ -17,7 +17,7 @@ import os
 from optparse import  OptionParser, OptionGroup
 import argparse
 
-from cno.io import CNOGraph
+from cno import CNOGraph, cnodata
 
 __all__ = ["plotmodel"]
 
@@ -39,7 +39,11 @@ def plotmodel(args=None):
     else:
         options = user_options.parse_args(args[1:])
 
-    cno = CNOGraph(options.model[0], options.data[0], verbose=options.verbose)
+    if options.cnodata is True:
+        cno = CNOGraph(cnodata(options.model[0]), cnodata(options.data[0]), 
+                verbose=options.verbose)
+    else:
+        cno = CNOGraph(options.model[0], options.data[0], verbose=options.verbose)
 
     compression = True
     expansion = True
@@ -107,14 +111,9 @@ class OptionCNO(argparse.ArgumentParser):
         group.add_argument("--viewer", dest='viewer', default="browse",
                          action="store_true", 
                          help="verbose option.")
-        #group.add_argument("--output", dest='output', 
-        #                 default="pkn", type=str,
-        #                 help="verbose option.")
-        #group.add_argument("--format", dest='format', 
-        #                 default="svg", type=str,
-        #                 help="output format. Can be pdf, png, pdf.")
-        # store_false that the inverse boolean of save_dot because plotModel
-        # uses an argument called remove_dot
+        group.add_argument("--use-cnodata", dest='cnodata',
+                         action="store_true", 
+                         help="fetch data from cno repository.")
         group.add_argument("--save-dot", dest='save_dot', 
                          action="store_false",
                          help="Save format in dot format.")
