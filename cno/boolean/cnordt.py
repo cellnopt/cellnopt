@@ -308,7 +308,6 @@ class CNORdt(CNORBase, CNOBase):
 
         self._create_report_header()
 
-
         txt = """<pre class="literal-block">\n"""
         #txt += "\n".join([x for x in self._script_optim.split("\n") if "write.csv" not in x])
         txt += "o.report()\n</pre>\n"
@@ -328,7 +327,6 @@ class CNORdt(CNORBase, CNOBase):
         <img src="optimised_model_mapback.png">
 
         """, "Optimised model")
-
 
         self._report.add_section('<img src="fitness.png">', "Fitness")
         self._report.add_section('<img src="Errors.png">', "Errors")
@@ -351,6 +349,10 @@ class CNORdt(CNORBase, CNOBase):
         self._report.add_section(txt, "stats")
         # dependencies
         self._report.write("index.html")
+
+    def cleanup(self):
+        # remove the report
+        pass
 
     def _get_stats(self):
         res = {}
