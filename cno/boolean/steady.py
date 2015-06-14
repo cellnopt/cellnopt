@@ -16,6 +16,24 @@ import collections
 
 from easydev import AttrDict
 
+class SteadyMultiRun(CNOBase):
+    """Example of multi run and steady analysis)"""
+
+    def __init__(self, pknmodel, data, N=10, verbose=True):
+        super(SteadyMultiRun, self).__init__(pknmodel, data, verbose)
+        from cno.optimisers import multiresults
+        self.mr = multiresults.MultiResults()
+
+    def run(self, N=10, maxgens=20, popsize=50):
+        from easydev import progressbar
+        pb = progressbar.progress_bar(N, interval=1)
+        for i in range(0,N):
+            s = Steady(self.pknmodel, self.data)
+            s.optimise(maxtime=1e6, maxgens=maxgens, popsize=popsize, maxstallgen=200)
+            self.mr.add_scores(s.results.results.best_score)
+            pb.animate(i+1)
+        self.mr.interval = popsize
+
 
 class Steady(CNOBase):
     """Naive implementation of Steady state to help in designing the API
@@ -137,7 +155,6 @@ class Steady(CNOBase):
         # order may be different !!
 
         assert time in self.data.times
-
 
         self._init_values(time=time)
 
@@ -551,15 +568,38 @@ class Steady(CNOBase):
         print(str(t2-t1) + " seconds")        
         return t2-t1
 
-    def plotsim(self, fontsize=16, experiments=None, vmin=0, vmax=1):
+    def plotsim(self, experiments=None, fontsize=16, vmin=0, vmax=1, cmap='gray'):
+        """
+
+        :param experiments: if None, shows the steady state for each experiment and species
+            if provided, must be a valid experiment name (see midas.experiments attribute)
+            in which case, for that particular experiment, the steady state and all previous
+            states are shown for each species.
+
+
+        A simulation must be performed using :meth:`simulate`
+        ::
+
+            # those 2 calls are identical
+            s.plotsim(experiments=8)
+            s.plotsim(experiments=8)
+            # This plot the steady states for all experiments
+            s.plotsim()
+
+        """
         # This is for all experiments is experiments is None
-        cm = pylab.get_cmap('gray')
+        cm = pylab.get_cmap(cmap)
         pylab.clf()
 
         if experiments is None: # takes the latest (steady state) of each experiments
             data = pd.DataFrame(self.debug_values[-1]).fillna(0.5)
         else:
-            data = [(k, [self.debug_values[i][k][experiments] for i in range(0, len(self.debug_values))]) for k in self.debug_values[0].keys()]
+
+            exp_name = self.midas.experiments.ix[experiments].name
+            index_exp = list(self.midas.experiments.index).index(exp_name)
+
+            data = [(k, [self.debug_values[i][k][index_exp] for i in range(0, len(self.debug_values))])
+                    for k in self.debug_values[0].keys()]
             data = dict(data)
             data = pd.DataFrame(data).fillna(0.5)
             data = data.ix[data.index[::-1]]
@@ -639,19 +679,19 @@ class Steady(CNOBase):
 
         return sim
 
-
     def optimise2(self, time=None, verbose=True):
-        assert len(self.data.times)>=2, "Must have at least 2 time points in the data"
+        assert len(self.data.times) >= 2, "Must have at least 2 time points in the data"
         time1 = self.time
         if time is None:
             self.time = self.data.times[2]
         else:
             self.time = time
-        self.init(time)
+
+        self.init(self.time)
         prior = list(self.results.results.best_bitstring) # best is the prior
         self.optimise(prior=prior, verbose=verbose)
 
-        # reset to time1
+        # reset to time1 FIXME why ?
         self.init(time1)
 
     def plot_errors2(self):
@@ -807,13 +847,11 @@ class Steady(CNOBase):
         from easydev import AttrDict
         res = AttrDict(**self.ga.results)
 
-
         results = pd.DataFrame(self.ga.results)
         columns_int = ['Generation', 'Stall_Generation']
         columns_float = ['Best_score', 'Avg_Score_Gen', 'Best_Score_Gen', 'Iter_time']
         results[columns_int] = results[columns_int].astype(int)
         results[columns_float] = results[columns_float].astype(float)
-
 
         results = {
                 'best_score': res.Best_score,
@@ -824,9 +862,6 @@ class Steady(CNOBase):
                 #'sim_results': self.session.sim_results,  # contains mse and sim at t0,t1,
                 'results': results,
                 #'models': models,
-                #'stimuli': self.session.stimuli.copy(),
-                #'inhibitors': self.session.inhibitors.copy(),
-                #'species': self.session.species,
         }
 
         results['pkn'] = self.pknmodel
