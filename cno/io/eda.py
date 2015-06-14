@@ -103,8 +103,29 @@ class EDA(object):
             threshold = self.threshold
 
         s = SIF()
-        for n1, score, n2 in zip(self.nodes1, self.scores, self.nodes2):
+        for n1, edge, score, n2 in zip(self.nodes1, self.edges, self.scores, self.nodes2):
             if score > threshold:
-                s.add_reaction("%s=%s" % (n1, n2))
+                if edge == '(1)':
+                    s.add_reaction("%s=%s" % (n1, n2))
+                elif edge == '(-1)':
+                    s.add_reaction("!%s=%s" % (n1, n2))
+
         return s
+
+    def plot(self):
+        """
+
+        c.add_edge('E', 'F', label='0.1', width=2, penwidth=2, link="+")
+        c.plot(edge_attribute='penwidth', cmap='gray_r')
+
+        """
+        from cno import CNOGraph
+        c = CNOGraph()
+        for n1, edge, score, n2 in zip(self.nodes1, self.edges, self.scores, self.nodes2):
+            if edge == '(1)':
+                c.add_edge(n1, n2, link='+', width=score, penwidth=score)
+            elif edge == '(-1)':
+                c.add_edge(n1, n2, link='-', width=score, penwidth=score)
+        c.plot(edge_attribute='penwidth', cmap='gray_r')
+
 
