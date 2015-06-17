@@ -62,6 +62,10 @@ class GTTBool(object):
 
 
 
+
+
+
+
 class GTTBoolOld(CNORBase):
     """Works for boolean steady state (1 time point)
 
@@ -146,3 +150,110 @@ class GTTBoolOld(CNORBase):
 
     def __len__(self):
         return len(self.scores)
+
+
+class GTTDendrogram(object):
+
+    def __init__(self, asp):
+
+        self._asp = asp # reference that must not be touch 
+        self.setup = Setup(
+            self._asp.cnograph.stimuli, 
+            self._asp.cnograph.inhibitors, 
+            self._asp.cnograph.signals)
+    
+        # Set the experiments 
+        self.experiments = []
+        ac = self._asp.cnograph
+        for d in list(self._asp.dataset):
+
+            inputs = [(x[0],x[1]) if x[0] not in ac.inhibitors else (x[0]+"i", x[1]) 
+                    for x in d.inputs.iteritems()]
+            self.experiments.append(dict(inputs))
+
+        # Set the outputs to be looked at
+        self.outputs = sorted(self._asp.dataset[0].outputs[0].keys())
+
+    def _get_asp(self):
+        return self._asp
+    asp = property(_get_asp)
+
+    def _get_readouts_for_one_gtt(self, gtt):
+        """# create experiments given setup for a given GTT
+        # keep only experiments that we are interested in (ie present in dataset
+        # experiments."""
+        tokeep = []
+        names = self.experiments[0].keys()
+
+        for i,r in enumerate(gtt.to_matrix(self.setup)):
+            thisexp = dict([x for x in r.iteritems() if x[0] in names])
+            #if thisexp in experiments:
+
+            if thisexp in self.experiments:
+                #print i,
+                #res = [thisexp[x] for x in names] + [r[x] for x in outputs]
+                # we need only the outputs since inputs/experiments are always
+                # the same
+                res = [r[x] for x in self.outputs]
+                tokeep.append(res)
+
+        m = matrix(tokeep).flatten()
+        return m
+
+
+    # get matrix for the first gtt
+    def get_readouts(self):
+        print("Getting all readouts for all %s GTTS" % len(self._asp.family.gtts))
+        print("Using the following outputs %s" % self.outputs)
+
+        allres = []
+        for i, gtt in enumerate(list(self._asp.family.gtts)):
+            print "looking at GTT %s " % i
+            m = self._get_readouts_for_one_gtt(gtt)
+            allres.append(m)
+        N = len(self._asp.family.gtts)
+        M = len(self.outputs) * len(self.experiments)
+
+
+        m = array(allres).reshape(N, M)
+
+        return m
+
+
+    def get_distance_matrix(self, *args, **kargs):
+        allres = self.get_readouts()
+
+        # now compute the dist between the vectors
+        dm = pdist(allres, *args, **kargs)
+        return dm
+
+    def get_linkage(self, dm):
+        linkageMatrix = linkage(dm)
+        return linkageMatrix
+
+    def dendrogram(self, linkage=None, metric="euclidean", **kargs):
+        """
+
+            res = d.dendrogram(metric="hamming", 
+                        leaf_label_func=lambda x:d.get_mses()[x], 
+                        leaf_rotation=90)
+
+                        leaf_label_func=lambda x:d.get_GTTS_length[x], 
+        """
+        if linkage == None:
+            dm = self.get_distance_matrix(metric=metric)
+            linkage = self.get_linkage(dm)
+
+        from pylab import clf
+        clf()
+        res = dendrogram(linkage, show_leaf_counts=True, leaf_font_size=16, **kargs)
+        return res
+
+    def get_mses(self):
+        mses = [round(x.mse(self._asp.dataset), 4) for x in self._asp.family.gtts]
+        return mses
+    def get_GTTs_length(self):
+        N = [len(gtt.models) for gtt in self._asp.family.gtts]
+        return N
+
+    
