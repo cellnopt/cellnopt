@@ -29,4 +29,4 @@ taking care of lower and upper cases.
 
 NOLIG changed into CYTO.
 
-
+Some raw data are also in ./data directory.
