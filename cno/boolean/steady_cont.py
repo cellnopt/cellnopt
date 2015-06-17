@@ -10,8 +10,8 @@ import numpy as np
 import pylab
 import time
 import bottleneck as bn
-from collections import defaultdict
-import collections
+#from collections import defaultdict
+#import collections
 
 from cno.boolean.steady import Steady
 
@@ -317,11 +317,10 @@ class SteadyCont(Steady):
         """
         s.optimise(method='inspyred', mut=0.02, pop_size=50, maxgens=40)
         """
-        
         # TODO: check length of init guess
         from scipy.optimize import minimize
         from scipy.optimize import basinhopping
-
+        self.models = []
         def eval_func_in(x):
             return self.eval_func(x, prior=[])
 
@@ -339,6 +338,7 @@ class SteadyCont(Steady):
         self.upper = 1
         self.best_score = 1
 
+        self.scores_all = []
         def evaluator(candidates, args):
             dimensions = args['dimensions']
             dimension_bits = args['dimension_bits']
@@ -354,6 +354,7 @@ class SteadyCont(Steady):
                 #score = eval_func_in(cs)
                 fitness.append(score)
                 # TODO selection pressure could be added here 
+            self.scores_all.extend(fitness)
             self.scores.append(min(np.array(fitness)))
             if self.scores[-1] < self.best_score:
                 self.best_score =  self.scores[-1]
@@ -384,7 +385,6 @@ class SteadyCont(Steady):
         ea.terminator = inspyred.ec.terminators.evaluation_termination
         bounder = inspyred.ec.ec.Bounder(0,1)
 
-
         self.storage = []
 
         def my_observer(population, num_generations, num_evaluations, args):
@@ -393,6 +393,8 @@ class SteadyCont(Steady):
 
             #print(population)
             self.storage.append(population[0].candidate[:])
+            for pop in population:
+                self.models.append(pop.candidate[:])
         ea.observer = my_observer
 
 
@@ -421,7 +423,18 @@ class SteadyCont(Steady):
                 len(self.model.reactions), dimension_bits)
         except:
             pass
-        return res
+
+    def set_models(self, dimension_bits):
+        models = []
+        for model in self.models:
+            models.append(self._binary_to_real(model, len(self.model.reactions),dimension_bits))
+        df = pd.DataFrame(models)
+        df['Score'] = self.scores_all
+        df.columns = self.model.reactions +['Score']
+        
+        self.results._models = df
+
+
 
     def _binary_to_real(self, binary, dimensions, dimension_bits):
         real = []

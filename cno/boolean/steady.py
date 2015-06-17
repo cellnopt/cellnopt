@@ -66,11 +66,9 @@ class Steady(CNOBase):
         # if you change the model or data
         self._init_model_data()
 
-
         self.debug = True
         self.counter = 0
         self.length_buffer = 10000
-
 
         # affects the simulation and ts stopping criteria
         # this is arbitrary additional tick to match CNOR simulation
@@ -88,6 +86,8 @@ class Steady(CNOBase):
 
         self.paradoxical = {}
         self.repressors = {}
+
+        self._previous_fit = 0
 
     def _init_model_data(self):
 
@@ -118,6 +118,7 @@ class Steady(CNOBase):
         self.buffering = True
         self.buffer = {}
         self.simulated = {}
+
 
 
     #@do_profile()
@@ -194,17 +195,13 @@ class Steady(CNOBase):
         self.measures = {}
         # FIXME No need for time zero but if so, need to re-order the experiments
         #self.measures[0] = self.data.df.query("time==0").reset_index(drop=True).values
-        df = self.data.df.query("time==@self.time")
-        df = df.ix[self.data.cellLine]
-        df = df.ix[self.stimuli.index]
-        df = df.reset_index(drop=True).values
-        self.measures[self.time] = df.copy()
+        for time in self.midas.times:
+            df = self.data.df.query("time==@time")
+            df = df.ix[self.data.cellLine]
+            df = df.ix[self.stimuli.index]
+            df = df.reset_index(drop=True).values
+            self.measures[time] = df.copy()
 
-        df = self.data.df.query("time==0")
-        df = df.ix[self.data.cellLine]
-        df = df.ix[self.stimuli.index]
-        df = df.reset_index(drop=True).values
-        self.measures[0] = df
         self.inhibitors_failed = []
 
     def preprocessing(self, expansion=True, compression=True, cutnonc=True):
@@ -230,7 +227,6 @@ class Steady(CNOBase):
             self._shift = self._shift0
             self._simulate(reactions=reactions, time=0, ntic=ntic)
             self._shift = tmp
-            self.dd0 = self.dd.copy()
         else:
             self.simulated[0] = np.zeros(self.measures[0].shape)
 
@@ -258,7 +254,6 @@ class Steady(CNOBase):
         import copy
         #values = copy.deepcopy(self.values)
         values = self.values  # !! reference but should be reset when calling _init_values / simulate()
-
 
         if self.debug:
             self.debug_values = [values.copy()]
@@ -319,7 +314,6 @@ class Steady(CNOBase):
             #    if node in self.paradoxical[inh]:
             #        values[node][(self.inhibitors[inh]==1).values] = 1
             #    #values[inh][(self.inhibitors[inh]==1).values] = 1
-
 
             for node in self.and_gates:
                 # replace na by large number so that min is unchanged
@@ -403,7 +397,6 @@ class Steady(CNOBase):
 
     def get_errors_rates(self):
 
-
         FN0 = ((self.simulated[0] - self.measures[0])<-0.5).sum(axis=0)
         FP0 = ((self.simulated[0] - self.measures[0])>0.5).sum(axis=0)
 
@@ -415,8 +408,43 @@ class Steady(CNOBase):
         return df
 
     #@do_profile()
-    def score(self ):
-        
+    def score(self):
+        """
+          Akt Hsp27   NFkB  Erk p90RSK Jnk cJun
+ [1,] 0.0081  0.00 0.7396 0.04 0.0144   0    0
+ [2,] 0.0324  0.09 0.0100 0.00 0.0000   0    0
+ [3,] 0.0081  0.09 0.0100 0.04 0.0144   0    0
+ [4,] 0.0081  0.00 0.7396 0.00 0.0000   0    0
+ [5,] 0.0324  0.09 0.0100 0.00 0.0000   0    0
+ [6,] 0.0081  0.09 0.0100 0.00 0.0000   0    0
+ [7,] 0.0000  0.00 0.0000 0.04 0.0144   0    0
+ [8,] 0.0000  0.09 0.0100 0.00 0.0000   0    0
+ [9,] 0.0000  0.09 0.0100 0.04 0.0144   0    0
+[1] "------------"
+[1] 0.03805909
+
+         1    0    0    1    1    0    0
+ [2,]    1    1    1    0    0    0    0
+ [3,]    1    1    1    1    1    0    0
+ [4,]    1    0    0    0    0    0    0
+ [5,]    1    1    1    0    0    0    0
+ [6,]    1    1    1    0    0    0    0
+ [7,]    0    0    0    1    1    0    0
+ [8,]    0    1    1    0    0    0    0
+ [9,]    0    1    1    1    1    0    0
+
+
+ "nDataPts= 63"
+[1] "nInputs= 13" okay
+[1] "nInTot= 22"    okay
+[1] "deviationPen= 2.394"
+[1] "NAPen= 0"
+[1] "sizePen= 0.00372272727272727"  okay
+[1] 0.03805909
+
+        For T2 --> 0.03805909
+        :return:
+        """
         # time 1 only is taken into account
         #self.diff = np.square(self.measures[self.time] - self.simulated[self.time])
         diff1 = (self.measures[self.time] - self.simulated[self.time])**2
@@ -424,7 +452,6 @@ class Steady(CNOBase):
             diff0 = (self.measures[0] - self.simulated[0])**2
         else:
             diff0 = 0
-
 
         # FIXME we could have an option to ignore time 0
         diff = diff1 + diff0
@@ -441,7 +468,6 @@ class Steady(CNOBase):
 
         Nna1 = np.isnan(self.simulated[self.time]).sum()
 
-
         # FIXME in cNOR, NAs at time 0 are ignored. why ?
         Nna = np.isnan(self.measures[self.time]).sum()
         N-= Nna
@@ -451,10 +477,8 @@ class Steady(CNOBase):
         nInTot = self.nInputs # should be correct
         nDataPts = diff.shape[0] * diff.shape[1]
         nDataP = N # N points excluding the NA if any
-        #print(N)
 
         #NAPen = NAFac * sum(self.simulated[self.time].isnull())
-
         # nInTot: number of inputs of expanded miodel
         # nInputs: number of inputs of cut model
 
@@ -487,6 +511,9 @@ class Steady(CNOBase):
         deviationPen = (bn.nansum(diff1) + bn.nansum(diff0))/ 2.
         #self.diff = diff / 2.
 
+        #if self._params['include_time_zero'] is True:
+        #    deviationPen *=2 # does not really matter but agrees with CNOR
+
 
         if debug:
             print("deviationPen=%s"% deviationPen)
@@ -501,9 +528,10 @@ class Steady(CNOBase):
         else:
             S = deviationPen
 
-
         self._na_contrib  = Nna/float(nDataPts)
         S = (S + self._params.NAFac * Nna1/float(nDataPts))
+
+        print self._previous_fit
         if debug:
             print("score=%s" %S)
         return S
@@ -594,7 +622,6 @@ class Steady(CNOBase):
         if experiments is None: # takes the latest (steady state) of each experiments
             data = pd.DataFrame(self.debug_values[-1]).fillna(0.5)
         else:
-
             exp_name = self.midas.experiments.ix[experiments].name
             index_exp = list(self.midas.experiments.index).index(exp_name)
 
@@ -615,7 +642,6 @@ class Steady(CNOBase):
         ax1.set_ylim(0, len(data))
         ax = pylab.twiny()
 
-
         # FIXME seems shifted. could not fix it xticklabels seems to reset the position of the ticks
         xr = pylab.linspace(0.5, Ndata-1.5, Ndata)
         ax.set_xticks(xr)
@@ -630,7 +656,6 @@ class Steady(CNOBase):
         pylab.tight_layout()
 
     def plot_errors(self, columns=None, reactions=None, show=True):
-        # What do we use here: self.values
 
         # use eval_func with debug one
         debug = self.debug
@@ -653,6 +678,7 @@ class Steady(CNOBase):
             self.data.plot(mode='mse')
             score = self.score()
         m = self.data.copy()
+
         return m
 
     def get_sim(self, columns=None):
@@ -689,62 +715,13 @@ class Steady(CNOBase):
 
         self.init(self.time)
         prior = list(self.results.results.best_bitstring) # best is the prior
+
+        self.simulate(self.parameters2reactions(list(self.best_bitstring)))
+        self._previous_fit = self.score()
         self.optimise(prior=prior, verbose=verbose)
 
         # reset to time1 FIXME why ?
         self.init(time1)
-
-    def plot_errors2(self):
-        pass
-
-    def _optimise_gaevolve(self, freq_stats=1, maxgen=200, cross=0.9, elitism=1, 
-            mutation=0.02, popsize=80, prior=[]):
-        """Example using the library gaevolve
-
-        This was an attempt at using an external library for the GA but it appears
-        thst is is slower than our implementation. Dont know why. Could be
-        their implementation. Could be the set of parameters.
-        """
-
-        # This function is the evaluation function, we want
-        # to give high score to more zero'ed chromosomes
-        self.count = 0
-        def eval_func_in(x):
-            return self.eval_func(x)
-
-        self._ga_stats = {'ave':[], 'min':[], 'max':[]}
-        def cbcall(ga):
-            #print('raw fitness %s' % ga.bestIndividual().score)
-            self._ga_stats['min'].append(ga.getStatistics()['rawMin'])
-            self._ga_stats['ave'].append(ga.getStatistics()['rawAve'])
-            self._ga_stats['max'].append(ga.getStatistics()['rawMax'])
-
-
-        from pyevolve import G1DList, GSimpleGA, Consts, Selectors
-        genome = G1DList.G1DList(len(self.model.reactions))
-        genome.evaluator.set(eval_func_in)
-        genome.setParams(rangemin=0, rangemax=1, rounddecimal=1e-8, bestrawscore=0)
-
-        ga = GSimpleGA.GSimpleGA(genome)
-        ga.setMinimax(Consts.minimaxType["minimize"])
-        ga.setGenerations(maxgen)
-        ga.setCrossoverRate(cross)
-        ga.setMutationRate(mutation)
-        ga.setPopulationSize(popsize)
-        ga.setElitismReplacement(elitism)
-        ga.stepCallback.set(cbcall)
-        ga.selector.set(Selectors.GRouletteWheel)
-        ga.terminationCriteria.set(GSimpleGA.ConvergenceCriteria)
-        ga.terminationCriteria.set(GSimpleGA.FitnessStatsCriteria)
-        #ga.setSortType(Consts.sortType['raw'])
-
-        ga.evolve(freq_stats=freq_stats)
-        ga._stats = self._ga_stats.copy()
-        #self.plotHistPopScore()
-        #self.plotPopScore(hold=hold)
-        #from pyevolve import Interaction
-        #Interaction.plotHistPopScore(self.ga.getPopulation())
-        return ga
 
     def exhaustive(self):
         from cno.optimisers.binary_tools import permutations
@@ -755,7 +732,7 @@ class Steady(CNOBase):
         N = len(self.model.reactions)
         pb = progress_bar(2**N)
         for i,this in enumerate(permutations(N)):
-            self.simulate(this)
+            self.simulate(self.parameters2reactions(this))
             scores.append(self.score())
             pb.animate(i)
             sizes.append(sum(this))
@@ -817,6 +794,7 @@ class Steady(CNOBase):
         maxtime=60, elitism=5, prior=[], guess=None, reuse_best=True, maxstallgen=100):
         """Using the CellNOptR-like GA"""
         from cno.optimisers import genetic_algo
+        self._previous_fit = 0
         ga = genetic_algo.GABinary(len(self.model.reactions), verbose=verbose, 
                 maxgens=maxgens, popsize=popsize, maxtime=maxtime, reltol=reltol,
                 maxstallgen=maxstallgen, elitism=elitism, pmutation=pmutation)
@@ -828,7 +806,7 @@ class Steady(CNOBase):
                 pass
 
         if guess is not None:
-            self.logging.debug('settting guess')
+            self.logging.debug('Setting guess')
             ga.guess = guess
             ga.init()
 
@@ -863,7 +841,6 @@ class Steady(CNOBase):
                 'results': results,
                 #'models': models,
         }
-
         results['pkn'] = self.pknmodel
         results['midas'] = self.data
         #self.results.models = models
@@ -968,7 +945,6 @@ class Steady(CNOBase):
         new_score = self.score()
         return newr
 
-
     def clean_models(self, tolerance=0.1):
 
         models = self.results.models.copy()
@@ -1003,7 +979,6 @@ class Steady(CNOBase):
             else:
                 # keep original
                 pass
-
 
             pb.animate(count)
         print('Simplified %s %% of the model' % float(changed/float(len(models.df))))
