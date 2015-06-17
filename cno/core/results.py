@@ -13,8 +13,7 @@
 #  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
-from cno.core.models import Models
-
+#from cno.core.models import Models
 from biokit import viz
 
 import pylab

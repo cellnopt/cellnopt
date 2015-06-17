@@ -46,7 +46,12 @@ class CNORBase(object):
 
 
 class CNOBase(Logging):
-    """Abstract Base Class common class to all formalisms"""
+    """Abstract Base Class common class to all formalisms
+    
+    
+    Should not use results classes.
+    
+    """
 
     def __init__(self, pknmodel, data, tag=None, verbose=False, use_cnodata=False, config=None):
         super(CNOBase, self).__init__(level=verbose)

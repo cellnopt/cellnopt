@@ -67,6 +67,12 @@ class Models(object):
                 del self.df['score']
         elif isinstance(data, pd.DataFrame):
             self.df = data.copy()
+            if 'Score' in self.df.columns:
+                self.scores = self.df.Score
+                del self.df['Score']
+            if 'score' in self.df.columns:
+                self.scores = self.df.score
+                del self.df['score']
         elif isinstance(data, Models):
             self.df = data.df.copy()
         else:
@@ -164,6 +170,18 @@ class Models(object):
 
     def __len__(self):
         return len(self.df)
+
+
+class ContinousModels(Models):
+    def __init__(self, data, reacID=None, index_col=None):
+        super(ContinousModels, self).__init__(data, reacID, index_col)
+
+    def drop_duplicates(self):
+        self.df['score'] = self.scores
+        self.df.drop_duplicates(inplace=True)
+        self.scores = self.df['score']
+        del self.df['score']
+
 
 
 class FuzzyModels(Models):
