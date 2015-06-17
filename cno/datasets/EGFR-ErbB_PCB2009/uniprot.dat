@@ -1,0 +1,96 @@
+# source: felix Krueger http://www.ebi.ac.uk/~fkrueger/components.htm
+# protein_accession   full_name   species     complex     uniprotName     comments links           
+P62993      grb2    0   GRB2    SH2/SH3 adapter GRB2    
+O00750      pi3k    1   PIK3C2B     Phosphoinositide 3-kinase-C2-beta, should probably focus on class I, see Od    http://en.wikipedia.org/wiki/PI3K  
+O00443      pi3k    1   PIK3C2A     Phosphoinositide 3-kinase-C2-alpha, should probably focus on class I, see O    
+O75747      pi3k    1   PIK3C2G     Phosphoinositide 3-kinase-C2-gamma, should probably focus on class I, see  
+Q8NEB9      pi3k    1   PIK3C3  this is a class three catalytic unit, looking for class 1,2   
+O00329      pi3k    1   PIK3CD  catalytic subunit delta, expressed in leukocytes    
+P42338      pi3k    1   PIK3CB  catalytic subunit beta  
+P42336      pi3k    1    PIK3CA     catalytic subunit alpha http://en.wikipedia.org/wiki/Class_I_PI_3-kinases   
+P27986      pi3k    1   PIK3R1  PI3-kinase subunit p85-alpha    
+O00459      pi3k    1   PIK3R2  PI3-kinase subunit p85-beta     
+Q92569      pi3k    1   PIK3R3  PI3-kinase subunit p55-gamma    
+P31749      akt     0   AKT1    Proto-oncogene c-Akt    
+P31751      akt     0    AKT2   Protein kinase B beta   
+Q9Y243      akt     0   AKT3    Protein kinase B gamma  
+O15530      pdk1    0   PDPK1   PDK1    
+P49841      gsk3    0   GSK3B   Glycogen synthase kinase-3 beta (involved in metabolism and pattern forma    
+P49840      gsk3    0   GSK3A   Glycogen synthase kinase-3 alpha    
+P01106      cmyc    0   MYC     Proto-oncogene c-Myc    
+P20936      rasgap  0   RASA1   Ras p21 protein activator   
+P01116      ras     0   KRAS    Ki-Ras  
+P01112      ras     0   HRAS    Ha-Ras http://atlasgeneticsoncology.org/Genes/RAF1ID42032ch3p25.html
+P01111      ras     0   NRAS    Transforming protein N-Ras  
+Q07889      sos1    0   SOS1        
+P04049      raf1    0   RAF1    Proto-oncogene c-RAF    
+P15056      raf1    0   BRAF    v-Raf murine sarcoma viral oncogene homolog B1 (mainly expressed in neu    
+P10398      raf1    0   ARAF     Proto-oncogene A-Raf-1     
+Q02750      mek12   0   MAP2K1  Dual specificity mitogen-activated protein kinase kinase 1     
+P36507      mek12   0   MAP2K2  Dual specificity mitogen-activated protein kinase kinase 2     
+P27361      erk12   0   MAPK3   Synonyms:ERK1, PRKM3    
+P28482      erk12   0   MAPK1   Synonyms:ERK2, PRKM1, PRKM2     
+P60953      rac_cdc42   0   CDC42   Plasma membrane-associated small GTPase which cycles between an active  
+P45983      jnk     0   MAPK8   Synonyms:JNK1, PRKM8, SAPK1, SAPK1C     
+Q16539          p38     1   MAPK14  Mitogen-activated protein kinase p38 alpha  
+P16885      plcg    0   PLCG2   Phospholipase C-gamma-2     
+P19174      plcg    0   PLCG1   1-phosphatidylinositol-4,5-bisphosphate phosphodiesterase gamma-1   
+P42345      mtor_rap    1   MTOR    FKBP12-rapamycin complex-associated protein     
+Q8N122      mtor_rap    1   RPTOR   Synonyms:KIAA1303, RAPTOR http://dx.doi.org/10.1016%2FS0092-8674%2802%2900808-5   
+Q9BVC4      mtor_rap    1   MLST8   Synonyms:GBL, LST8 http://dx.doi.org/10.1016%2FS1097-2765%2803%2900114-X   
+Q96B36      mtor_rap    1   AKT1S1  Synonyms:PRAS40     
+Q8TB45      mtor_rap    1   DEPTOR  Part of the mammalian target of rapamycin complex 1 (mTORC1) which con    http://www.ncbi.nlm.nih.gov/pubmed/19446321     
+P42345      mtor_ric    1   MTOR    FKBP12-rapamycin complex-associated protein     
+Q9BVC4      mtor_ric    1   MLST8   Synonyms:GBL, LST8 http://dx.doi.org/10.1016%2FS1097-2765%2803%2900114-X   
+Q8TB45      mtor_ric    1   DEPTOR  Part of the mammalian target of rapamycin complex 2 (mTORC2) which con    http://www.uniprot.org/uniprot/Q8TB45   
+P85299      mtor_ric    1   PRR5    Subunit of mTORC2, which regulates cell growth and survival in response to  
+Q9BPZ7      mtor_ric    1   MAPKAP1     Subunit of mTORC2, which regulates cell growth and survival in response to  
+Q6R327      mtor_ric    1   RICTOR  Rapamycin-insensitive companion of mTOR http://www.ncbi.nlm.nih.gov/pubmed/15268862     
+P17252      pkc     0   PRKCA   this seems to be the primary pkc for egfr signalling  http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2838521/    
+P05771      pkc     0   PRKCB   here, we consider only conventional isoforms of PKC as the model requires   
+P05129      pkc     0   PRKCG   primarily expressed in brain and eye tissue     
+P23443      p706s_1     0   RPS6KB1     Ribosomal protein S6 kinase beta-1  
+P23443      p706s_2     0   RPS6KB1     Ribosomal protein S6 kinase beta-1  
+Q13233      mekk1   0   MAP3K1  Mitogen-activated protein kinase kinase kinase 1    
+Q9Y6R4      mekk4   0   MAP3K4  Mitogen-activated protein kinase kinase kinase 4    
+P45985      mkk4    0   MAP2K4  Dual specificity mitogen-activated protein kinase kinase 4     
+O14733      mkk7    0   MAP2K7  Dual specificity mitogen-activated protein kinase kinase 7     
+Q16584      mlk3    0   MAP3K11     Mitogen-activated protein kinase kinase kinase 11   
+P46734      mkk3    0   MAP2K3  Dual specificity mitogen-activated protein kinase kinase 3     
+P52564      mkk6    0   MAP2K6  Dual specificity mitogen-activated protein kinase kinase 6     
+P01100      cfos    0   FOS     Proto-oncogene c-Fos    
+P05412      cjun    0   JUN     Transcription factor AP-1   
+P01100      ap-1    1   FOS     Proto-oncogene c-Fos, as dimer with JUN     
+P05412      ap-1    1   JUN     Transcription factor AP-1, as dimer with FOS    
+P16333      nck1    0   NCK1    Cytoplasmic protein NCK1    
+Q07889      sos1_eps8_e3b   1   SOS1    Son of sevenless homolog 1  
+Q8IZP0      sos1_eps8_e3b   1   ABI1    Abl interactor 1, e3B1  
+Q12929      sos1_eps8_e3b   1   EPS8    Epidermal growth factor receptor kinase substrate 8     
+P52735      vav2    0   VAV2    Guanine nucleotide exchange factor VAV2     
+Q13153      pak1    0   PAK1    Serine/threonine-protein kinase PAK 1   
+P53667      limk1   0   LIMK1   LIM domain kinase 1     
+Q13480      gab1    0   GAB1    GRB2-associated-binding protein 1   
+O15357      ship2   0   INPPL1  Phosphatidylinositol-3,4,5-trisphosphate 5-phosphatase 2     
+P60484      pten    0   PTEN    Phosphatidylinositol-3,4,5-trisphosphate 3-phosphatase and dual-specificity  
+Q0VAM5      tsc1_tsc_2  1   TSC1    Tuberous sclerosis 1    
+P49815      tsc1_tsc_2  1   TSC2    Tuberin, Tuberous sclerosis 2 protein   
+P62714      pp2a    0   PPP2CB  Serine/threonine-protein phosphatase 2A catalytic subunit beta isoform  
+P67775      pp2a    0   PPP2CA  Serine/threonine-protein phosphatase 2A catalytic subunit alpha isoform     
+Q15382      rheb    0   RHEB    GTP-binding protein Rheb    
+Q92934      bad     0   BAD     Bcl2 antagonist of cell death   
+Q06124      shp2    0   PTPN11  Tyrosine-protein phosphatase non-receptor type 11, Shp2    
+P22681      ccbl    0   CBL     E3 ubiquitin-protein ligase CBL     
+Q92738      rntre   0   USP6NL  USP6 N-terminal-like protein, Related to the N-terminus of tre   
+Q13671      rin1    0   RIN1    Ras and Rab interactor 1    
+P20339      rab5a   0   RAB5A   Ras-related protein Rab-5A  
+P29350      shp1    0   PTPN6   Tyrosine-protein phosphatase non-receptor type 6, Protein-tyrosine phosph  
+P29353      shc     0   SHC1    SHC-transforming protein 1  
+P12931      csrc    0   SRC     Proto-oncogene tyrosine-protein kinase Src  
+P42224      stat1   0   STAT1   Signal transducer and activator of transcription 1-alpha/beta    
+P40763      stat3   0   STAT3   Signal transducer and activator of transcription 3   
+P51692      stat5   0   STAT5B  Signal transducer and activator of transcription 5B  
+P42229      stat5   0   STAT5A  Signal transducer and activator of transcription 5A  
+P00533      erbb1   0   EGFR    Epidermal growth factor receptor, ERBB, ERBB1, HER1    
+P04626      erbb2   0   ERBB2   Receptor tyrosine-protein kinase erbB-2,  HER2, MLN19, NEU, NGL     
+P21860      erbb3   0   ERBB3   Receptor tyrosine-protein kinase erbB-3, HER3   
+Q15303      erbb4   0   ERBB4   Receptor tyrosine-protein kinase erbB-4, HER4   
