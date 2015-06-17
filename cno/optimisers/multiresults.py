@@ -38,7 +38,6 @@ class MultiResults(object):
             mr.add_scores(s.results.results.best_score)
         mr.plot()
 
-
     """
     def __init__(self, interval=1):
         self.scores = []

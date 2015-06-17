@@ -10,12 +10,11 @@ __author__ = """\n""".join(['Thomas Cokelaer <cokelaer@ebi.ac.uk'])
 
 __all__ = ['GABinary']
 
-import copy
 import numpy
 from easydev import Logging
-from cno.misc.profiler import do_profile
 import time
 import pylab
+from cno.optimisers.optimisation import Optimisation
 
 
 class GA(Logging):
@@ -24,8 +23,7 @@ class GA(Logging):
         self.blength = length
 
 
-
-class GABinary(GA):
+class GABinary(Optimisation, GA):
     """GA algorithm
 
     ::
@@ -43,14 +41,13 @@ class GABinary(GA):
         :param kargs: GA parameters.
 
         """
-        super(GABinary, self).__init__(length, verbose=verbose)
-
+        Optimisation.__init__(self)
+        GA.__init__(self, length, verbose=verbose)
 
         self.initbstring = kargs.get('initbstring', None)
         self.popsize =  kargs.get('popsize', 50)
         self.pmutation= kargs.get('pmutation', 0.5)
         self.selpress = kargs.get('selpress', 1.2) # use to increase spped of loss of diversity (and convergence) if linear ranking is used between 1 and 2 and if nonlinear between [1, popsize 2]??
-
 
         self.elitism = kargs.get('elitism', 5)
         self.reltol = kargs.get('reltol', 0.1)
@@ -61,7 +58,6 @@ class GABinary(GA):
         self.stallgenmax = kargs.get('stallgenmax',100)
         self.stallgenmax = kargs.get('maxstallgen',100)
 
-
         self.guess = [1] * self.blength
 
         self.init()
@@ -70,7 +66,6 @@ class GABinary(GA):
     def init(self):
 
         # p = rbind(initBstring,round(matrix(runif(bLength*(PopSize-1)),
-
 
         # Generate a bunch of random string, one each population size
         N = self.blength * self.popsize
@@ -238,9 +233,6 @@ class GABinary(GA):
 
             # update
             #Check for bitstrings that are within the tolerance of the best bitstring
-
-
-
             #, _tolbs
 
             if len(_tolbs) > 0:
@@ -286,15 +278,10 @@ class GABinary(GA):
         _tolbs = numpy.where(self.popTolScores < self._scores[-1] + _tolscore)[0]
         self.popTol = self.popTol[_tolbs,:]
         self.popTolScores = self.popTolScores[_tolbs]
-        #self.popTolT = numpy.concatenate( (self.popTol, self.popTolScores), axis=1)
-        #self.popTolT = numpy.unique(self.popTolT)#,MARGIN=1)
-        #if(!is.null(dim(PopTolT))):
-        #PopTol<-PopTolT[,1:(dim(PopTolT)[2]-1)]
-        # PopTolScores<-PopTolT[,dim(PopTolT)[2]]
 
-        #else:
-        #     PopTol<-PopTolT[1:(length(PopTolT)-1)]
-        #     PopTolScores<-PopTolT[length(PopTolT)]
+
+        self._best_parameters = self.results['Best_bitString'][-1]
+        self._best_score = self.results['Best_score'][-1]
 
 
     def plotFit(self):
@@ -340,12 +327,3 @@ class GABinary(GA):
 
 
 
-
-
-class GADiscrete(GABinary):
-
-        def __init__(self):
-            pass
-
-
-        #Pop3[MutProba]<-(sample.int(dim(paramsList$type2Funs)[1],length(Pop3[MutProba]),replace = TRUE)) - 1
