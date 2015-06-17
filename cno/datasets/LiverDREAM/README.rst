@@ -16,6 +16,11 @@ References
 
 .. [2] `DREAM4 challenge <http://www.the-dream-project.org>`_
 
+Note
+----------
+
+There is an additional file called LiverDREAM_PKN_Subnetwork_AddFeedback.sif that is a large network as compared to PKN-LiverDREAM.sif
+
 
 
 
