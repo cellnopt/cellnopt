@@ -23,6 +23,7 @@ from cno.io.cnograph import CNOGraph
 from cno.io.reactions import Reaction, Reactions
 
 import bs4
+import lxml
 
 __all__ = ["SBMLQual"]
 
@@ -59,7 +60,7 @@ class SBMLQual(object):
     def __init__(self):
         self.and_symbol = "^"
 
-    def to_sbmlqual(self, graph):
+    def to_sbmlqual(self, graph, filename=None):
         """Exports SIF to SBMLqual format.
 
         :return: the SBML text
@@ -73,7 +74,7 @@ class SBMLQual(object):
             >>> res = s.to_SBMLQual("test.xml")
 
         """
-        s = SBML(self, version="1.0", model_name='cellnopt_model')
+        s = SBML(self, version="1", model_name='cellnopt_model')
 
         if isinstance(graph, SIF):
             data = graph.to_cnograph()
@@ -193,9 +194,14 @@ class SBMLQual(object):
         sbml += """</model>\n"""
         sbml += s.create_footer()
 
-        sbml = self._prettify(sbml)
-
-        return sbml
+        if filename is not None:
+            import lxml
+            parser = lxml.etree.XMLParser(remove_blank_text=True)
+            import StringIO
+            tree = lxml.etree.parse(StringIO.StringIO(sbml), parser)
+            tree.write(filename, pretty_print=True)
+        else:
+            return sbml
 
     def _prettify(self, sbml):
         """Return a pretty-printed XML string for the Element."""
@@ -216,7 +222,9 @@ class SBMLQual(object):
 
         .. warning:: experimental
         """
-        # We could just use XML.etree
+        # We could just use XML.etree. BeautifulSoup loses the upper cases while
+        # reading. Although this is an issue when writing, reading is not. This
+        # is acutally better because more robust.
         sif = SIF()
         res = bs4.BeautifulSoup(open(filename).read())
 
@@ -295,6 +303,7 @@ class Qual(object):
         self.xmlns = xmlns
         self.open_attribute = {}
         self.indent = ""
+        #self.version = '1'
 
     def open(self):
         if self.xmlns is False:
@@ -330,7 +339,7 @@ class QualitativeSpecies(Qual):
         return sbml
 
     def close(self):
-        return ""
+        return """</qual:{0}>\n""".format(self.tag)
 
     def create(self):
         sbml = self.open()
@@ -421,7 +430,7 @@ class ListOfOutputs(Qual):
 
     def create(self):
         txt = self.open()
-        txt += """<qual:output qual:thresholdLevel="1" """
+        txt += """<qual:output """
         txt += """ qual:transitionEffect="assignmentLevel" """
         txt += """ qual:qualitativeSpecies="{0}"/>\n""".format(self.name)
         txt += self.close()
