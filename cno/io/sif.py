@@ -392,14 +392,7 @@ class SIF(Reactions):
         #sif = self.to_cnograph()
         from cno.io.sbmlqual import SBMLQual
         qual = SBMLQual()
-        sbml = qual.to_sbmlqual(self)
-
-        if filename:
-            fh = open(filename, "w")
-            fh.write(sbml)
-            fh.close()
-        else:
-            return sbml
+        return qual.to_sbmlqual(self, filename=filename)
 
     def read_sbmlqual(self, filename):
         """import SBMLQual XML file into a SIF instance

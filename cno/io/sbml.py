@@ -38,11 +38,13 @@ class SBML(object):
 
 
     """
-    def __init__(self, data, version="1.0", model_name=None):
+    def __init__(self, data, version="1", model_name=None, xmlversion="1.0"):
+        """Note that version are integer but xmlversion can be X.Y"""
         self.data = data # ! a reference
         self.annotation = None
         self.note = None
         self.version = version
+        self.xmlversion = xmlversion
         self.header = None
         self.footer = None
         self.model_name = None
@@ -50,7 +52,8 @@ class SBML(object):
     def create_header(self):
         header = """<?xml version='%s' encoding='UTF-8' standalone='no'?>
 <sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" qual:required="true" level="3"
-xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">""" % self.version
+xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1"
+version="%s">""" % (self.xmlversion, self.version)
         self.header = header
         return header
 
@@ -61,7 +64,8 @@ xmlns:qual="http://www.sbml.org/sbml/level3/version1/qual/version1">""" % self.v
     def create_compartment(self, constant="true", id="main"):
         self.compartment = """
      <listOfCompartments>
-       <compartment id="%s" constant="%s"/>
+       <compartment id="%s" constant="%s">
+       </compartment>
      </listOfCompartments>\n""" %(id, constant)
         return self.compartment
 
