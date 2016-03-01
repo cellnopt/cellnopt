@@ -8,7 +8,7 @@ import glob
 
 _MAJOR               = 0
 _MINOR               = 1
-_MICRO               = 3
+_MICRO               = 4
 version              = '%d.%d.%d' % (_MAJOR, _MINOR, _MICRO)
 release              = '%d.%d' % (_MAJOR, _MINOR)
 
@@ -66,7 +66,7 @@ setup(
     #package_dir  = package_dir,
     install_requires = ['numpy', 'matplotlib', 'scipy', 'networkx', 'pandas>=0.15', 'bioservices',
         'colormap>=0.9.3', 'biokit', 'pulp', 'numexpr', 'wrapt',
-        'easydev>=0.8.4', 'bottleneck'],
+        'easydev>=0.9.12', 'bottleneck'],
     zip_safe=False,
 
 
