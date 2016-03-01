@@ -4,9 +4,6 @@ cellnopt/cno
 .. image:: https://badge.fury.io/py/cellnopt.svg
     :target: https://pypi.python.org/pypi/cno
 
-.. image:: https://pypip.in/d/cellnopt/badge.png
-    :target: https://crate.io/packages/cellnopt
-
 .. image:: https://secure.travis-ci.org/cellnopt/cellnopt.png
     :target: http://travis-ci.org/cellnopt/cellnopt
 
