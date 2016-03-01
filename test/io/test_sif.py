@@ -230,7 +230,7 @@ def test_notedge():
     assert s.notedge("-1") == "!"
     assert s.notedge("1") == ""
 
-def test_to_sif():
+def _test_to_sif():
     fh = easydev.TempFile()
     s1 = SIF(getdata('PKN-test_all.sif'))
     s1.save(fh.name)

@@ -127,8 +127,8 @@ class XCNOGraph(CNOGraph):
 
 
         """
-        ts1 = pd.TimeSeries(self.in_degree())
-        ts2 = pd.TimeSeries(self.out_degree())
+        ts1 = pd.Series(self.in_degree())
+        ts2 = pd.Series(self.out_degree())
         df = pd.DataFrame([ts1, ts2]).transpose()
         df.columns = ["in","out"]
         if show:

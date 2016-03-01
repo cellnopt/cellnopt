@@ -39,7 +39,6 @@ metainfo = {
     }
 
 
-
 with open('README.rst') as f:
     readme = f.read()
 
@@ -64,9 +63,10 @@ setup(
     #package_dir = {'':''},
     #packages = ['cno'],
     #package_dir  = package_dir,
-    install_requires = ['numpy', 'matplotlib', 'scipy', 'networkx', 'pandas>=0.15', 'bioservices',
+    install_requires = ['numpy', 'matplotlib', 'scipy', 'networkx>=1.11', 
+        'pandas>=0.17', 'bioservices',
         'colormap>=0.9.3', 'biokit', 'pulp', 'numexpr', 'wrapt',
-        'easydev>=0.9.12', 'bottleneck'],
+        'easydev>=0.9.12', 'bottleneck', 'lxml'],
     zip_safe=False,
 
 

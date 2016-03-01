@@ -207,7 +207,7 @@ class SBMLQual(object):
         """Return a pretty-printed XML string for the Element."""
         # beautifulsoup does a much better job than minidom but all tags are
         # transformed into lowercase.
-        return bs4.BeautifulSoup(sbml).prettify()
+        return bs4.BeautifulSoup(sbml, "lxml").prettify()
 
         # not always the best layout
         #from xml.dom import minidom
@@ -226,7 +226,7 @@ class SBMLQual(object):
         # reading. Although this is an issue when writing, reading is not. This
         # is acutally better because more robust.
         sif = SIF()
-        res = bs4.BeautifulSoup(open(filename).read())
+        res = bs4.BeautifulSoup(open(filename).read(), 'lxml')
 
         # First, let us get the node names
         #model = res.findAll("model")[0]

@@ -963,8 +963,11 @@ class CNOGraph(nx.DiGraph):
 
 
         """
+        # networkx 1.11 introduces a bug. We need to import graphviz_layout
+        # instead of using nx.drawing.draw_graphviz
+        from networkx.drawing.nx_agraph import graphviz_layout
         self.logging.warning("Not for production. Use plot() instead")
-        pos = nx.drawing.graphviz_layout(self, prog=prog)
+        pos = graphviz_layout(self, prog=prog)
 
         node_size = kargs.get('node_size', 1200)
         kargs['node_size'] = node_size
@@ -1208,7 +1211,7 @@ class CNOGraph(nx.DiGraph):
             if rank_method is not None:
                 self.logging.warning("%s program failed to create image" % prog)
             H = self._get_ranked_agraph('cno')
-            #H = nx.to_agraph(this)
+            #H = nx.to_network_graph(this)
             if filename.endswith('svg') and 'dpi' in H.graph_attr.keys():
                 del H.graph_attr['dpi']
             frmt = os.path.splitext(filename)[1][1:]
@@ -1380,7 +1383,8 @@ class CNOGraph(nx.DiGraph):
         if rank_method == 'cno':
             H = AGraphCNO(self)
         else:
-            H = nx.to_agraph(self)
+            # networkx 1.11 changes 
+            H = nx.drawing.nx_agraph.to_agraph(self)
 
         for k, v in self.graph_options['graph'].items():
             H.graph_attr[k] = v
@@ -1420,6 +1424,8 @@ class CNOGraph(nx.DiGraph):
             if rank == 0:
                 # label will be used if name == 'cluster_source'
                 species = [x for x in ranks[rank] if x not in selfloops]
+
+
                 aa = H.add_subgraph(species,  rank='source', name='source',
                         label='stimuli')
                 if len(species)>=2:
@@ -1429,7 +1435,7 @@ class CNOGraph(nx.DiGraph):
                             aa.add_edge(node1, node2, style="invis")
             elif rank == M:
                 species = sorted([x for x in ranks[rank] if x not in selfloops])
-                aa = H.add_subgraph(species, name="sink", rank='sink')
+                #aa = H.add_subgraph(species, name="sink", rank='sink')
                 if len(species)>=2:
                     for i, node1 in enumerate(species[0:-1]):
                         node2 = species[i+1]
@@ -1440,7 +1446,7 @@ class CNOGraph(nx.DiGraph):
                     # something funky here with self loop
                     # self loop should be ignored here
                     species = sorted([x for x in ranks[rank] if x not in selfloops])
-                    H.add_subgraph(species, name=name, rank='all')
+                    #H.add_subgraph(species, name=name, rank='all')
 
         return H
 
