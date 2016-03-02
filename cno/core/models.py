@@ -423,6 +423,7 @@ class CompareTwoModels(object):
          return self.m2[np.logical_and(self.m1==0, self.m2==0)]
 
     def plot_multigraph(self, cmap='jet'):
+        print('plot_multigraph may not wrok as expected. Experimental')
         from cno.io.multigraph import  CNOGraphMultiEdges
         #from cno import CNOGraph
         from cno import Reaction
@@ -431,28 +432,55 @@ class CompareTwoModels(object):
         c.midas = self.midas
 
         for reaction in self.get_both().index:
+            print reaction
             r = Reaction(reaction)
             r.sort()
-            for edge, link in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link=link, edgecolor=.1, color='black', penwidth=6, label='both')
+
+            print c.reac2edges(r.name)
+            for this in c.reac2edges(r.name):
+                try:
+                    edge1, edge2, link = this
+                except:
+                    edge1,edge2 = this
+                    link = "+"
+                c.add_edge(edge1, edge2, link=link, edgecolor=.1, 
+                     color='black', penwidth=6, label='both')
 
         for reaction in self.get_m1_only().index:
             r = Reaction(reaction)
             r.sort()
-            for edge, link in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link=link, edgecolor=.3, label='m1', color='red', penwidth=3)
+            for this in c.reac2edges(r.name):
+                try:
+                    edge1, edge2, link = this
+                except:
+                    edge1, edge2 = this
+                    link = "+"
+                c.add_edge(edge1, edge2, link=link, edgecolor=.3, 
+                    label='m1', color='red', penwidth=3)
 
         for reaction in self.get_m2_only().index:
             r = Reaction(reaction)
             r.sort()
-            for edge, link in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link=link, edgecolor=.5, label='m2', color='green', penwidth=3)
+            for this in c.reac2edges(r.name):
+                try:
+                    edge1, edge2, link = this
+                except:
+                    edge1, edge2 = this
+                    link = "+"
+                c.add_edge(edge1, edge2, link=link, edgecolor=.5, 
+                    label='m2', color='green', penwidth=3)
 
         for reaction in self.get_both_off().index:
             r = Reaction(reaction)
             r.sort()
-            for edge, link in c.reac2edges(r.name):
-                c.add_edge(edge[0], edge[1], link=link, edgecolor=.9, label='', arrowsize=0, color='gray', penwidth=0)
+            for this in c.reac2edges(r.name):
+                try:
+                    edge1, edge2, link = this
+                except:
+                    edge1, edge2 = this
+                    link = "+"
+                c.add_edge(edge1, edge2, link=link, edgecolor=.9,
+                 label='', arrowsize=0, color='gray', penwidth=0)
 
 
         #c.plot(edge_attribute='edgecolor', cmap=cmap)
