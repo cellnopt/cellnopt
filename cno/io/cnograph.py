@@ -1435,7 +1435,7 @@ class CNOGraph(nx.DiGraph):
                             aa.add_edge(node1, node2, style="invis")
             elif rank == M:
                 species = sorted([x for x in ranks[rank] if x not in selfloops])
-                #aa = H.add_subgraph(species, name="sink", rank='sink')
+                aa = H.add_subgraph(species, name="sink", rank='sink')
                 if len(species)>=2:
                     for i, node1 in enumerate(species[0:-1]):
                         node2 = species[i+1]
@@ -1446,7 +1446,7 @@ class CNOGraph(nx.DiGraph):
                     # something funky here with self loop
                     # self loop should be ignored here
                     species = sorted([x for x in ranks[rank] if x not in selfloops])
-                    #H.add_subgraph(species, name=name, rank='all')
+                    H.add_subgraph(species, name=name, rank='all')
 
         return H
 
