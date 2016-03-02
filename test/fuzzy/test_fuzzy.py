@@ -2,6 +2,10 @@ from cno import CNORfuzzy, cnodata
 
 
 
+from nose.plugins.attrib import attr
+
+
+@attr('skip_travis')
 def test_fuzzy():
     c = CNORfuzzy(cnodata("PKN-ToyMMB.sif"), cnodata("MD-ToyMMB.csv"))
     c.optimise(2, maxgens=5)
