@@ -121,7 +121,7 @@ class DistributeRPackage(object):
         cmd = """
          git init %(directory)s;
          cd %(directory)s;
-         git remote add -f origin %(repo)s true;
+         git remote add -f origin %(repo)s ;
          echo "packages/%(package_name)s" >> .git/info/sparse-checkout;
          git pull origin master
         """
