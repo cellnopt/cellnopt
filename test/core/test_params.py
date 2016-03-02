@@ -85,7 +85,7 @@ def test_decorator():
     class A(object):
         def __init__(self):
             pass
-        @params_to_update()
+        @params_to_update
         def runme(self, arg1=1, arg2=2):
             self.runme.actual_kwargs
     a = A()
