@@ -531,7 +531,7 @@ class Steady(CNOBase):
         self._na_contrib  = Nna/float(nDataPts)
         S = (S + self._params.NAFac * Nna1/float(nDataPts))
 
-        print self._previous_fit
+        #print self._previous_fit
         if debug:
             print("score=%s" %S)
         return S
