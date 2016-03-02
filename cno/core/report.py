@@ -64,7 +64,7 @@ class Report(easydev.Logging):
         self.Rdependencies = []
 
     def show(self):
-        from browse import browse as bs
+        from easydev.browser import browse as bs
         bs(self.report_directory + os.sep + self.index)
 
     def close_body(self):
