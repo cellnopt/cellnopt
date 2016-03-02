@@ -72,7 +72,7 @@ def test_models():
 def test_compare_two_models():
     from cno.core.models import CompareTwoModels
     import pandas as pd
-    m1 = pd.TimeSeries({'!erk=sos': 0,
+    m1 = pd.Series({'!erk=sos': 0,
          '!ikb=nfkb': 1,
           '!pi3k=gsk3': 1,
            '!tnfa=ikb': 1,
@@ -93,7 +93,7 @@ def test_compare_two_models():
                           'tnfa=pi3k': 0,
                            'tnfa^egf=pi3k': 1}
                            )
-    m2 = pd.TimeSeries({'!erk=sos': 0,
+    m2 = pd.Series({'!erk=sos': 0,
                      '!ikb=nfkb': 1,
                       '!pi3k=gsk3': 1,
                        '!tnfa=ikb': 1,
