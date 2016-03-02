@@ -27,7 +27,7 @@ before_install:
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: 
   - conda install --yes numpy matplotlib scipy networkx pandas>=0.15
-  - pip install pulp numpexp wrapt bottleneck  
+  - pip install pulp numexpr wrapt bottleneck  
   - pip install nose coverage
   - pip install bioservices
   - pip install biokit
