@@ -368,11 +368,15 @@ class CNORfuzzy(CNOBase, CNORBase):
         :param show:
         :return:
         """
+        raise NotImplementedError
+        # THE FUZZY PACKAGE FROM BIOCONDUCTOR IS OUTDATED TO MAKE THIS TO WORK
+
         # TODO: should use automatic selection of the threshold
         # First, we need to compute the simulation
         script = """simulation = plotMeanFuzzyFit(%(threshold)s,
         summary$allFinalMSEs, allRes)""" % {'threshold': threshold}
         self.session.run(script)
+        
         self.simulated = self.session.simulation['simResults']
 
         midas = self.data.copy()
