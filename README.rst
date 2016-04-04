@@ -21,6 +21,7 @@ cellnopt/cno
                  `notebooks <https://github.com/cellnopt/cellnopt/tree/master/notebooks>`_
 :Issues: Please use `cellnopt issues and bug report <https://github.com/cellnopt/cellnopt/issues>`_
 :Documentation: Some documentation (mostly API) are also available on `pypi <http://pythonhosted.org//cno/>`_
+:references: For this python version, please cite http://arxiv.org/pdf/1412.6386v1.pdf ; for the underlying R packages, please see www.cellnopt.org
 
 This is a stable version that contains datasets and tools to manipulate
 models and data sets used in CellNOpt project. The sub-package cno.io is ready and 
