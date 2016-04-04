@@ -239,10 +239,12 @@ class GABinary(Optimisation, GA):
                 #print self.popTol
                 #print self.Pop[_tolbs, :]
                 #FIXME: axis=1 here below will be an error in future numpy version.
+                # numpy.1.11 raises an error.
+                # i nself.popTolScores we now use axis=0 instead of 0. seems to
+                # work
                 self.popTol = numpy.concatenate( (self.popTol, self.Pop[_tolbs,:]), axis=0)
                 self.popTolScores = numpy.concatenate( (self.popTolScores, 
-                    self._scores[_tolbs]), axis=1)
-
+                    self._scores[_tolbs]), axis=0)
 
             if self.elitism > 0:
                 self.Pop = numpy.concatenate( (self.Pop3, self.Pop[self.popsize-self.elitism:self.popsize,:]), axis=0)

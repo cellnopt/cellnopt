@@ -142,7 +142,10 @@ class Models(object):
 
     def to_csv(self, filename, index=False):
         """Exports the dataframe to a CSV file"""
-        self.df['score'] = self.scores.values
+        try:
+            self.df['score'] = self.scores.values
+        except:
+            self.df['score'] = self.scores
         self.df.to_csv(filename, index=False)
         del self.df['score']
 
