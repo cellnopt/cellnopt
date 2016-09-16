@@ -316,8 +316,8 @@ class MIDASReader(MIDAS):
         self._experiments = self._experiments.applymap(lambda x: 0
             if isinstance(x, str) and x.isspace() else x)
         # must convert read data into numeric value.
-        self._experiments = self._experiments.convert_objects(convert_numeric=True,
-                                                              copy=True)
+        self._experiments = self._experiments._convert(numeric=True,
+                                                       copy=True)
 
         index =  pd.MultiIndex.from_tuples(tuples, names=self._levels)
         #keep = [this for this in self.df.columns if this not in ["experiments", "times"]]
