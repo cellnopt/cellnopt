@@ -13,6 +13,9 @@
 #  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
+
+from future.utils import iteritems
+
 import os
 import sys
 
@@ -342,7 +345,7 @@ class CNORdt(CNORBase, CNOBase):
         # some stats
         stats = self._get_stats()
         txt = "<table>\n"
-        for k,v in stats.iteritems():
+        for k,v in iteritems(stats):
             txt += "<tr><td>%s:</td><td>%s</td></tr>\n" % (k,v)
         txt += "</table>\n"
         txt += """<img id="img" onclick='changeImage();' src="fit_over_time.png">\n"""
