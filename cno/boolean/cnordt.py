@@ -100,7 +100,7 @@ class CNORdt(CNORBase, CNOBase):
             msg = "boolupdate must be set to number of time points. "
             msg += "Other cases not implemented so far"
             msg += "number time points s %s" % len(self.midas.times)
-            print(self.midas.filename)
+            sys.stdout.write('%s\n' % self.midas.filename)
             raise ValueError(msg)
 
         # TODO reuse the previous params
@@ -239,7 +239,7 @@ class CNORdt(CNORBase, CNOBase):
         Ntimes = len(self.simdata)  # TODO: should match bool_update
         Nspecies = len(self.midas.df.columns)
         Nexp = len(self.midas.experiments.index)
-        print Ntimes, Nspecies, Nexp
+        sys.stdout.write('%s %s %s\n' % (Ntimes, Nspecies, Nexp))
         #N = Ntimes * Nexp
         #sim = np.array(self.simdata).transpose().reshape(Ntimes,Nexp, Nspecies)
         sim = self.simdata
@@ -271,7 +271,7 @@ class CNORdt(CNORBase, CNOBase):
 
     def info(self):
         str_ = "Best bitstring: %s (rmse=%s) " % (self.best_bitstring,self.best_score)
-        print(str_)
+        sys.stdout.write('%s\n' % str_)
 
     def create_report_images(self):
 
@@ -370,7 +370,7 @@ class CNORdt(CNORBase, CNOBase):
         Ntimes = self.config.DT.boolupdates
         Nspecies = len(self.midas.df.columns)
         Nexp = len(self.midas.experiments.index)
-        print Ntimes, Nspecies, Nexp
+        sys.stdout.write('%s %s %s\n' % (Ntimes, Nspecies, Nexp))
         #N = Ntimes * Nexp
         sim = np.array(self.sim).transpose().reshape(Ntimes,Nexp, Nspecies)
 
@@ -390,7 +390,7 @@ class CNORdt(CNORBase, CNOBase):
         self.midas.sim.columns = self.midas.df.columns
 
     def _init(self):
-        print("ARE WE HERE")
+        # sys.stdout.write("ARE WE HERE\n")
         params =  {'pknmodel': self.pknmodel.filename,
                 'midas': self.data.filename}
         script = """
