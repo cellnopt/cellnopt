@@ -82,11 +82,14 @@ class Parameter(Params):
     and value.
 
     """
+    
+    def __new__(cls, *args, **kwargs):
+        return super(Parameter, cls).__new__(cls, *args, **kwargs)
+    
     def __init__(self, name, argname, default, description, types=[]):
         self._value = None
         assert argname.startswith("--"), "argument name must start with -- signs"
-        super(Parameter, self).__init__(name=name, argname=argname,
-                default=default, description=description)
+        super(Parameter, self).__init__()
         self.value = default
         # TODO check types
 
