@@ -13,6 +13,7 @@
 #  website: http://github.com/cellnopt/cellnopt
 #
 ##############################################################################
+import sys
 import argparse
 from easydev import AttrDict
 import functools
@@ -81,11 +82,14 @@ class Parameter(Params):
     and value.
 
     """
+    
+    def __new__(cls, *args, **kwargs):
+        return super(Parameter, cls).__new__(cls, *args, **kwargs)
+    
     def __init__(self, name, argname, default, description, types=[]):
         self._value = None
         assert argname.startswith("--"), "argument name must start with -- signs"
-        super(Parameter, self).__init__(name=name, argname=argname,
-                default=default, description=description)
+        super(Parameter, self).__init__()
         self.value = default
         # TODO check types
 
@@ -146,7 +150,7 @@ class Parameters(AttrDict):
             try:
                 value = self[k].value
             except:
-                print "------", k, value
+                sys.stdout.write("------ %s %s\n" % (k, value))
             if value is None:
                 value = ""
             elif value is True:
@@ -163,13 +167,13 @@ class Parameters(AttrDict):
 
     def __eq__(self, other):
         if sorted(self._get_names()) != sorted(other._get_names()):
-            print("False 1")
+            sys.stdout.write("False 1\n")
             return False
         for key in other._get_names():
             p1 = other[key]
             p2 = self[key]
             if (p1 == p2) is False:
-                print("False 2 " + key)
+                sys.stdout.write("False 2 %s\n" % key)
                 return False
         return True
 
@@ -444,12 +448,12 @@ class CNOConfigParser(AttrDict):
 
     def __eq__(self, other):
         if sorted(other.keys()) != sorted(self.keys()):
-            print('config False 1')
+            sys.stdout.write('config False 1\n')
             return False
         for key in other.keys():
             # check that all sections are identical
             if (other[key] == self[key] ) is False:
-                print('config False 2 ' + key)
+                sys.stdout.write('config False 2 %s\n' % key)
                 return False
         return True
 

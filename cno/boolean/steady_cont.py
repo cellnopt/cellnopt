@@ -1,3 +1,5 @@
+from past.builtins import xrange, range
+
 from cno.core.base import CNOBase
 from cno.core.results import BooleanResults
 from cno.core.models import BooleanModels
