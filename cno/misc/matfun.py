@@ -13,6 +13,9 @@
 #  website: http://www.cellnopt.org
 #
 ##############################################################################
+
+from past.builtins import reduce
+
 import numpy
 from scipy.optimize import fsolve
 import pylab

@@ -3,7 +3,7 @@
 #
 #  This file is part of the cellnopt package
 #
-#  Copyright (c) 2014 - EMBL-EBI
+#  Copyright (c) 2014-2016 - EMBL-EBI
 #
 #  File author(s): Thomas Cokelaer (cokelaer@ebi.ac.uk)
 #
@@ -15,6 +15,7 @@
 #
 ##############################################################################
 from __future__ import print_function
+from future.utils import iteritems
 import types
 
 import pylab
@@ -316,8 +317,8 @@ class MIDASReader(MIDAS):
         self._experiments = self._experiments.applymap(lambda x: 0
             if isinstance(x, str) and x.isspace() else x)
         # must convert read data into numeric value.
-        self._experiments = self._experiments.convert_objects(convert_numeric=True,
-                                                              copy=True)
+        self._experiments = self._experiments._convert(numeric=True,
+                                                       copy=True)
 
         index =  pd.MultiIndex.from_tuples(tuples, names=self._levels)
         #keep = [this for this in self.df.columns if this not in ["experiments", "times"]]
@@ -1214,7 +1215,7 @@ class XMIDAS(MIDASReader):
 
         """
         # dataframe cannot be compared to None so, we need this trick:
-        if isinstance(sim, types.NoneType):
+        if sim is None:
             sim = self.sim
 
         if squared is True:
@@ -2633,16 +2634,13 @@ class Trend(object):
             return None
 
         corrs = self._get_correlation(self.normed_values)
-        keys,values = (corrs.keys(), corrs.values())
+        keys, values = zip(*sorted(iteritems(corrs), key = lambda i: i[0]))
         # M  = max(values)
         values = [x[0] for x in values]
         if np.isnan(np.nanmax(values)):
             return 'purple'
         else:
             res = keys[np.nanargmax(values)]
-
-        #except:
-        #    res = keys[np.argmax(values)]
 
         if "constant" in res:
             return "black"

@@ -1,2 +1,2 @@
-import model
-from model import MILPTrain
+import cno.milp.model
+from cno.milp.model import MILPTrain

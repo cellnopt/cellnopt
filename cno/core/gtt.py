@@ -13,6 +13,9 @@
 #  website: github.com/cellnopt/cellnopt
 #
 ##############################################################################
+
+from future.utils import iteritems
+
 import numpy as np
 import pylab
 import pandas as pd
@@ -168,7 +171,7 @@ class GTTDendrogram(object):
         for d in list(self._asp.dataset):
 
             inputs = [(x[0],x[1]) if x[0] not in ac.inhibitors else (x[0]+"i", x[1]) 
-                    for x in d.inputs.iteritems()]
+                    for x in iteritems(d.inputs)]
             self.experiments.append(dict(inputs))
 
         # Set the outputs to be looked at
@@ -186,7 +189,7 @@ class GTTDendrogram(object):
         names = self.experiments[0].keys()
 
         for i,r in enumerate(gtt.to_matrix(self.setup)):
-            thisexp = dict([x for x in r.iteritems() if x[0] in names])
+            thisexp = dict([x for x in iteritems(r) if x[0] in names])
             #if thisexp in experiments:
 
             if thisexp in self.experiments:

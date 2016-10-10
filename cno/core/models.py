@@ -13,6 +13,7 @@
 #  website: github.com/cellnopt/cellnopt
 #
 ##############################################################################
+import sys
 import numpy as np
 import pylab
 import pandas as pd
@@ -92,7 +93,7 @@ class Models(object):
                 # todo: use logging
 
                 if self.verbose and count == 0:
-                    print("Warning in Models. found a + sign... in %s. Interepreted as ^" % reaction)
+                    sys.stdout.write("Warning in Models. found a + sign... in %s. Interepreted as ^" % reaction)
                     count = 1
             def convert(x):
                 from cno import Reaction
@@ -116,7 +117,7 @@ class Models(object):
                 self.cnograph.add_reaction(str(this))
             except:
                 if self.verbose:
-                    print('Skipping column %s (not valid reaction ?)' % this)
+                    sys.stdout.write('Skipping column %s (not valid reaction ?)' % this)
                 non_reactions.append(this)
         #self.non_reactions = non_reactions
         #self.df_non_reactions = self.df[non_reactions].copy()
@@ -136,7 +137,7 @@ class Models(object):
         else:
             #filter scores below some vlues
             N = float(sum(self.scores<=max_score))
-            print('Keeping %s percent of the models' % str( N /len(self.scores)*100.))
+            sys.stdout.write('Keeping %s percent of the models' % str( N /len(self.scores)*100.))
 
             return self.df.ix[self.scores<=max_score].mean(axis=0)
 
@@ -423,7 +424,7 @@ class CompareTwoModels(object):
          return self.m2[np.logical_and(self.m1==0, self.m2==0)]
 
     def plot_multigraph(self, cmap='jet'):
-        print('plot_multigraph may not wrok as expected. Experimental')
+        sys.stdout.write('plot_multigraph may not wrok as expected. Experimental')
         from cno.io.multigraph import  CNOGraphMultiEdges
         #from cno import CNOGraph
         from cno import Reaction
@@ -432,11 +433,11 @@ class CompareTwoModels(object):
         c.midas = self.midas
 
         for reaction in self.get_both().index:
-            print reaction
+            sys.stdout.write(str(reaction))
             r = Reaction(reaction)
             r.sort()
 
-            print c.reac2edges(r.name)
+            sys.stdout.write(str(c.reac2edges(r.name)))
             for this in c.reac2edges(r.name):
                 try:
                     edge1, edge2, link = this
