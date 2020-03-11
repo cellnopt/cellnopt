@@ -23,8 +23,8 @@ def test_eda():
 def test_eda_format():
     # test eda with header (used in HPN-Dream8 challenge
     fh = tempfile.NamedTemporaryFile(delete=False)
-    fh.write("EdgeScore\n")
-    fh.write("A (1) B = 0.5\n")
+    fh.write(b"EdgeScore\n")
+    fh.write(b"A (1) B = 0.5\n")
     fh.close()
     e = EDA(fh.name)
     fh.delete = True
@@ -33,9 +33,9 @@ def test_eda_format():
     # test bad data sets
 
     fh = tempfile.NamedTemporaryFile(delete=False)
-    fh.write("A (1) B = 0.5\n")
-    fh.write("\n") # should be skipped without errors
-    fh.write("A B = 0.5\n") # should raise an erro
+    fh.write(b"A (1) B = 0.5\n")
+    fh.write(b"\n") # should be skipped without errors
+    fh.write(b"A B = 0.5\n") # should raise an erro
     fh.close()
     try:
         e = EDA(fh.name)

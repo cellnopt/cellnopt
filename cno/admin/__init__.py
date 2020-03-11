@@ -1,7 +1,7 @@
-import distribute
-from distribute import *
+from . import distribute
+from .distribute import *
 
 
-import install
-from install import *
+from . import install
+from .install import *
 

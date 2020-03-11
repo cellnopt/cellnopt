@@ -162,7 +162,7 @@ class DistributeRPackage(object):
             self._create_temp_directory()
         try:
             self._checkout_git()
-        except Exception, e:
+        except Exception as e:
             self._stop()
             raise Exception(e)
 
@@ -187,7 +187,7 @@ class DistributeRPackage(object):
             ret = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
             ret.wait()
             revision = ret.stdout.read().strip()
-        except Exception, e:
+        except Exception as e:
             revision = self.revision_user
             raise Exception(e)
         self.logging.info("This is revision %s. Making a tar ball." % revision)

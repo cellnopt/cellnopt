@@ -124,7 +124,7 @@ def test_constructor():
     # bad format
     import tempfile
     fh = tempfile.NamedTemporaryFile(delete=False)
-    fh.write("A 1B\n")
+    fh.write(b"A 1B\n")
     fh.close()
     try:
         s = SIF(fh.name)
@@ -165,7 +165,7 @@ def _test_constructor2():
 def test_constructor3():
     """edge can be only 1 or -1 if fomrat is cno  """
     fh = tempfile.NamedTemporaryFile(delete=False)
-    fh.write("A activate B\n")
+    fh.write(b"A activate B\n")
     fh.close()
     try:
         s = SIF(fh.name)
@@ -178,9 +178,9 @@ def test_constructor3():
 
 def test_constructor_bad_and_gate():
     fh = tempfile.NamedTemporaryFile(delete=False)
-    fh.write("A 1 and1\n")
-    fh.write("B 1 and1\n")
-    fh.write("and1 -1 C\n") # this is not possible
+    fh.write(b"A 1 and1\n")
+    fh.write(b"B 1 and1\n")
+    fh.write(b"and1 -1 C\n") # this is not possible
     fh.close()
 
     try:
@@ -194,10 +194,10 @@ def test_constructor_bad_and_gate():
 
 def _test_constructor_ignore_and():
     fh = tempfile.NamedTemporaryFile(delete=False)
-    fh.write("A 1 and1\n")
-    fh.write("B 1 and1\n")
-    fh.write("and1 1 C\n")
-    fh.write("a 1 b\n")
+    fh.write(b"A 1 and1\n")
+    fh.write(b"B 1 and1\n")
+    fh.write(b"and1 1 C\n")
+    fh.write(b"a 1 b\n")
     fh.close()
 
     s = SIF(fh.name, ignore_and=True)

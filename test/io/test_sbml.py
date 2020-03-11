@@ -79,16 +79,17 @@ def test_toypb_bioservices():
     from bioservices import biomodels
     b = biomodels.BioModels()
 
-    sbml = b.getModelSBMLById('MODEL1305240000')
-
     fh =TempFile(suffix='.xml')
+
+
     with open(fh.name, 'w') as fh:
-        fh.write(sbml.encode('utf-8'))
+        sbml = b.get_model_download('MODEL1305240000', 
+            filename="MODEL1305240000_urn.xml", output_filename = fh.name)
 
-    c = CNOGraph(fh.name)
+        c = CNOGraph(fh.name)
 
-    c2 = CNOGraph(cnodata("PKN-ToyPB.sif"))
-    assert c == c2
+        c2 = CNOGraph(cnodata("PKN-ToyPB.sif"))
+        assert c == c2
 
 
 
