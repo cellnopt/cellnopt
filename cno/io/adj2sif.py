@@ -140,7 +140,7 @@ class ADJ2SIF(object):
         """
         from cno.io.sif import SIF
         s = SIF()
-        for edge in self.G.edges_iter():
+        for edge in self.G.edges():
             reac = self.names[edge[0]] + "=" + self.names[edge[1]]
             s.add_reaction(reac)
         if filename: 

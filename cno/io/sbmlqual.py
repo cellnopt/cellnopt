@@ -98,7 +98,7 @@ class SBMLQual(object):
         # Loop over all transitions
         tid = 0
         for node in sorted(data.nodes()):
-            predecessors = data.predecessors(node)
+            predecessors = list(data.predecessors(node))
             reactions = data.predecessors_as_reactions(node)
 
             if self.and_symbol in node:
@@ -197,8 +197,8 @@ class SBMLQual(object):
         if filename is not None:
             import lxml
             parser = lxml.etree.XMLParser(remove_blank_text=True)
-            import StringIO
-            tree = lxml.etree.parse(StringIO.StringIO(sbml), parser)
+            from io import StringIO
+            tree = lxml.etree.parse(StringIO(sbml), parser)
             tree.write(filename, pretty_print=True)
         else:
             return sbml

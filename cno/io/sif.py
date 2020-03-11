@@ -303,7 +303,7 @@ class SIF(Reactions):
         # It assumes there is only 1 item in the lhs, 
         # which should be true in the SIF format.
         lhs = [x.lhs_species[0] for x in self._reactions]
-        
+
         f = open(filename, "w")
         sign2int = self.sign_operator_to_number
 

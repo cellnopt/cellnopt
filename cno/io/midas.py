@@ -14,7 +14,7 @@
 #  website: www.cellnopt.org
 #
 ##############################################################################
-from __future__ import print_function
+#from __future__ import print_function
 from future.utils import iteritems
 import types
 
@@ -326,7 +326,7 @@ class MIDASReader(MIDAS):
         names_species = [x[3:] for x in names_species]
 
         self.df = pd.DataFrame(value_signals, index=index, columns=names_species)
-        self.df = self.df.sortlevel(["experiment"])
+        self.df = self.df.sort_index(level=["experiment"])
         self.df = self.df.sort_index(axis=1) # sort the species
 
         # Get rid of TR in experiments
@@ -386,7 +386,7 @@ class MIDASReader(MIDAS):
         except:
             pass
 
-        self._experiments.sortlevel(axis=1, inplace=True)
+        self._experiments.sort_index(axis=1, inplace=True)
         #self.df = self.df.sort_index(axis=1)
 
         self._set_missing_time_zero()
@@ -446,7 +446,7 @@ class MIDASReader(MIDAS):
 
         df = pd.concat([self.df, tobeadded])
         #df = df.set_index(self._levels)
-        df = df.sortlevel([self._levels[1], self._levels[2]]) # experiment
+        df = df.sort_index(level=[self._levels[1], self._levels[2]]) # experiment
         #df = df.sort_index(axis=1)
         self.df = df.copy()
 
@@ -492,7 +492,7 @@ class MIDASReader(MIDAS):
         df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
 
         df = df.set_index(self._levels)
-        df = df.sortlevel([self._levels[1]]) # experiment
+        df = df.sort_index(level=[self._levels[1]]) # experiment
         self.df = df.copy()
         self._reset_experiment_names()
 
@@ -552,7 +552,7 @@ class MIDASReader(MIDAS):
         # finally concatenate all the rows with the dataframe df
         df = pd.concat([self.df.reset_index(), tobeadded], ignore_index=True)
         df = df.set_index(self._levels)
-        df = df.sortlevel([self._levels[1]]) # experiment
+        df = df.sort_index(level=[self._levels[1]]) # experiment
         self.df = df.copy()
 
 
@@ -693,6 +693,11 @@ class XMIDAS(MIDASReader):
         return m
 
     def __mul__(self, this):
+        m = self.copy()
+        m.df *= this
+        return m
+
+    def __rmul__(self, this):
         m = self.copy()
         m.df *= this
         return m
@@ -1929,7 +1934,7 @@ class XMIDAS(MIDASReader):
         """
         if species == None:
             species = list(self.df.columns)
-        from pandas.tools.plotting import radviz
+        from pandas.plotting import radviz
         df = self.df.reset_index()
         del df['time']
         del df['cell']

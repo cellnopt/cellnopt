@@ -50,7 +50,7 @@ class NormaliseMIDASBase(object):
     def _get_saturation(self):
         return self._saturation
     def _set_saturation(self, saturation):
-        if isinstance(saturation, (int, long, float)):
+        if isinstance(saturation, (int, float)):
             self._saturation = saturation
         else:
             raise TypeError("saturation argument must be a number")
@@ -60,7 +60,7 @@ class NormaliseMIDASBase(object):
     def _get_detection(self):
         return self._detection
     def _set_detection(self, detection):
-        if isinstance(detection, (int, long, float)):
+        if isinstance(detection, (int,  float)):
             self._detection = detection
         else:
             raise TypeError("detection argument must be a number")
@@ -70,7 +70,7 @@ class NormaliseMIDASBase(object):
     def _get_EC50noise(self):
         return self._EC50noise
     def _set_EC50noise(self, EC50noise):
-        if isinstance(EC50noise, (int, long, float)):
+        if isinstance(EC50noise, (int,  float)):
             self._EC50noise = EC50noise
         else:
             raise TypeError("EC50noise argument must be a number")
@@ -79,7 +79,7 @@ class NormaliseMIDASBase(object):
     def _get_EC50data(self):
         return self._EC50data
     def _set_EC50data(self, EC50data):
-        if isinstance(EC50data, (int, long, float)):
+        if isinstance(EC50data, (int,  float)):
             self._EC50data = EC50data
         else:
             raise TypeError("EC50data argument must be a number")
@@ -88,7 +88,7 @@ class NormaliseMIDASBase(object):
     def _get_changeThreshold(self):
         return self._changeThreshold
     def _set_changeThreshold(self, changeThreshold):
-        #if isinstance(changeThreshold, (int, long, float)):
+        #if isinstance(changeThreshold, (int,  float)):
         self._changeThreshold = changeThreshold
         #else:
         #    raise TypeError("changeThreshold argument must be a number")
@@ -97,7 +97,7 @@ class NormaliseMIDASBase(object):
     def _get_HillCoeff(self):
         return self._HillCoeff
     def _set_HillCoeff(self, HillCoeff):
-        if isinstance(HillCoeff, (int, long, float)):
+        if isinstance(HillCoeff, (int,  float)):
             self._HillCoeff = HillCoeff
         else:
             raise TypeError("HillCoeff argument must be a number")

@@ -282,7 +282,7 @@ class MIDASBuilder(object):
         df = pd.DataFrame(np.zeros(N*Nrows).reshape(Nrows, N), 
                 index=range(0,Nrows),
                 columns=[['Stimuli']*Ns + ['Inhibitors']*Ni, stimuli + inhibitors])
-        df.sortlevel(axis=1, inplace=True)
+        df.sort_index(axis=1, inplace=True)
 
         # this is the slowest part in the 2 next loops.
         for stimulus in stimuli:
